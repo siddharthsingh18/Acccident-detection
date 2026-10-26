@@ -29,6 +29,20 @@ export interface AlertMessage {
   video_url: string;
 }
 
+export interface SampleFeed {
+  id: string;
+  filename: string;
+  camera_id: number;
+  city: string;
+  district: string;
+  label: string;
+  description: string;
+  has_accident: boolean;
+  incident_id: string | null;
+  video_url: string;
+  output_video_url: string | null;
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let errorDetail = 'An unexpected error occurred';
@@ -92,6 +106,23 @@ export const api = {
       method: 'POST',
     });
     return handleResponse<FeedCancelResponse>(res);
+  },
+
+  async getSampleFeeds(): Promise<SampleFeed[]> {
+    const res = await fetch('/api/feeds/samples');
+    return handleResponse<SampleFeed[]>(res);
+  },
+
+  async startSampleFeed(sampleId: string, city: string, district: string): Promise<FeedResponse> {
+    const formData = new FormData();
+    formData.append('sample_id', sampleId);
+    formData.append('city', city);
+    formData.append('district', district);
+    const res = await fetch('/api/feeds/sample', {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse<FeedResponse>(res);
   },
 
   getExportUrl(filters: IncidentFilters = {}): string {

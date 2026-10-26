@@ -20,7 +20,7 @@ export function Sidebar({ alertCount = 0 }: SidebarProps) {
     },
     {
       to: '/feeder',
-      label: 'Camera Feeder',
+      label: 'Detection Studio (Input/Output)',
       icon: Video,
     },
   ];

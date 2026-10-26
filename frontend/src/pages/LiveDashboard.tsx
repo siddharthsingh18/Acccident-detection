@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, AlertCircle, RefreshCw, Radio, Camera, MapPin, Clock, CheckCircle2, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ShieldAlert, AlertCircle, RefreshCw, Radio, Camera, MapPin, Clock, CheckCircle2, Sparkles, Video } from 'lucide-react';
 import { api, type Incident } from '@/lib/api';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
@@ -190,8 +191,17 @@ export function LiveDashboard() {
           </p>
         </div>
 
-        {/* WebSocket Connection Badge */}
-        <div className="flex items-center gap-2 self-start sm:self-center">
+        {/* Header Actions */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-center">
+          <Link
+            to="/feeder"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs uppercase tracking-wider transition shadow-md shadow-cyan-500/20"
+          >
+            <Video className="w-3.5 h-3.5" />
+            <span>Detection Studio (Input & Output)</span>
+          </Link>
+
+          {/* WebSocket Connection Badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono">
             <span
               className={`w-2 h-2 rounded-full ${

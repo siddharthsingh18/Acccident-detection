@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from ..config import settings
+from ..config import settings, PROJECT_ROOT
 from ..models.schemas import FeedResponse, FeedCancelResponse, ErrorResponse
 from ..services.feed_manager import feed_manager
 from ..services.media import sanitize_id
@@ -13,6 +13,95 @@ from ..services.media import sanitize_id
 
 logger = logging.getLogger("argus.api.feeds")
 router = APIRouter(prefix="/api/feeds", tags=["Feeds"])
+
+@router.get("/samples", summary="List built-in dataset surveillance video feeds")
+async def get_sample_feeds():
+    """Returns curated sample videos from the Argus dataset for quick 1-click testing."""
+    return [
+        {
+            "id": "1528",
+            "filename": "1528.mp4",
+            "camera_id": 1528,
+            "city": "Shibin El Kom",
+            "district": "District 13",
+            "label": "Camera 1528 (Shibin El Kom - Confirmed Accident)",
+            "description": "High-speed road junction with multi-vehicle impact",
+            "has_accident": True,
+            "incident_id": "1528_76",
+            "video_url": "/api/feeds/sample/1528.mp4",
+            "output_video_url": "/api/incidents/1528_76/video"
+        },
+        {
+            "id": "1513",
+            "filename": "1513.mp4",
+            "camera_id": 1513,
+            "city": "Aswan",
+            "district": "District 21",
+            "label": "Camera 1513 (Aswan Highway - Side Collision)",
+            "description": "Highway collision at frame 61 with traffic deceleration",
+            "has_accident": True,
+            "incident_id": "1513_61",
+            "video_url": "/api/feeds/sample/1513.mp4",
+            "output_video_url": "/api/incidents/1513_61/video"
+        },
+        {
+            "id": "1543",
+            "filename": "1543.mp4",
+            "camera_id": 1543,
+            "city": "Asyut",
+            "district": "District 10",
+            "label": "Camera 1543 (Asyut Avenue - Crash)",
+            "description": "Multi-lane urban crash with tracked vehicle trajectory",
+            "has_accident": True,
+            "incident_id": "1543_166",
+            "video_url": "/api/feeds/sample/1543.mp4",
+            "output_video_url": "/api/incidents/1543_166/video"
+        },
+        {
+            "id": "1506",
+            "filename": "1506.mp4",
+            "camera_id": 1506,
+            "city": "Cairo",
+            "district": "District 5",
+            "label": "Camera 1506 (Cairo Junction - Normal Traffic)",
+            "description": "Steady vehicle flow with zero collision incidents",
+            "has_accident": False,
+            "incident_id": None,
+            "video_url": "/api/feeds/sample/1506.mp4",
+            "output_video_url": None
+        }
+    ]
+
+@router.api_route("/sample/{filename}", methods=["GET", "HEAD"], summary="Stream sample dataset video")
+async def stream_sample_video(filename: str):
+    safe_name = Path(filename).name
+    video_path = PROJECT_ROOT / "videos" / safe_name
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Sample video not found.")
+    return FileResponse(video_path, media_type="video/mp4", headers={"Accept-Ranges": "bytes"})
+
+@router.post("/sample", response_model=FeedResponse, status_code=201)
+async def start_sample_feed(
+    sample_id: str = Form(..., description="Sample video ID (e.g. 1528)"),
+    city: str = Form("Cairo"),
+    district: str = Form("District 1")
+):
+    safe_name = f"{Path(sample_id).stem}.mp4"
+    video_path = PROJECT_ROOT / "videos" / safe_name
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail=f"Sample video '{safe_name}' not found.")
+    
+    try:
+        cam_id = int(Path(sample_id).stem)
+    except ValueError:
+        cam_id = 9999
+
+    return await feed_manager.start_feed(
+        file_path=video_path,
+        camera_id=cam_id,
+        city=city,
+        district=district
+    )
 
 @router.post(
     "",
