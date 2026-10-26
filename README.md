@@ -79,17 +79,108 @@ Framework Architecture
 
 
 ## How to Run Argus
-1. Install requirements.txt
-1. Run Backend Services
-   1. RunMaster.py
-   1. RunDetect.py
-   1. RunTracker.py
-   1. RunCrash.py
-1. Run Client Services
-   1. RunGui.py
-   1. RunCamera.py
-1. Select video from videos folder
-1. From RunCamera.py hit Process
+1. Install requirements:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Run Backend Computer Vision Pipeline:
+   ```bash
+   python RunMaster.py
+   python RunDetect.py
+   python RunTracker.py
+   python RunCrash.py
+   ```
+   *(Or run all backend nodes concurrently with: `python run_system.py backend`)*
+3. Run Client Services:
+   - **Option A (Native Qt Desktop GUI)**:
+     ```bash
+     python RunGui.py
+     python RunCamera.py
+     ```
+   - **Option B (FastAPI Bridge for React Frontend)**:
+     See section below.
+
+## Python Environment Requirements
+> [!IMPORTANT]
+> **Argus requires Python 3.11.**
+> Python 3.14 removed the deprecated standard library module `imghdr`, which causes legacy computer vision modules to fail on import. Python 3.11 is fully tested and verified.
+
+### Virtual Environment Setup
+```bash
+# 1. Install Python 3.11 (if not already installed)
+brew install python@3.11   # macOS
+# or sudo apt install python3.11 python3.11-venv  # Ubuntu/Debian
+
+# 2. Create and activate virtual environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+pip install -r backend/requirements.txt
+```
+
+---
+
+## Quickstart: Running Full Stack with One Command
+
+You can run the entire system (all 4 computer vision nodes + FastAPI bridge + Vite React frontend) with a single command:
+
+```bash
+# Verify environment prerequisites and network ports
+make check
+
+# Launch all 6 services with automated port readiness checks & colored log prefixes
+make dev
+
+# Stop all background services cleanly
+make stop
+```
+
+Once started:
+* **React Web Frontend**: [http://localhost:5173](http://localhost:5173)
+* **FastAPI Bridge Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+* **WebSocket Alerts Stream**: `ws://127.0.0.1:8000/ws/alerts`
+
+---
+
+## React + TypeScript Frontend Features (`frontend/`)
+
+Built with React 19, TypeScript, Tailwind CSS, TanStack Query, React Router, and Lucide Icons.
+
+1. **Live Dashboard (`/`)**:
+   - Real-time incident cards (newest first) with camera ID, timestamp, and location.
+   - Incoming WebSocket alerts slide in with green highlight and pop-up toast.
+   - Audio siren alarm (`UI/siren.mp3`) with browser unlock button and volume slider.
+   - Video modal with H.264 MP4 playback, range seeking, telemetry metadata, and keyboard `Esc` shortcut.
+   - Pre-loads 10 most recent incidents on initial load.
+
+2. **Incident Search & Archive (`/search`)**:
+   - Temporal filters (date range, time range) and geographic filters (city, district).
+   - Validated with `react-hook-form` + `zod`.
+   - Filters sync to URL query string for shareable bookmarks.
+   - Sortable columns, thumbnail previews, pagination, and one-click video player.
+   - **CSV Export**: Downloads matching records directly via `GET /api/incidents/export`.
+
+3. **Camera Feeder / Ingest Simulation (`/feeder`)**:
+   - Replaces native `RunCamera.py` with web ingest.
+   - Drag-and-drop video upload (MP4, AVI, MKV, MOV up to 200MB) with `ffprobe` container inspection.
+   - First-frame thumbnail preview with play-button overlay.
+   - Dispatches headless `CameraNode` subprocess streaming 30-frame batches with 15-frame overlap to Master node.
+   - Real-time progress bar polling `GET /api/feeds/{id}`, live percentage, and cancellation support.
+   - Enforces single active feed concurrency (returns `409 Conflict` if busy).
+
+---
+
+## Testing & Verification
+```bash
+# Run both backend pytest suite and frontend TypeScript compilation
+make test
+
+# Or run separately:
+cd backend && pytest -v
+cd frontend && npm run build && npm run lint
+```
 
 ## How to Configure used modules in Project
 As the project has different settings there are hyper-parameter you need to configure to use the module you actually want. Go to file called "Constants.py" in "Argus/System/Data/Constants.py"

@@ -1,0 +1,5 @@
+/* Custom application style resets */
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
