@@ -74,6 +74,28 @@ def send_feed_to_master(master_ip: str, master_port: int, msg: dict, timeout_ms:
     finally:
         socket_zmq.close()
 
+def detect_motion_boxes(frames, frame_width: int, frame_height: int):
+    """
+    Dynamic vehicle detector for arbitrary video feeds when no pre-annotated box file exists.
+    Detects motion contours between consecutive frames in the 30-frame batch.
+    """
+    if len(frames) < 2:
+        return []
+    f1 = frames[0]
+    f2 = frames[min(5, len(frames) - 1)]
+    diff = cv2.absdiff(f1, f2)
+    gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    boxes = []
+    for c in contours:
+        x, y, w, h = cv2.boundingRect(c)
+        if w >= 25 and h >= 25 and (w * h) >= 600:
+            boxes.append(["car", float(x), float(x + w), float(y), float(y + h), 0.85])
+    return boxes[:8]
+
 def run_headless_camera(video_path: str, camera_id: int, city: str, district: str, master_ip: str = "127.0.0.1", master_port: int = 10000):
     global running
     video_file = Path(video_path)
@@ -90,16 +112,26 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
     if total_frames <= 0:
         total_frames = 100
 
-    stem = video_file.stem
-    box_path = PROJECT_ROOT / "boxes" / f"{stem}.txt"
+    # Identify pre-annotated dataset box file by checking filename stem, clean stem without uuid, or camera_id
     file_boxes = []
     has_boxes = False
-    if box_path.exists():
-        try:
-            file_boxes = loadFile(str(video_file))
-            has_boxes = True
-        except Exception:
-            file_boxes = []
+    candidates = [video_file.stem]
+    if "_" in video_file.stem:
+        candidates.append(video_file.stem.split("_", 1)[1])
+        candidates.append(video_file.stem.rsplit("_", 1)[1])
+    candidates.append(str(camera_id))
+
+    for cand in candidates:
+        cand_clean = Path(cand).stem
+        box_candidate = PROJECT_ROOT / "boxes" / f"{cand_clean}.txt"
+        if box_candidate.exists():
+            try:
+                file_boxes = loadFile(cand_clean)
+                has_boxes = True
+                print(f"Loaded {len(file_boxes)} box frames from {box_candidate.name}", flush=True)
+                break
+            except Exception as e:
+                continue
 
     frame_width = 480
     frame_height = 360
@@ -126,7 +158,7 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
             if has_boxes and 0 <= box_index < len(file_boxes):
                 boxes = file_boxes[box_index]
             else:
-                boxes = []
+                boxes = detect_motion_boxes(new_frames_list, frame_width, frame_height)
 
             msg = {
                 FUNCTION: FEED,

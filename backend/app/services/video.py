@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 import cv2
 
-from ..config import settings
+from ..config import settings, PROJECT_ROOT
 from ..models.schemas import Incident
 from .database import query_incident_by_id
 from .media import sanitize_id
@@ -98,7 +98,7 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
             clip_name = f"({cam}) {frm}.avi"
             raw_clip = settings.SAVED_CRASH_VID_DIR / clip_name
             if not raw_clip.exists():
-                raw_clip = (settings.PROJECT_ROOT / "saved_frames_vid") / clip_name
+                raw_clip = (PROJECT_ROOT / "saved_frames_vid") / clip_name
             if raw_clip.exists():
                 await transcode_avi_to_mp4(raw_clip, cached_mp4)
                 return cached_mp4
@@ -114,8 +114,7 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
     clip_filename = f"({incident.camera_id}) {incident.starting_frame_id}.avi"
     avi_path = settings.SAVED_CRASH_VID_DIR / clip_filename
     if not avi_path.exists():
-        avi_path = (settings.PROJECT_ROOT / "saved_frames_vid") / clip_filename
-
+        avi_path = (PROJECT_ROOT / "saved_frames_vid") / clip_filename
 
     if not avi_path.exists():
         # Ask master to retrieve/stitch video
@@ -131,14 +130,14 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
             if avi_path.exists():
                 break
 
-    if not avi_path.exists():
-        raise FileNotFoundError(
-            f"Stitched incident clip '{clip_filename}' could not be located on disk or retrieved from Argus Master"
-        )
+    if avi_path.exists():
+        # Transcode to H.264 MP4
+        await transcode_avi_to_mp4(avi_path, cached_mp4)
+        return cached_mp4
 
-    # Transcode to H.264 MP4
-    await transcode_avi_to_mp4(avi_path, cached_mp4)
-    return cached_mp4
+    raise FileNotFoundError(
+        f"Stitched incident clip '{clip_filename}' could not be located on disk or retrieved from Argus Master"
+    )
 
 def parse_range_header(range_header: str, file_size: int) -> Tuple[int, int]:
     """Parse HTTP Range header 'bytes=start-end' returning (start, end)."""

@@ -92,6 +92,15 @@ export function CameraFeeder() {
 
     setSelectedFile(file);
 
+    // Auto-detect camera ID from filename (e.g. 1528.mp4 -> 1528)
+    const match = file.name.match(/\d+/);
+    if (match) {
+      const parsedId = parseInt(match[0], 10);
+      if (!isNaN(parsedId) && parsedId > 0) {
+        setCameraId(parsedId);
+      }
+    }
+
     // Auto-extract first frame using HTML5 video + canvas
     const videoUrl = URL.createObjectURL(file);
     const video = document.createElement('video');
@@ -291,6 +300,11 @@ export function CameraFeeder() {
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="flex items-start gap-2 text-xs text-slate-400 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+            <span className="text-cyan-400 font-mono font-semibold shrink-0">Tip:</span>
+            <span>Dataset accident videos (e.g. <span className="font-mono text-slate-200">1528.mp4</span>, <span className="font-mono text-slate-200">1513.mp4</span>, <span className="font-mono text-slate-200">1543.mp4</span> in <span className="font-mono text-slate-200">videos/</span>) auto-sync with pre-computed boxes in <span className="font-mono text-slate-200">boxes/</span>. Arbitrary videos use dynamic motion detection.</span>
           </div>
         </div>
 

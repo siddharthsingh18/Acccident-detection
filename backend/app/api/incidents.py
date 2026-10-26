@@ -138,7 +138,7 @@ async def get_incident(id: str):
         )
     return incident
 
-@router.get("/{id}/video", summary="Stream stitched incident video clip with HTTP Range seeking")
+@router.api_route("/{id}/video", methods=["GET", "HEAD"], summary="Stream stitched incident video clip with HTTP Range seeking")
 async def stream_incident_video(id: str, request: Request):
     """
     Stream stitched crash video.
@@ -172,6 +172,17 @@ async def stream_incident_video(id: str, request: Request):
         )
 
     file_size = mp4_path.stat().st_size
+
+    if request.method == "HEAD":
+        return Response(
+            status_code=200,
+            headers={
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(file_size),
+                "Content-Type": "video/mp4",
+            }
+        )
+
     range_header = request.headers.get("range")
 
     if range_header:
