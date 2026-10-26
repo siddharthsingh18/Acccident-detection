@@ -5,10 +5,11 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from app.config import settings
-from app.models.schemas import FeedResponse, FeedCancelResponse, ErrorResponse
-from app.services.feed_manager import feed_manager
-from app.services.media import sanitize_id
+from ..config import settings
+from ..models.schemas import FeedResponse, FeedCancelResponse, ErrorResponse
+from ..services.feed_manager import feed_manager
+from ..services.media import sanitize_id
+
 
 logger = logging.getLogger("argus.api.feeds")
 router = APIRouter(prefix="/api/feeds", tags=["Feeds"])

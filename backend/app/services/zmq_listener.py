@@ -35,63 +35,69 @@ class ZmqAlertListener(threading.Thread):
         self.context: Optional[zmq.Context] = None
 
     def stop(self) -> None:
-        """Signal thread to stop and close ZeroMQ socket."""
+        """Signal thread to stop without blocking the event loop."""
         self._stop_event.set()
-        if self.context:
-            try:
-                self.context.destroy(linger=0)
-            except Exception:
-                pass
 
     def run(self) -> None:
         logger.info(f"Starting ZmqAlertListener on tcp://{self.host}:{self.port}")
         bind_addr = f"tcp://{self.host}:{self.port}"
 
-        while not self._stop_event.is_set():
-            try:
-                self.context = zmq.Context()
-                self.socket = self.context.socket(zmq.REP)
-                self.socket.setsockopt(zmq.RCVTIMEO, 1000)  # 1 sec timeout for clean stop check
-                self.socket.setsockopt(zmq.LINGER, 0)
-                self.socket.bind(bind_addr)
-                logger.info(f"ZmqAlertListener bound successfully to {bind_addr}")
-
-                while not self._stop_event.is_set():
-                    try:
-                        message = self.socket.recv_pyobj()
-                    except zmq.Again:
-                        continue  # Timeout, check stop_event
-                    except zmq.ZMQError as ze:
-                        if self._stop_event.is_set():
-                            break
-                        raise ze
-
-                    # Send immediate REP reply so Argus SenderController releases
-                    try:
-                        self.socket.send_pyobj("")
-                    except Exception as se:
-                        logger.warning(f"Error sending REP reply: {se}")
-
-                    # Process alert payload
-                    self._handle_message(message)
-
-            except Exception as e:
-                if self._stop_event.is_set():
+        try:
+            self.context = zmq.Context()
+            for attempt in range(15):
+                try:
+                    self.socket = self.context.socket(zmq.REP)
+                    self.socket.setsockopt(zmq.RCVTIMEO, 150)  # 150ms timeout for responsive stop
+                    self.socket.setsockopt(zmq.LINGER, 0)
+                    self.socket.bind(bind_addr)
+                    logger.info(f"ZmqAlertListener bound successfully to {bind_addr}")
                     break
-                logger.error(f"ZMQ listener error on {bind_addr}: {e}. Retrying in 2 seconds...", exc_info=False)
-                if self.socket:
-                    try:
-                        self.socket.close(linger=0)
-                    except Exception:
-                        pass
-                if self.context:
-                    try:
-                        self.context.term()
-                    except Exception:
-                        pass
-                time.sleep(2.0)
+                except zmq.ZMQError:
+                    if self.socket:
+                        try:
+                            self.socket.close(linger=0)
+                        except Exception:
+                            pass
+                    if attempt == 14 or self._stop_event.is_set():
+                        raise
+                    time.sleep(0.05)
 
-        logger.info("ZmqAlertListener stopped")
+
+            while not self._stop_event.is_set():
+                try:
+                    message = self.socket.recv_pyobj()
+                except zmq.Again:
+                    continue  # Timeout, check stop_event
+                except zmq.ZMQError:
+                    if self._stop_event.is_set():
+                        break
+                    continue
+
+                # Send immediate REP reply so Argus SenderController releases
+                try:
+                    self.socket.send_pyobj("")
+                except Exception as se:
+                    logger.warning(f"Error sending REP reply: {se}")
+
+                # Process alert payload
+                self._handle_message(message)
+
+        except Exception as e:
+            if not self._stop_event.is_set():
+                logger.error(f"ZMQ listener error on {bind_addr}: {e}")
+        finally:
+            if self.socket:
+                try:
+                    self.socket.close(linger=0)
+                except Exception:
+                    pass
+            if self.context:
+                try:
+                    self.context.term()
+                except Exception:
+                    pass
+            logger.info("ZmqAlertListener stopped")
+
 
     def _handle_message(self, message: dict) -> None:
         if not isinstance(message, dict):
@@ -142,8 +148,13 @@ class ZmqAlertListener(threading.Thread):
             )
 
             # Safely schedule put into asyncio.Queue
+            if self.loop.is_closed() or self._stop_event.is_set():
+                logger.debug("Event loop closed or stopping, skipping enqueue")
+                return
+
             self.loop.call_soon_threadsafe(self._enqueue_alert, alert)
             logger.info(f"Enqueued alert for incident {incident_id} ({city}, {district})")
+
 
         except Exception as e:
             logger.error(f"Error parsing NOTIFICATION message: {e}", exc_info=True)

@@ -67,7 +67,10 @@ export function useAlertSocket() {
     }
   }, [scheduleReconnect]);
 
-  connectRef.current = connect;
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
 
   useEffect(() => {
     connect();

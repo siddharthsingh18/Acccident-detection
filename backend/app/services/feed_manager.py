@@ -16,8 +16,9 @@ import cv2
 import numpy as np
 from fastapi import HTTPException
 
-from app.config import settings, BACKEND_DIR
-from app.models.schemas import FeedResponse, FeedProgress, FeedCancelResponse
+from ..config import settings, BACKEND_DIR
+from ..models.schemas import FeedResponse, FeedProgress, FeedCancelResponse
+
 
 logger = logging.getLogger("argus.feeds")
 

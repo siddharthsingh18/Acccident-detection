@@ -80,13 +80,28 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
     """
     Retrieve or transcode H.264 MP4 for given incident.
     1. Returns cached .mp4 if already present.
-    2. Locates raw AVI clip on disk in saved_crash_vid/.
+    2. Locates raw AVI clip on disk in saved_crash_vid/ or saved_frames_vid/.
     3. If missing, sends REQ_VIDEO to Master and polls briefly for file creation.
     4. Transcodes AVI to MP4, caches it, and returns the Path.
     """
     safe_id = sanitize_id(identifier)
+    cached_mp4 = settings.VIDEO_CACHE_DIR / f"{safe_id}.mp4"
+
+    if cached_mp4.exists() and cached_mp4.stat().st_size > 0:
+        return cached_mp4
+
     incident = query_incident_by_id(safe_id)
     if not incident:
+        # Check if raw clip exists on disk even if not in DB
+        if "_" in safe_id:
+            cam, frm = safe_id.split("_", 1)
+            clip_name = f"({cam}) {frm}.avi"
+            raw_clip = settings.SAVED_CRASH_VID_DIR / clip_name
+            if not raw_clip.exists():
+                raw_clip = (settings.PROJECT_ROOT / "saved_frames_vid") / clip_name
+            if raw_clip.exists():
+                await transcode_avi_to_mp4(raw_clip, cached_mp4)
+                return cached_mp4
         raise FileNotFoundError(f"Incident '{safe_id}' not found in database")
 
     cache_key = f"{incident.camera_id}_{incident.starting_frame_id}"
@@ -98,6 +113,9 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
     # Check for raw clip on disk
     clip_filename = f"({incident.camera_id}) {incident.starting_frame_id}.avi"
     avi_path = settings.SAVED_CRASH_VID_DIR / clip_filename
+    if not avi_path.exists():
+        avi_path = (settings.PROJECT_ROOT / "saved_frames_vid") / clip_filename
+
 
     if not avi_path.exists():
         # Ask master to retrieve/stitch video

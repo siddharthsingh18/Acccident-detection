@@ -107,6 +107,7 @@ export function IncidentVideoModal({ incident, onClose }: IncidentVideoModalProp
               <video
                 key={videoKey}
                 ref={videoRef}
+                data-testid="incident-video-player"
                 controls
                 autoPlay
                 playsInline

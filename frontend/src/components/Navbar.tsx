@@ -1,14 +1,45 @@
 import { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Moon, Sun, Shield } from 'lucide-react';
+import { Volume2, VolumeX, Moon, Sun, Sparkles, Clock } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSound } from '@/contexts/SoundContext';
+import { useDemo } from '@/contexts/DemoContext';
 import { api, type HealthResponse } from '@/lib/api';
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { isSoundEnabled, volume, enableSound, toggleSound, setVolume } = useSound();
+  const { isDemoMode, toggleDemoMode, lastAlertTime } = useDemo();
+
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isHealthLoading, setIsHealthLoading] = useState(true);
+  const [timeAgo, setTimeAgo] = useState<string>('No alerts yet');
+
+  // Relative timer updating every second
+  useEffect(() => {
+    if (!lastAlertTime) {
+      setTimeAgo('No alerts yet');
+      return;
+    }
+
+    const updateTimer = () => {
+      const elapsedSeconds = Math.floor((Date.now() - lastAlertTime.getTime()) / 1000);
+      if (elapsedSeconds < 10) {
+        setTimeAgo('Just now');
+      } else if (elapsedSeconds < 60) {
+        setTimeAgo(`${elapsedSeconds}s ago`);
+      } else if (elapsedSeconds < 3600) {
+        const mins = Math.floor(elapsedSeconds / 60);
+        setTimeAgo(`${mins}m ago`);
+      } else {
+        const hours = Math.floor(elapsedSeconds / 3600);
+        setTimeAgo(`${hours}h ago`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [lastAlertTime]);
 
   // Poll system health every 8 seconds
   useEffect(() => {
@@ -41,19 +72,41 @@ export function Navbar() {
 
   return (
     <header className="h-16 px-4 md:px-6 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
-      {/* Brand & Status */}
+      {/* Brand & Health */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-            <Shield className="w-4 h-4 text-cyan-400" />
+          {/* Custom Argus Multi-Eyed Surveillance Emblem */}
+          <div className="relative w-8 h-8 rounded-lg bg-cyan-950/40 border border-cyan-500/40 flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+            <svg viewBox="0 0 32 32" className="w-5 h-5 text-cyan-400" fill="none">
+              <path
+                d="M16 4 L28 10 L28 22 L16 28 L4 22 L4 10 Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8 16 C12 11 20 11 24 16 C20 21 12 21 8 16 Z"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="#0f172a"
+              />
+              <circle cx="16" cy="16" r="3" fill="#06b6d4" />
+              <circle cx="16" cy="16" r="1.2" fill="#ef4444" />
+            </svg>
           </div>
-          <span className="font-bold tracking-wider text-white text-base md:text-lg">
-            ARGUS <span className="text-cyan-400 text-xs font-mono font-normal">CONTROL ROOM</span>
-          </span>
+
+          <div className="flex flex-col">
+            <span className="font-bold tracking-wider text-white text-base leading-none">
+              ARGUS
+            </span>
+            <span className="text-cyan-400 text-[10px] font-mono tracking-widest uppercase">
+              Surveillance Ops
+            </span>
+          </div>
         </div>
 
         {/* Live Service Health Indicator */}
-        <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-slate-800">
+        <div className="hidden lg:flex items-center gap-2 pl-4 border-l border-slate-800">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs">
             {isHealthLoading ? (
               <span className="w-2 h-2 rounded-full bg-slate-500 animate-pulse" />
@@ -69,10 +122,32 @@ export function Navbar() {
             </span>
           </div>
         </div>
+
+        {/* Dynamic Last Alert Timer */}
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/60 border border-slate-800/80 text-xs text-slate-300 font-mono">
+          <Clock className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Last Alert:</span>
+          <span className="text-white font-semibold">{timeAgo}</span>
+        </div>
       </div>
 
-      {/* Controls: Sound, Volume, Theme */}
-      <div className="flex items-center gap-3">
+      {/* Controls: Demo Mode, Sound, Theme */}
+      <div className="flex items-center gap-2.5">
+        {/* Demo Mode Toggle */}
+        <button
+          onClick={toggleDemoMode}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition border ${
+            isDemoMode
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-800'
+          }`}
+          title="Toggle client-side demo alert simulator (Never modifies database)"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">DEMO MODE</span>
+          {isDemoMode && <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>}
+        </button>
+
         {/* Audio Siren Unlock / Controls */}
         <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5">
           {!isSoundEnabled ? (

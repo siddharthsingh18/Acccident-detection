@@ -1,13 +1,15 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SoundProvider } from '@/contexts/SoundContext';
+import { DemoProvider, useDemo } from '@/contexts/DemoContext';
 import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { IncidentSearch } from '@/pages/IncidentSearch';
 import { CameraFeeder } from '@/pages/CameraFeeder';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
+import { Sparkles } from 'lucide-react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,13 +22,29 @@ const queryClient = new QueryClient({
 
 function AppLayout() {
   const { alerts } = useAlertSocket();
+  const { isDemoMode } = useDemo();
+  const location = useLocation();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-300">
       <Navbar />
+
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-center text-xs text-amber-300 flex items-center justify-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+          <span>
+            <strong>DEMO MODE ACTIVE:</strong> Generating simulated incident alerts without contacting or modifying the real surveillance database.
+          </span>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col md:flex-row">
         <Sidebar alertCount={alerts.length} />
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
+        <main
+          key={location.pathname}
+          className="page-transition flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto"
+        >
           <Routes>
             <Route path="/" element={<LiveDashboard />} />
             <Route path="/search" element={<IncidentSearch />} />
@@ -43,9 +61,11 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <SoundProvider>
-          <BrowserRouter>
-            <AppLayout />
-          </BrowserRouter>
+          <DemoProvider>
+            <BrowserRouter>
+              <AppLayout />
+            </BrowserRouter>
+          </DemoProvider>
         </SoundProvider>
       </ThemeProvider>
     </QueryClientProvider>

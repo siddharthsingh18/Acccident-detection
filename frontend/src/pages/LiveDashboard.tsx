@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, AlertCircle, RefreshCw, Radio, Camera, MapPin, Clock, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, AlertCircle, RefreshCw, Radio, Camera, MapPin, Clock, CheckCircle2, Sparkles } from 'lucide-react';
 import { api, type Incident } from '@/lib/api';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
+import { useDemo } from '@/contexts/DemoContext';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
 
 interface DisplayIncident {
@@ -15,6 +16,7 @@ interface DisplayIncident {
   thumbnail_url: string;
   video_url: string;
   isNewAlert?: boolean;
+  isDemo?: boolean;
 }
 
 export function LiveDashboard() {
@@ -27,6 +29,7 @@ export function LiveDashboard() {
 
   const { latestAlert, connectionStatus } = useAlertSocket();
   const { playSiren } = useSound();
+  const { demoAlert, setLastAlertTime } = useDemo();
   const processedAlertIds = useRef<Set<string>>(new Set());
 
   // Load 10 most recent incidents on mount
@@ -62,6 +65,7 @@ export function LiveDashboard() {
     }
 
     processedAlertIds.current.add(latestAlert.incident_id);
+    setLastAlertTime(new Date());
 
     // Play siren
     playSiren();
@@ -91,6 +95,7 @@ export function LiveDashboard() {
       thumbnail_url: latestAlert.thumbnail_url,
       video_url: latestAlert.video_url,
       isNewAlert: true,
+      isDemo: false,
     };
 
     setIncidents((prev) => [newIncident, ...prev.filter((item) => item.id !== newIncident.id)]);
@@ -99,10 +104,51 @@ export function LiveDashboard() {
       clearTimeout(toastTimer);
       clearTimeout(highlightTimer);
     };
-  }, [latestAlert, playSiren]);
+  }, [latestAlert, playSiren, setLastAlertTime]);
+
+  // Listen for simulated Demo alerts
+  useEffect(() => {
+    if (!demoAlert || processedAlertIds.current.has(demoAlert.incident_id)) {
+      return;
+    }
+
+    processedAlertIds.current.add(demoAlert.incident_id);
+    playSiren();
+
+    setToastMessage(`[DEMO] Simulated Alert: Camera ${demoAlert.camera_id} (${demoAlert.city})`);
+    const toastTimer = setTimeout(() => setToastMessage(null), 6000);
+
+    setHighlightedIds((prev) => new Set(prev).add(demoAlert.incident_id));
+    const highlightTimer = setTimeout(() => {
+      setHighlightedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(demoAlert.incident_id);
+        return next;
+      });
+    }, 6000);
+
+    const demoIncident: DisplayIncident = {
+      id: demoAlert.incident_id,
+      camera_id: demoAlert.camera_id,
+      starting_frame_id: demoAlert.starting_frame_id,
+      crash_time: `${demoAlert.date} ${demoAlert.time}`,
+      city: demoAlert.city,
+      district: demoAlert.district,
+      thumbnail_url: demoAlert.thumbnail_url,
+      video_url: demoAlert.video_url,
+      isNewAlert: true,
+      isDemo: true,
+    };
+
+    setIncidents((prev) => [demoIncident, ...prev.filter((item) => item.id !== demoIncident.id)]);
+
+    return () => {
+      clearTimeout(toastTimer);
+      clearTimeout(highlightTimer);
+    };
+  }, [demoAlert, playSiren]);
 
   const handleCardClick = (item: DisplayIncident) => {
-    // Cast to full Incident model for the modal
     setSelectedIncident({
       id: item.id,
       rowid: 0,
@@ -213,6 +259,7 @@ export function LiveDashboard() {
             return (
               <div
                 key={incident.id}
+                data-testid="incident-card"
                 onClick={() => handleCardClick(incident)}
                 className={`group cursor-pointer rounded-xl overflow-hidden border transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl ${
                   isHighlighted
@@ -238,6 +285,12 @@ export function LiveDashboard() {
                     <span className="px-2 py-0.5 rounded font-mono text-xs font-bold bg-slate-950/80 text-cyan-400 border border-slate-700/80 backdrop-blur-sm">
                       #{incident.id}
                     </span>
+                    {incident.isDemo && (
+                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500 text-slate-950 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        DEMO
+                      </span>
+                    )}
                     {isHighlighted && (
                       <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500 text-slate-950 animate-pulse">
                         NEW ALERT

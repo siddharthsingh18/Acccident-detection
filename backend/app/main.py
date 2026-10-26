@@ -44,6 +44,10 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Argus FastAPI Bridge...")
     if hasattr(app.state, "zmq_listener"):
         app.state.zmq_listener.stop()
+        try:
+            await asyncio.to_thread(app.state.zmq_listener.join, 1.0)
+        except Exception:
+            pass
     if hasattr(app.state, "broadcast_task"):
         app.state.broadcast_task.cancel()
         try:
@@ -51,6 +55,7 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
     logger.info("Argus FastAPI Bridge stopped.")
+
 
 app = FastAPI(
     title="Argus Road Accident Detection Bridge API",

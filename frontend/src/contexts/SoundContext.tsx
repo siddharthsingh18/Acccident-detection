@@ -23,7 +23,6 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const audio = new Audio('/siren.mp3');
     audio.preload = 'auto';
-    audio.volume = volume;
     audioRef.current = audio;
 
     return () => {
@@ -31,6 +30,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       audioRef.current = null;
     };
   }, []);
+
 
   useEffect(() => {
     if (audioRef.current) {
