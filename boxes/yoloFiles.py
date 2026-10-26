@@ -1,11 +1,11 @@
+import os
+
 def loadFile(videoName):
-    videoName =  videoName.split('/')
-    videoName = videoName[len(videoName) - 1]
-    videoName = 'boxes/' + videoName.split('.')[0] + '.txt'
-    print(videoName)
-    f = open(videoName, "r")
-    lines = f.readlines()
-    f.close()
+    stem = os.path.splitext(os.path.basename(videoName))[0]
+    box_path = os.path.join('boxes', stem + '.txt')
+    print("Loading boxes from:", box_path)
+    with open(box_path, "r") as f:
+        lines = f.readlines()
     lines = [x.strip() for x in lines]
     lines.pop(0)
 

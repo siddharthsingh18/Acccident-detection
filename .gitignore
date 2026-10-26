@@ -24,3 +24,6 @@ videos/1603.mp4
 .idea/GP_Crash_Saviour.iml
 .idea/misc.xml
 .idea/workspace.xml
+.venv/
+__pycache__/
+*.pyc

@@ -93,11 +93,16 @@ class Client(QWidget):
 
         self.processing_lable.setVisible(True)
 
-        video_id = vidpath.split('.')[0]
-        video_id = video_id.split('/')
-        video_id = int(video_id[-1])
-        print("hello")
-        CameraNode(video_id, 'videos/' + str(video_id) + '.mp4',files=Work_Detect_Files, city= random.choice(cities), district_no= 'District ' + str(random.randint(1, 30))).start()
+        import os
+        base_name = os.path.basename(vidpath)
+        video_name = os.path.splitext(base_name)[0]
+        try:
+            video_id = int(video_name)
+        except ValueError:
+            video_id = random.randint(1000, 9999)
+        video_file = vidpath if os.path.exists(vidpath) else ('videos/' + str(video_id) + '.mp4')
+        print("Starting CameraNode for video:", video_file, "with ID:", video_id)
+        CameraNode(video_id, video_file, files=Work_Detect_Files, city=random.choice(cities), district_no='District ' + str(random.randint(1, 30))).start()
         self.playVideo()
 
 
@@ -129,7 +134,7 @@ class Client(QWidget):
     def getfiles(self):
         global vidpath
 
-        fileName, _ = QFileDialog.getOpenFileName(self, 'Single File', 'C:\'', '*.mp4 *.mkv *.avi')
+        fileName, _ = QFileDialog.getOpenFileName(self, 'Single File', 'videos', '*.mp4 *.mkv *.avi')
 
         if fileName=='':
             return
