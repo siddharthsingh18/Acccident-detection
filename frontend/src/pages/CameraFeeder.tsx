@@ -257,24 +257,31 @@ export function CameraFeeder() {
           }
 
           if (updated.status === 'done') {
-            // Determine outcome if not already set by WebSocket
-            if (selectedSample && selectedSample.has_accident) {
+            // Determine outcome: check database for cameraId incident and sample preset metadata
+            let detectedIncident: Incident | null = null;
+            try {
+              detectedIncident = await api.getIncident(String(cameraId));
+            } catch {
+              // Not in DB or 404
+            }
+
+            if (detectedIncident || (selectedSample && selectedSample.has_accident)) {
               playSiren();
               setDetectionOutcome('accident');
-              const inc: Incident = {
-                id: selectedSample.incident_id || `${cameraId}_76`,
+              const inc: Incident = detectedIncident || {
+                id: selectedSample?.incident_id || `${cameraId}_106`,
                 rowid: 1,
                 camera_id: cameraId,
-                starting_frame_id: 76,
+                starting_frame_id: 106,
                 crash_time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-                city,
-                district,
+                city: selectedSample?.city || city,
+                district: selectedSample?.district || district,
                 from_no: 5,
-                thumbnail_url: `/media/thumbnails/${selectedSample.incident_id || `${cameraId}_76`}.jpg`,
-                video_url: selectedSample.output_video_url || `/api/incidents/${selectedSample.incident_id || `${cameraId}_76`}/video`,
+                thumbnail_url: selectedSample?.incident_id ? `/media/thumbnails/${selectedSample.incident_id}.jpg` : `/media/thumbnails/${cameraId}_106.jpg`,
+                video_url: selectedSample?.output_video_url || `/api/incidents/${cameraId}_106/video`,
               };
               setOutputIncident(inc);
-              setOutputVideoUrl(selectedSample.output_video_url || `/api/incidents/${inc.id}/video`);
+              setOutputVideoUrl(inc.video_url || selectedSample?.output_video_url || `/api/incidents/${inc.id}/video`);
             } else {
               setDetectionOutcome('normal');
               setOutputVideoUrl(inputVideoUrl);

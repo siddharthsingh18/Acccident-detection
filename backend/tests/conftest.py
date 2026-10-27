@@ -76,12 +76,14 @@ def temp_environment(tmp_path):
     orig_thumb_dir = settings.THUMBNAILS_DIR
     orig_cache_dir = settings.VIDEO_CACHE_DIR
     orig_fallback = settings.FALLBACK_IMAGE_PATH
+    orig_alert_port = settings.ZMQ_ALERT_PORT
 
     settings.DATABASE_PATH = db_file
     settings.SAVED_CRASH_VID_DIR = saved_crash_dir
     settings.THUMBNAILS_DIR = thumbnails_dir
     settings.VIDEO_CACHE_DIR = video_cache_dir
     settings.FALLBACK_IMAGE_PATH = fallback_img
+    settings.ZMQ_ALERT_PORT = 10019
 
     yield {
         "db_file": db_file,
@@ -96,6 +98,7 @@ def temp_environment(tmp_path):
     settings.THUMBNAILS_DIR = orig_thumb_dir
     settings.VIDEO_CACHE_DIR = orig_cache_dir
     settings.FALLBACK_IMAGE_PATH = orig_fallback
+    settings.ZMQ_ALERT_PORT = orig_alert_port
 
 @pytest.fixture
 def client(temp_environment):

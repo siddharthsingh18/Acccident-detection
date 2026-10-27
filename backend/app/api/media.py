@@ -4,7 +4,7 @@ from ..services.media import get_thumbnail_file, sanitize_id
 
 router = APIRouter(prefix="/media", tags=["media"])
 
-@router.get("/thumbnails/{id}", summary="Serve incident thumbnail image with fallback")
+@router.api_route("/thumbnails/{id}", methods=["GET", "HEAD"], summary="Serve incident thumbnail image with fallback")
 async def get_thumbnail(id: str):
     """
     Serve incident thumbnail.

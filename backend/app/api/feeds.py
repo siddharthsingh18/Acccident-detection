@@ -61,13 +61,26 @@ async def get_sample_feeds():
             "id": "1506",
             "filename": "1506.mp4",
             "camera_id": 1506,
+            "city": "Asyut",
+            "district": "District 16",
+            "label": "Camera 1506 (Asyut Junction - Van Collision)",
+            "description": "Intersection collision at frame 106 between white van and passenger vehicle",
+            "has_accident": True,
+            "incident_id": "1506_106",
+            "video_url": "/api/feeds/sample/1506.mp4",
+            "output_video_url": "/api/incidents/1506_106/video"
+        },
+        {
+            "id": "1562",
+            "filename": "1562.mp4",
+            "camera_id": 1562,
             "city": "Cairo",
             "district": "District 5",
-            "label": "Camera 1506 (Cairo Junction - Normal Traffic)",
+            "label": "Camera 1562 (Cairo Junction - Normal Traffic)",
             "description": "Steady vehicle flow with zero collision incidents",
             "has_accident": False,
             "incident_id": None,
-            "video_url": "/api/feeds/sample/1506.mp4",
+            "video_url": "/api/feeds/sample/1562.mp4",
             "output_video_url": None
         }
     ]
