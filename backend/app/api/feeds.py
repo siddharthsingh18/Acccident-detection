@@ -71,16 +71,16 @@ async def get_sample_feeds():
             "output_video_url": "/api/incidents/1506_106/video"
         },
         {
-            "id": "1562",
-            "filename": "1562.mp4",
-            "camera_id": 1562,
+            "id": "1600",
+            "filename": "1600.mp4",
+            "camera_id": 1600,
             "city": "Cairo",
             "district": "District 5",
-            "label": "Camera 1562 (Cairo Junction - Normal Traffic)",
-            "description": "Steady vehicle flow with zero collision incidents",
+            "label": "Camera 1600 (Bridge Expressway - Normal Traffic)",
+            "description": "Continuous multi-vehicle highway flow with zero collisions or trajectory anomalies",
             "has_accident": False,
             "incident_id": None,
-            "video_url": "/api/feeds/sample/1562.mp4",
+            "video_url": "/api/feeds/sample/1600.mp4",
             "output_video_url": None
         }
     ]
