@@ -1,5 +1,4 @@
 import json
-import pickle as pickle
 from time import time
 
 from System.Connections.SenderController import SenderController
