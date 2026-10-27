@@ -10,9 +10,7 @@ class DatabaseConnection:
         self.cursor = None
 
     def connect(self):
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        db_path = os.path.join(BASE_DIR, "Argus_DB.db")
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect(DATABASE_PATH)
         self.cursor = self.conn.cursor()
 
     def close(self):

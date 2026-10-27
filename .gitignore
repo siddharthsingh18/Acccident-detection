@@ -1,23 +1,45 @@
-
-*.mkv
-Corner Detection Module/.idea/workspace.xml
-*.weights
-Corner Detection Module/.idea/workspace.xml
-*.h5
-VIF/video2.avi
-.idea/workspace.xml
-*.avi
-.idea/workspace.xml
-*.jpg
-*.json
-.idea/workspace.xml
-*.pyc
-.idea/GP_Crash_Saviour.iml
-.idea/misc.xml
-.idea/workspace.xml
-.idea/GP_Crash_Saviour.iml
-.idea/misc.xml
-.idea/workspace.xml
-.venv/
+# Byte-compiled / cache files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+
+# Environment & Dependencies
+.venv/
+env/
+venv/
+node_modules/
+
+# Database files
+/Argus_DB.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE and OS files
+.idea/
+**/.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+**/.DS_Store
+
+# Pytest & Test coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Weights & ML artifacts
+*.weights
+*.h5
+
+# Local temporary media & generated runtime video
+VIF/video2.avi
+saved_crash_vid/
+saved_frames_vid/
+*.avi
+*.mkv
+

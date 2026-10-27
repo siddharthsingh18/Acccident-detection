@@ -1,3 +1,8 @@
+import os
+
+SYSTEM_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATABASE_PATH = os.path.join(SYSTEM_DIR, "Database", "Argus_DB.db")
+
 FUNCTION = "FUNCTION"
 DETECT = "DETECT"
 TRACK = "TRACK"
