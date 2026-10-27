@@ -77,7 +77,11 @@ async def stream_sample_video(filename: str):
     safe_name = Path(filename).name
     video_path = PROJECT_ROOT / "videos" / safe_name
     if not video_path.exists():
-        raise HTTPException(status_code=404, detail="Sample video not found.")
+        fallback_path = PROJECT_ROOT / "Joiner" / "vids" / safe_name
+        if fallback_path.exists():
+            video_path = fallback_path
+        else:
+            raise HTTPException(status_code=404, detail="Sample video not found.")
     return FileResponse(video_path, media_type="video/mp4", headers={"Accept-Ranges": "bytes"})
 
 @router.post("/sample", response_model=FeedResponse, status_code=201)
@@ -89,7 +93,11 @@ async def start_sample_feed(
     safe_name = f"{Path(sample_id).stem}.mp4"
     video_path = PROJECT_ROOT / "videos" / safe_name
     if not video_path.exists():
-        raise HTTPException(status_code=404, detail=f"Sample video '{safe_name}' not found.")
+        fallback_path = PROJECT_ROOT / "Joiner" / "vids" / safe_name
+        if fallback_path.exists():
+            video_path = fallback_path
+        else:
+            raise HTTPException(status_code=404, detail=f"Sample video '{safe_name}' not found.")
     
     try:
         cam_id = int(Path(sample_id).stem)

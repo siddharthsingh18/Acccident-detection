@@ -271,10 +271,13 @@ class FeedManager:
         self._cleanup_feed_video(feed_item)
 
     def _cleanup_feed_video(self, feed_item: FeedItem):
-        """Clean up uploaded video file while keeping thumbnail and metadata."""
+        """Clean up temporary uploaded video file while keeping dataset files, thumbnail, and metadata."""
         try:
-            if feed_item.video_path.exists():
-                feed_item.video_path.unlink(missing_ok=True)
+            resolved_path = feed_item.video_path.resolve()
+            resolved_uploads = settings.UPLOADS_DIR.resolve()
+            # Only delete files located in the temporary uploads directory
+            if resolved_uploads in resolved_path.parents and resolved_path.exists():
+                resolved_path.unlink(missing_ok=True)
         except Exception as e:
             logger.warning(f"Failed to remove uploaded feed file {feed_item.video_path}: {e}")
 
