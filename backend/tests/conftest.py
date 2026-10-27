@@ -49,6 +49,9 @@ def temp_environment(tmp_path):
     saved_crash_dir = tmp_path / "saved_crash_vid"
     saved_crash_dir.mkdir(parents=True, exist_ok=True)
 
+    saved_frames_dir = tmp_path / "saved_frames_vid"
+    saved_frames_dir.mkdir(parents=True, exist_ok=True)
+
     thumbnails_dir = tmp_path / "thumbnails"
     thumbnails_dir.mkdir(parents=True, exist_ok=True)
 
@@ -73,6 +76,7 @@ def temp_environment(tmp_path):
     # Patch settings
     orig_db = settings.DATABASE_PATH
     orig_crash_dir = settings.SAVED_CRASH_VID_DIR
+    orig_frames_dir = settings.SAVED_FRAMES_VID_DIR
     orig_thumb_dir = settings.THUMBNAILS_DIR
     orig_cache_dir = settings.VIDEO_CACHE_DIR
     orig_fallback = settings.FALLBACK_IMAGE_PATH
@@ -80,6 +84,7 @@ def temp_environment(tmp_path):
 
     settings.DATABASE_PATH = db_file
     settings.SAVED_CRASH_VID_DIR = saved_crash_dir
+    settings.SAVED_FRAMES_VID_DIR = saved_frames_dir
     settings.THUMBNAILS_DIR = thumbnails_dir
     settings.VIDEO_CACHE_DIR = video_cache_dir
     settings.FALLBACK_IMAGE_PATH = fallback_img
@@ -95,6 +100,7 @@ def temp_environment(tmp_path):
     # Restore settings
     settings.DATABASE_PATH = orig_db
     settings.SAVED_CRASH_VID_DIR = orig_crash_dir
+    settings.SAVED_FRAMES_VID_DIR = orig_frames_dir
     settings.THUMBNAILS_DIR = orig_thumb_dir
     settings.VIDEO_CACHE_DIR = orig_cache_dir
     settings.FALLBACK_IMAGE_PATH = orig_fallback

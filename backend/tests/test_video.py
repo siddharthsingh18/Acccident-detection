@@ -39,8 +39,14 @@ def test_video_transcoding_and_streaming(client, temp_environment):
     assert len(range_response.content) == 101
 
 def test_video_not_found(client):
-    # Request video for non-existent video clip
-    response = client.get("/api/incidents/1566_151/video")
+    # Request video for non-existent incident
+    response = client.get("/api/incidents/9999_99999/video")
     assert response.status_code in (404, 500)
     data = response.json()
     assert "code" in data
+
+    # Request video for incident present in DB but with missing video clip
+    response_missing = client.get("/api/incidents/1566_151/video")
+    assert response_missing.status_code in (404, 500)
+    data_missing = response_missing.json()
+    assert "code" in data_missing

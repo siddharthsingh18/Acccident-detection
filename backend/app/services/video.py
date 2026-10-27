@@ -98,7 +98,7 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
             clip_name = f"({cam}) {frm}.avi"
             raw_clip = settings.SAVED_CRASH_VID_DIR / clip_name
             if not raw_clip.exists():
-                raw_clip = (PROJECT_ROOT / "saved_frames_vid") / clip_name
+                raw_clip = settings.SAVED_FRAMES_VID_DIR / clip_name
             if raw_clip.exists():
                 await transcode_avi_to_mp4(raw_clip, cached_mp4)
                 return cached_mp4
@@ -114,7 +114,7 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
     clip_filename = f"({incident.camera_id}) {incident.starting_frame_id}.avi"
     avi_path = settings.SAVED_CRASH_VID_DIR / clip_filename
     if not avi_path.exists():
-        avi_path = (PROJECT_ROOT / "saved_frames_vid") / clip_filename
+        avi_path = settings.SAVED_FRAMES_VID_DIR / clip_filename
 
     if not avi_path.exists():
         # Ask master to retrieve/stitch video
