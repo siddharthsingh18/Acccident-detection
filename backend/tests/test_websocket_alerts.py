@@ -18,6 +18,7 @@ def test_zmq_to_websocket_alert_pipeline(client):
         assert ws.receive_text() == "pong"
 
         # 2. Setup mock ZeroMQ client (simulating Master.py SenderController)
+        from System.Connections.protocol import serialize_message, deserialize_reply
         context = zmq.Context()
         req_socket = context.socket(zmq.REQ)
         req_socket.RCVTIMEO = 4000
@@ -37,9 +38,11 @@ def test_zmq_to_websocket_alert_pipeline(client):
 
         # Send alert in a background thread or directly
         def send_alert():
-            req_socket.send_pyobj(alert_msg)
-            reply = req_socket.recv_pyobj()
-            assert reply == ""  # Verified REP acknowledgement
+            payload = serialize_message(alert_msg)
+            req_socket.send_multipart(payload)
+            reply_parts = req_socket.recv_multipart()
+            reply = deserialize_reply(reply_parts)
+            assert reply.get("status") == "ok"
 
         sender_thread = threading.Thread(target=send_alert)
         sender_thread.start()
