@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   UploadCloud,
@@ -64,6 +64,27 @@ export function CameraFeeder() {
   const [cameraId, setCameraId] = useState<number>(1528);
   const [city, setCity] = useState<string>('Shibin El Kom');
   const [district, setDistrict] = useState<string>('District 13');
+  const [sampleFilter, setSampleFilter] = useState<'all' | 'accident' | 'normal'>('all');
+  const [sampleSearch, setSampleSearch] = useState<string>('');
+
+  const accidentCount = useMemo(() => samples.filter((s) => s.has_accident).length, [samples]);
+  const normalCount = useMemo(() => samples.filter((s) => !s.has_accident).length, [samples]);
+
+  const filteredSamples = useMemo(() => {
+    return samples.filter((s) => {
+      if (sampleFilter === 'accident' && !s.has_accident) return false;
+      if (sampleFilter === 'normal' && s.has_accident) return false;
+      if (sampleSearch.trim()) {
+        const q = sampleSearch.toLowerCase();
+        const matchCam = String(s.camera_id).includes(q);
+        const matchCity = s.city.toLowerCase().includes(q);
+        const matchDistrict = s.district.toLowerCase().includes(q);
+        const matchLabel = s.label.toLowerCase().includes(q);
+        return matchCam || matchCity || matchDistrict || matchLabel;
+      }
+      return true;
+    });
+  }, [samples, sampleFilter, sampleSearch]);
 
   // Processing & Output State
   const [activeFeed, setActiveFeed] = useState<FeedResponse | null>(null);
@@ -390,39 +411,107 @@ export function CameraFeeder() {
 
           {/* Quick Presets Carousel / Badges */}
           <div className="space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
-              1-Click Dataset Footage Presets
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {samples.map((s) => {
-                const isSelected = selectedSample?.id === s.id && !selectedFile;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => handleSelectSample(s)}
-                    disabled={isProcessing}
-                    className={`p-2.5 text-left rounded-xl border transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.25)]'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                    } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-cyan-400">Cam {s.camera_id}</span>
-                      {s.has_accident ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-                          Accident
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          Normal
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] truncate mt-1 text-slate-300">{s.city}</p>
-                  </button>
-                );
-              })}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
+                Dataset Footage Library ({samples.length} Samples)
+              </label>
+              <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setSampleFilter('all')}
+                  className={`px-2 py-0.5 rounded transition ${
+                    sampleFilter === 'all'
+                      ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  All ({samples.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSampleFilter('accident')}
+                  className={`px-2 py-0.5 rounded transition ${
+                    sampleFilter === 'accident'
+                      ? 'bg-red-500/20 text-red-300 font-bold border border-red-500/30'
+                      : 'text-slate-400 hover:text-red-300'
+                  }`}
+                >
+                  Accidents ({accidentCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSampleFilter('normal')}
+                  className={`px-2 py-0.5 rounded transition ${
+                    sampleFilter === 'normal'
+                      ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30'
+                      : 'text-slate-400 hover:text-emerald-300'
+                  }`}
+                >
+                  Normal ({normalCount})
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Filter Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Filter by Camera ID, city or district..."
+                value={sampleSearch}
+                onChange={(e) => setSampleSearch(e.target.value)}
+                className="w-full pl-8 pr-12 py-1.5 text-xs font-mono rounded-lg bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition"
+              />
+              {sampleSearch && (
+                <button
+                  type="button"
+                  onClick={() => setSampleSearch('')}
+                  className="absolute right-2.5 top-1.5 text-[11px] text-slate-500 hover:text-slate-300 font-mono px-1 py-0.5"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Presets Grid */}
+            <div className="max-h-56 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {filteredSamples.length === 0 ? (
+                <div className="col-span-2 sm:col-span-3 text-center py-6 text-xs text-slate-500 font-mono">
+                  No sample videos match "{sampleSearch}"
+                </div>
+              ) : (
+                filteredSamples.map((s) => {
+                  const isSelected = selectedSample?.id === s.id && !selectedFile;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => handleSelectSample(s)}
+                      disabled={isProcessing}
+                      title={s.description}
+                      className={`p-2 text-left rounded-xl border transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.25)]'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-mono text-xs font-bold text-cyan-400">Cam {s.camera_id}</span>
+                        {s.has_accident ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
+                            Crash
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                            Normal
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] truncate mt-1 text-slate-300 font-medium">{s.city}</p>
+                      <p className="text-[9px] truncate text-slate-500">{s.district}</p>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import logging
 import shutil
 import uuid
 from pathlib import Path
+from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
@@ -14,22 +15,44 @@ from ..services.media import sanitize_id
 logger = logging.getLogger("argus.api.feeds")
 router = APIRouter(prefix="/api/feeds", tags=["Feeds"])
 
+def get_sample_video_path(safe_name: str) -> Optional[Path]:
+    """Resolve sample video path across videos/, videos/Extra/, or Joiner/vids/."""
+    for folder in [PROJECT_ROOT / "videos", PROJECT_ROOT / "videos" / "Extra", PROJECT_ROOT / "Joiner" / "vids"]:
+        candidate = folder / safe_name
+        if candidate.exists():
+            return candidate
+    return None
+
 @router.get("/samples", summary="List built-in dataset surveillance video feeds")
 async def get_sample_feeds():
     """Returns curated sample videos from the Argus dataset for quick 1-click testing."""
     return [
+        # --- ACCIDENT FEEDS (VERIFIED CRASHES) ---
         {
             "id": "1528",
             "filename": "1528.mp4",
             "camera_id": 1528,
             "city": "Shibin El Kom",
             "district": "District 13",
-            "label": "Camera 1528 (Shibin El Kom - Confirmed Accident)",
-            "description": "High-speed road junction with multi-vehicle impact",
+            "label": "Camera 1528 (Shibin El Kom - High-Speed Junction Impact)",
+            "description": "High-velocity road intersection collision with vehicle deflection",
             "has_accident": True,
             "incident_id": "1528_76",
             "video_url": "/api/feeds/sample/1528.mp4",
             "output_video_url": "/api/incidents/1528_76/video"
+        },
+        {
+            "id": "1506",
+            "filename": "1506.mp4",
+            "camera_id": 1506,
+            "city": "Asyut",
+            "district": "District 16",
+            "label": "Camera 1506 (Asyut Junction - Van Collision)",
+            "description": "Intersection collision at frame 106 between white van and passenger vehicle",
+            "has_accident": True,
+            "incident_id": "1506_106",
+            "video_url": "/api/feeds/sample/1506.mp4",
+            "output_video_url": "/api/incidents/1506_106/video"
         },
         {
             "id": "1513",
@@ -58,29 +81,200 @@ async def get_sample_feeds():
             "output_video_url": "/api/incidents/1543_166/video"
         },
         {
-            "id": "1506",
-            "filename": "1506.mp4",
-            "camera_id": 1506,
-            "city": "Asyut",
-            "district": "District 16",
-            "label": "Camera 1506 (Asyut Junction - Van Collision)",
-            "description": "Intersection collision at frame 106 between white van and passenger vehicle",
+            "id": "1508",
+            "filename": "1508.mp4",
+            "camera_id": 1508,
+            "city": "Fayyum",
+            "district": "District 26",
+            "label": "Camera 1508 (Fayyum Expressway - Impact)",
+            "description": "High-velocity roadway collision with lateral deceleration",
             "has_accident": True,
-            "incident_id": "1506_106",
-            "video_url": "/api/feeds/sample/1506.mp4",
-            "output_video_url": "/api/incidents/1506_106/video"
+            "incident_id": "1508_31",
+            "video_url": "/api/feeds/sample/1508.mp4",
+            "output_video_url": "/api/incidents/1508_31/video"
         },
+        {
+            "id": "1516",
+            "filename": "1516.mp4",
+            "camera_id": 1516,
+            "city": "Shubra El-Kheima",
+            "district": "District 27",
+            "label": "Camera 1516 (Shubra Corridor - Junction Crash)",
+            "description": "Busy corridor crash with multi-vehicle tracking bounds",
+            "has_accident": True,
+            "incident_id": "1516_61",
+            "video_url": "/api/feeds/sample/1516.mp4",
+            "output_video_url": "/api/incidents/1516_61/video"
+        },
+        {
+            "id": "1518",
+            "filename": "1518.mp4",
+            "camera_id": 1518,
+            "city": "Shubra El-Kheima",
+            "district": "District 25",
+            "label": "Camera 1518 (Shubra Boulevard - Side Impact)",
+            "description": "Boulevard side-swipe crash with Horn-Schunck violent flow spikes",
+            "has_accident": True,
+            "incident_id": "1518_1",
+            "video_url": "/api/feeds/sample/1518.mp4",
+            "output_video_url": "/api/incidents/1518_1/video"
+        },
+        {
+            "id": "1519",
+            "filename": "1519.mp4",
+            "camera_id": 1519,
+            "city": "Qalyub",
+            "district": "District 22",
+            "label": "Camera 1519 (Qalyub Highway Entry - Collision)",
+            "description": "Highway ramp vehicle merging impact at frame 16",
+            "has_accident": True,
+            "incident_id": "1519_16",
+            "video_url": "/api/feeds/sample/1519.mp4",
+            "output_video_url": "/api/incidents/1519_16/video"
+        },
+        {
+            "id": "1521",
+            "filename": "1521.mp4",
+            "camera_id": 1521,
+            "city": "Qena",
+            "district": "District 2",
+            "label": "Camera 1521 (Qena Avenue - Crossroad Impact)",
+            "description": "Avenue crossroad crash with sharp velocity reduction",
+            "has_accident": True,
+            "incident_id": "1521_121",
+            "video_url": "/api/feeds/sample/1521.mp4",
+            "output_video_url": "/api/incidents/1521_121/video"
+        },
+        {
+            "id": "1522",
+            "filename": "1522.mp4",
+            "camera_id": 1522,
+            "city": "Marsa Matruh",
+            "district": "District 6",
+            "label": "Camera 1522 (Marsa Matruh Road - Lateral Crash)",
+            "description": "Coastal roadway collision with abrupt orientation change",
+            "has_accident": True,
+            "incident_id": "1522_61",
+            "video_url": "/api/feeds/sample/1522.mp4",
+            "output_video_url": "/api/incidents/1522_61/video"
+        },
+        {
+            "id": "1529",
+            "filename": "1529.mp4",
+            "camera_id": 1529,
+            "city": "Bilbais",
+            "district": "District 29",
+            "label": "Camera 1529 (Bilbais Arterial - Multi-Vehicle)",
+            "description": "Arterial road collision involving commercial transport vehicles",
+            "has_accident": True,
+            "incident_id": "1529_181",
+            "video_url": "/api/feeds/sample/1529.mp4",
+            "output_video_url": "/api/incidents/1529_181/video"
+        },
+        {
+            "id": "1533",
+            "filename": "1533.mp4",
+            "camera_id": 1533,
+            "city": "Cairo",
+            "district": "District 18",
+            "label": "Camera 1533 (Cairo Boulevard - T-Bone Collision)",
+            "description": "Metropolitan intersection vehicle impact at frame 91",
+            "has_accident": True,
+            "incident_id": "1533_91",
+            "video_url": "/api/feeds/sample/1533.mp4",
+            "output_video_url": "/api/incidents/1533_91/video"
+        },
+        {
+            "id": "1534",
+            "filename": "1534.mp4",
+            "camera_id": 1534,
+            "city": "Ismailia",
+            "district": "District 27",
+            "label": "Camera 1534 (Ismailia Junction - Vehicle Crash)",
+            "description": "Urban intersection vehicle impact with trajectory deviation",
+            "has_accident": True,
+            "incident_id": "1534_91",
+            "video_url": "/api/feeds/sample/1534.mp4",
+            "output_video_url": "/api/incidents/1534_91/video"
+        },
+        {
+            "id": "1548",
+            "filename": "1548.mp4",
+            "camera_id": 1548,
+            "city": "Luxor",
+            "district": "District 14",
+            "label": "Camera 1548 (Luxor Avenue - Night Collision)",
+            "description": "Nighttime road collision with sharp optical flow spike at frame 226",
+            "has_accident": True,
+            "incident_id": "1548_226",
+            "video_url": "/api/feeds/sample/1548.mp4",
+            "output_video_url": "/api/incidents/1548_226/video"
+        },
+        {
+            "id": "1566",
+            "filename": "1566.mp4",
+            "camera_id": 1566,
+            "city": "Hurghada",
+            "district": "District 16",
+            "label": "Camera 1566 (Hurghada Coastal - Road Impact)",
+            "description": "Coastal highway collision at frame 136 with sudden stop",
+            "has_accident": True,
+            "incident_id": "1566_136",
+            "video_url": "/api/feeds/sample/1566.mp4",
+            "output_video_url": "/api/incidents/1566_136/video"
+        },
+
+        # --- NORMAL TRAFFIC FEEDS (SAFE ROADS - ZERO ACCIDENTS) ---
         {
             "id": "1600",
             "filename": "1600.mp4",
             "camera_id": 1600,
             "city": "Cairo",
             "district": "District 5",
-            "label": "Camera 1600 (Bridge Expressway - Normal Traffic)",
+            "label": "Camera 1600 (Bridge Expressway - Full Steady Traffic)",
             "description": "Continuous multi-vehicle highway flow with zero collisions or trajectory anomalies",
             "has_accident": False,
             "incident_id": None,
             "video_url": "/api/feeds/sample/1600.mp4",
+            "output_video_url": None
+        },
+        {
+            "id": "1601",
+            "filename": "1601.mp4",
+            "camera_id": 1601,
+            "city": "Cairo",
+            "district": "District 5",
+            "label": "Camera 1601 (Bridge Expressway - Morning Commute)",
+            "description": "Smooth highway commuter stream with stable speeds and zero incidents",
+            "has_accident": False,
+            "incident_id": None,
+            "video_url": "/api/feeds/sample/1601.mp4",
+            "output_video_url": None
+        },
+        {
+            "id": "1602",
+            "filename": "1602.mp4",
+            "camera_id": 1602,
+            "city": "Cairo",
+            "district": "District 5",
+            "label": "Camera 1602 (Bridge Expressway - Commercial Transit)",
+            "description": "Steady commercial transit flow with full adherence to lane boundaries",
+            "has_accident": False,
+            "incident_id": None,
+            "video_url": "/api/feeds/sample/1602.mp4",
+            "output_video_url": None
+        },
+        {
+            "id": "1701",
+            "filename": "1701.mp4",
+            "camera_id": 1701,
+            "city": "Giza",
+            "district": "District 3",
+            "label": "Camera 1701 (Downtown Signal Junction - Urban Queue)",
+            "description": "Traffic light intersection with orderly queues and smooth signal departures",
+            "has_accident": False,
+            "incident_id": None,
+            "video_url": "/api/feeds/sample/1701.mp4",
             "output_video_url": None
         }
     ]
@@ -88,13 +282,9 @@ async def get_sample_feeds():
 @router.api_route("/sample/{filename}", methods=["GET", "HEAD"], summary="Stream sample dataset video")
 async def stream_sample_video(filename: str):
     safe_name = Path(filename).name
-    video_path = PROJECT_ROOT / "videos" / safe_name
-    if not video_path.exists():
-        fallback_path = PROJECT_ROOT / "Joiner" / "vids" / safe_name
-        if fallback_path.exists():
-            video_path = fallback_path
-        else:
-            raise HTTPException(status_code=404, detail="Sample video not found.")
+    video_path = get_sample_video_path(safe_name)
+    if not video_path:
+        raise HTTPException(status_code=404, detail=f"Sample video '{safe_name}' not found.")
     return FileResponse(video_path, media_type="video/mp4", headers={"Accept-Ranges": "bytes"})
 
 @router.post("/sample", response_model=FeedResponse, status_code=201)
@@ -104,13 +294,9 @@ async def start_sample_feed(
     district: str = Form("District 1")
 ):
     safe_name = f"{Path(sample_id).stem}.mp4"
-    video_path = PROJECT_ROOT / "videos" / safe_name
-    if not video_path.exists():
-        fallback_path = PROJECT_ROOT / "Joiner" / "vids" / safe_name
-        if fallback_path.exists():
-            video_path = fallback_path
-        else:
-            raise HTTPException(status_code=404, detail=f"Sample video '{safe_name}' not found.")
+    video_path = get_sample_video_path(safe_name)
+    if not video_path:
+        raise HTTPException(status_code=404, detail=f"Sample video '{safe_name}' not found.")
     
     try:
         cam_id = int(Path(sample_id).stem)
