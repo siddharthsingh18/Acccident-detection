@@ -22,10 +22,18 @@ class WorkerThread(QObject):
 
     @pyqtSlot()
     def run(self):
+        from System.Connections.protocol import deserialize_message, serialize_reply
         while True:
-            message = self.socket.recv_pyobj()  # receive a message json
-            self.socket.send_pyobj("")
-            self.receive.emit(message)
+            try:
+                parts = self.socket.recv_multipart()
+                message = deserialize_message(parts)
+                self.socket.send_multipart(serialize_reply({"v": 1, "status": "ok"}))
+                self.receive.emit(message)
+            except Exception as e:
+                try:
+                    self.socket.send_multipart(serialize_reply({"v": 1, "status": "error", "error": str(e)}))
+                except Exception:
+                    pass
 
 
 class SearchForm(QWidget):

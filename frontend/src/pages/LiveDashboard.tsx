@@ -220,6 +220,15 @@ export function LiveDashboard() {
         </div>
       </div>
 
+      {/* Human Verification Advisory Banner */}
+      <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+        <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
+        <div>
+          <span className="font-semibold uppercase tracking-wide">Human verification required:</span>{' '}
+          Argus is an assisted decision support platform. A qualified operator must visually confirm every alert before dispatching emergency response.
+        </div>
+      </div>
+
       {/* Loading Skeleton State */}
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

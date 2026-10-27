@@ -23,14 +23,15 @@ def send_req_video_to_master(camera_id: int, starting_frame_id: int, timeout_ms:
     socket.SNDTIMEO = timeout_ms
     link = f"tcp://{settings.ZMQ_HOST}:{settings.ZMQ_MASTER_PORT}"
     try:
+        from System.Connections.protocol import serialize_message
         socket.connect(link)
         msg = {
             "FUNCTION": "REQ_VIDEO",
             "CAMERA_ID": camera_id,
             "STARTING_FRAME_ID": starting_frame_id,
         }
-        socket.send_pyobj(msg)
-        socket.recv_pyobj()
+        socket.send_multipart(serialize_message(msg))
+        socket.recv_multipart()
         return True
     except Exception:
         return False

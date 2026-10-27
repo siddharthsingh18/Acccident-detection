@@ -60,8 +60,11 @@ def send_alert(port=10010, camera_id=9876, frame_id=88, city="Cairo", district="
 
 
     try:
-        sock.send_pyobj(msg)
-        reply = sock.recv_pyobj()
+        from System.Connections.protocol import serialize_message, deserialize_reply
+        payload = serialize_message(msg)
+        sock.send_multipart(payload)
+        reply_parts = sock.recv_multipart()
+        reply = deserialize_reply(reply_parts)
         print(f"Sent fake alert for Camera {camera_id} ({city}). Reply: {reply}")
         return True
 

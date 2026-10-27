@@ -11,6 +11,8 @@ from ..config import settings
 from ..models.schemas import Alert
 from .broadcaster import get_alert_queue
 
+from System.Connections.protocol import deserialize_message, serialize_reply
+
 logger = logging.getLogger("argus.zmq_listener")
 
 class ZmqAlertListener(threading.Thread):
@@ -18,8 +20,8 @@ class ZmqAlertListener(threading.Thread):
     Background worker thread listening on the Argus Surveillance Alert port (10010).
     Replaces RunGui.py's WorkerThread:
       - Binds zmq.REP on tcp://{ZMQ_HOST}:{ZMQ_ALERT_PORT}
-      - Receives Python-pickled messages via socket.recv_pyobj()
-      - Responds immediately with socket.send_pyobj("") to release Master's REQ socket
+      - Safely receives multipart JSON/JPEG messages via deserialize_message()
+      - Responds immediately with serialize_reply({"v": 1, "status": "ok"})
       - Saves received crash_pic frame as JPEG thumbnail
       - Enqueues parsed Alert into asyncio.Queue for WebSocket broadcasting
       - Handles automatic reconnect/rebinding on errors
@@ -65,7 +67,7 @@ class ZmqAlertListener(threading.Thread):
 
             while not self._stop_event.is_set():
                 try:
-                    message = self.socket.recv_pyobj()
+                    parts = self.socket.recv_multipart()
                 except zmq.Again:
                     continue  # Timeout, check stop_event
                 except zmq.ZMQError:
@@ -73,14 +75,19 @@ class ZmqAlertListener(threading.Thread):
                         break
                     continue
 
-                # Send immediate REP reply so Argus SenderController releases
                 try:
-                    self.socket.send_pyobj("")
-                except Exception as se:
-                    logger.warning(f"Error sending REP reply: {se}")
-
-                # Process alert payload
-                self._handle_message(message)
+                    message = deserialize_message(parts)
+                    try:
+                        self.socket.send_multipart(serialize_reply({"v": 1, "status": "ok"}))
+                    except Exception as se:
+                        logger.warning(f"Error sending REP reply: {se}")
+                    self._handle_message(message)
+                except Exception as ex:
+                    logger.warning(f"Rejected invalid alert message on {bind_addr}: {ex}")
+                    try:
+                        self.socket.send_multipart(serialize_reply({"v": 1, "status": "error", "error": str(ex)}))
+                    except Exception:
+                        pass
 
         except Exception as e:
             if not self._stop_event.is_set():

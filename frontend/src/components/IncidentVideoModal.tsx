@@ -166,6 +166,16 @@ export function IncidentVideoModal({ incident, onClose }: IncidentVideoModalProp
                     Starting Frame #{incident.starting_frame_id}
                   </span>
                 </div>
+
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                  <div className="font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5 text-amber-400">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    Human Verification Required
+                  </div>
+                  <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                    Review full video footage to verify incident before dispatching emergency response.
+                  </p>
+                </div>
               </div>
             </div>
 

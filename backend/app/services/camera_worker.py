@@ -66,9 +66,10 @@ def send_feed_to_master(master_ip: str, master_port: int, msg: dict, timeout_ms:
     socket_zmq.setsockopt(zmq.SNDTIMEO, timeout_ms)
     socket_zmq.setsockopt(zmq.LINGER, 0)
     try:
+        from System.Connections.protocol import serialize_message
         socket_zmq.connect(f"tcp://{master_ip}:{master_port}")
-        socket_zmq.send_pyobj(msg)
-        socket_zmq.recv_pyobj()
+        socket_zmq.send_multipart(serialize_message(msg))
+        socket_zmq.recv_multipart()
     except Exception:
         pass
     finally:
