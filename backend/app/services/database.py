@@ -4,8 +4,9 @@ from ..config import settings
 from ..models.schemas import Incident
 
 def get_db_connection() -> sqlite3.Connection:
-    """Get read-only SQLite connection with row factory."""
-    conn = sqlite3.connect(f"file:{settings.DATABASE_PATH}?mode=ro", uri=True)
+    """Get read-only SQLite connection with row factory and busy timeout."""
+    conn = sqlite3.connect(f"file:{settings.DATABASE_PATH}?mode=ro", uri=True, timeout=5.0)
+    conn.execute("PRAGMA busy_timeout=5000;")
     conn.row_factory = sqlite3.Row
     return conn
 

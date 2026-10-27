@@ -1,105 +1,157 @@
 import os
 import sqlite3
+from contextlib import contextmanager
+from typing import Optional, List, Tuple, Dict, Any
 
 from System.Data.CONSTANTS import *
 
 
 class DatabaseConnection:
-    def __init__(self):
+    """
+    Robust SQLite database connection manager for Argus vision pipeline.
+    Uses WAL journal mode, busy timeouts, connection context managers,
+    and parameterized queries to guarantee database integrity and prevent SQL injection.
+    """
+
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path or DATABASE_PATH
         self.conn = None
         self.cursor = None
 
+    @contextmanager
+    def connection(self):
+        """Context manager providing an SQLite connection with WAL mode and busy timeout."""
+        conn = sqlite3.connect(self.db_path, timeout=5.0)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA busy_timeout=5000;")
+            yield conn
+        finally:
+            conn.close()
+
     def connect(self):
-        self.conn = sqlite3.connect(DATABASE_PATH)
+        """Legacy helper for manual connection management."""
+        self.conn = sqlite3.connect(self.db_path, timeout=5.0)
+        try:
+            self.conn.execute("PRAGMA journal_mode=WAL;")
+            self.conn.execute("PRAGMA busy_timeout=5000;")
+        except Exception:
+            pass
         self.cursor = self.conn.cursor()
+        return self.conn
 
     def close(self):
-        self.conn.close()
-    def execute(self,query):
-        self.connect()
-        self.cursor.execute(query)
-        self.conn.commit()
-        self.close()
-    def insertSavedFramesVid(self,camera_id,starting_frame_id):
-        query = "INSERT INTO SavedFrames (camera_id,frame_id) VALUES("+str(camera_id)+","+str(starting_frame_id)+")"
-        self.execute(query)
+        """Legacy helper to close active connection."""
+        if self.conn:
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+            self.conn = None
+            self.cursor = None
 
+    def execute(self, query: str, params: Tuple = ()):
+        """Execute a parameterized query safely within a connection context."""
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            conn.commit()
 
-    def insertCrashFramesVid(self,camera_id,starting_frame_id,from_no,city,district_no):
-        if from_no > 5:
-            print("helllo")
-        query = "INSERT INTO CrashFrames (camera_id,frame_id,from_no,city,district,crash_time) VALUES("+str(camera_id)+", "+str(starting_frame_id)+","+str(from_no)+",\""+city+"\",\""+district_no+"\",datetime('now'))"
-        self.execute(query)
+    def insertSavedFramesVid(self, camera_id: int, starting_frame_id: int):
+        """Insert frame tracking record with parameterized SQL."""
+        query = "INSERT INTO SavedFrames (camera_id, frame_id) VALUES (?, ?)"
+        self.execute(query, (int(camera_id), int(starting_frame_id)))
 
+    def insertCrashFramesVid(
+        self,
+        camera_id: int,
+        starting_frame_id: int,
+        from_no: int,
+        city: str,
+        district_no: str
+    ):
+        """Insert crash incident record with parameterized SQL preventing SQL injection."""
+        query = """
+            INSERT INTO CrashFrames (camera_id, frame_id, from_no, city, district, crash_time)
+            VALUES (?, ?, ?, ?, ?, datetime('now'))
+        """
+        self.execute(
+            query,
+            (int(camera_id), int(starting_frame_id), int(from_no), str(city), str(district_no))
+        )
 
-    def updateCrashFramesVid(self,camera_id,starting_frame_id,from_no):
-        if from_no > 5:
-            print("helllo")
-        query = "Update CrashFrames set from_no = "+str(from_no)+" Where camera_id = "+str(camera_id)+" and frame_id = "+str(starting_frame_id)
-        print(query)
-        self.execute(query)
+    def updateCrashFramesVid(self, camera_id: int, starting_frame_id: int, from_no: int):
+        """Update incident chunk number with parameterized SQL."""
+        query = "UPDATE CrashFrames SET from_no = ? WHERE camera_id = ? AND frame_id = ?"
+        self.execute(query, (int(from_no), int(camera_id), int(starting_frame_id)))
 
     def deleteCrashFramesVid(self):
-        query = "DELETE FROM CrashFrames Where from_no >=5"
+        """Clean up completed crash records."""
+        query = "DELETE FROM CrashFrames WHERE from_no >= 5"
         self.execute(query)
 
-    def deleteSavedFramesVid(self,camera_id,starting_frame_id):
-        query = "DELETE FROM SavedFrames Where camera_id = "+str(camera_id)+" and frame_id = "+str(starting_frame_id)
-        self.execute(query)
+    def deleteSavedFramesVid(self, camera_id: int, starting_frame_id: int):
+        """Remove saved frames record."""
+        query = "DELETE FROM SavedFrames WHERE camera_id = ? AND frame_id = ?"
+        self.execute(query, (int(camera_id), int(starting_frame_id)))
 
+    def selectCrashFrames(self) -> List[Tuple]:
+        """Fetch pending crash records where from_no < 5."""
+        query = "SELECT camera_id, frame_id, from_no, city, district, crash_time FROM CrashFrames WHERE from_no < 5"
+        with self.connection() as conn:
+            return conn.cursor().execute(query).fetchall()
 
-    def selectCrashFrames(self):
-        self.connect()
+    def selectSavedFrames(self, camera_id: int, starting_frame_id: int) -> List[Tuple]:
+        """Query future saved frames for camera feed stitching."""
+        query = """
+            SELECT frame_id FROM SavedFrames
+            WHERE camera_id = ? AND frame_id > ?
+            ORDER BY frame_id ASC
+        """
+        with self.connection() as conn:
+            return conn.cursor().execute(query, (int(camera_id), int(starting_frame_id))).fetchall()
 
-        query = "SELECT * from CrashFrames Where from_no < 5"
-        result = self.cursor.execute(query).fetchall()
-        self.conn.close()
-        return result
+    def selectCrashFramesList(self, dic: Dict[str, Any]) -> List[Tuple]:
+        """Query crashes matching dynamic criteria using parameterized WHERE clauses."""
+        conditions = []
+        params = []
 
-    def selectSavedFrames(self,camera_id,starting_frame_id):
-        self.connect()
+        if CITY in dic and dic[CITY]:
+            conditions.append("city = ?")
+            params.append(str(dic[CITY]))
 
-        query = "SELECT frame_id from SavedFrames Where camera_id = "+str(camera_id)+" and frame_id > "+str(starting_frame_id) +" ORDER BY frame_id ASC"
-        result = self.cursor.execute(query).fetchall()
-        self.conn.close()
-        return result
+        if DISTRICT in dic and dic[DISTRICT]:
+            conditions.append("district = ?")
+            params.append(str(dic[DISTRICT]))
 
-    def selectCrashFramesList(self,dic):
-        self.connect()
-        array = []
-        if CITY in dic:
-            array.append("city = \""+dic[CITY]+"\"")
-        if DISTRICT in dic:
-            array.append("district = \""+dic[DISTRICT]+"\"")
-        if START_DATE in dic:
-            array.append("crash_time BETWEEN \""+dic[START_DATE]+" "+dic[START_TIME]+"\" AND \""+dic[END_DATE]+" "+dic[END_TIME]+"\"")
-        where = ' AND '.join(array)
+        if START_DATE in dic and dic[START_DATE]:
+            start_date = str(dic[START_DATE])
+            end_date = str(dic.get(END_DATE, start_date))
+            start_time = str(dic.get(START_TIME, "00:00:00"))
+            end_time = str(dic.get(END_TIME, "23:59:59"))
 
-        query = "SELECT camera_id,frame_id,city,district,crash_time from CrashFrames Where "+where+" ORDER BY crash_time DESC "
-        result = self.cursor.execute(query).fetchall()
-        self.conn.close()
-        return result
+            start_ts = f"{start_date} {start_time}"
+            end_ts = f"{end_date} {end_time}"
+            conditions.append("crash_time BETWEEN ? AND ?")
+            params.extend([start_ts, end_ts])
 
-    def selectCrashFramesLast10(self):
-        self.connect()
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"""
+            SELECT camera_id, frame_id, city, district, crash_time
+            FROM CrashFrames
+            {where_clause}
+            ORDER BY crash_time DESC
+        """
+        with self.connection() as conn:
+            return conn.cursor().execute(query, tuple(params)).fetchall()
 
-        query = "SELECT camera_id,frame_id,city,district,crash_time from CrashFrames ORDER BY crash_time DESC LIMIT 10"
-        result = self.cursor.execute(query).fetchall()
-        self.conn.close()
-        return result
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# DatabaseConnection().insertSavedFramesVid(1,10)
+    def selectCrashFramesLast10(self) -> List[Tuple]:
+        """Query last 10 crash events in reverse chronological order."""
+        query = """
+            SELECT camera_id, frame_id, city, district, crash_time
+            FROM CrashFrames
+            ORDER BY crash_time DESC
+            LIMIT 10
+        """
+        with self.connection() as conn:
+            return conn.cursor().execute(query).fetchall()

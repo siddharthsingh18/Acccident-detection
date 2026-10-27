@@ -1,11 +1,20 @@
 import asyncio
 import os
+import sys
 import sqlite3
 import tempfile
 import cv2
 import numpy as np
 import pytest
 from pathlib import Path
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = BACKEND_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
 from fastapi.testclient import TestClient
 
 from app.config import settings

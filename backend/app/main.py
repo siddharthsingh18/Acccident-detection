@@ -23,6 +23,16 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Argus FastAPI Bridge...")
     settings.init_directories()
 
+    # Ensure SQLite WAL mode and busy timeout on active database
+    if settings.DATABASE_PATH.exists():
+        try:
+            import sqlite3
+            with sqlite3.connect(settings.DATABASE_PATH, timeout=5.0) as wal_conn:
+                wal_conn.execute("PRAGMA journal_mode=WAL;")
+                wal_conn.execute("PRAGMA busy_timeout=5000;")
+        except Exception as e:
+            logger.warning(f"Could not initialize WAL mode: {e}")
+
     loop = asyncio.get_running_loop()
 
     # Reset queue bound to current loop
