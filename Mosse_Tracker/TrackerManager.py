@@ -343,6 +343,73 @@ class Tracker:
             return True
         return False
 
+    def to_dict(self):
+        """Serialize tracker state into a dictionary for safe JSON serialization."""
+        mosse_data = None
+        if self.tracker_type == TrackerType.MOSSE and hasattr(self, 'tracker') and self.tracker:
+            mosse_data = {
+                "center": list(self.tracker.center) if getattr(self.tracker, 'center', None) else None,
+                "centers": [list(c) for c in getattr(self.tracker, 'centers', [])],
+                "dx": list(getattr(self.tracker, 'dx', [])),
+                "dy": list(getattr(self.tracker, 'dy', [])),
+                "area": float(getattr(self.tracker, 'area', 0.0)),
+            }
+        return {
+            "tracker_id": self.tracker_id,
+            "tracker_type": self.tracker_type.value,
+            "history": self.history,
+            "vehicle_width": self.vehicle_width,
+            "vehicle_height": self.vehicle_height,
+            "frame_width": self.frame_width,
+            "frame_height": self.frame_height,
+            "width": getattr(self, "width", 0),
+            "height": getattr(self, "height", 0),
+            "estimationFutureCenter": [
+                list(c) if isinstance(c, (list, tuple)) else c
+                for c in self.estimationFutureCenter
+            ],
+            "avg_speed": self.avg_speed,
+            "dx": getattr(self, "dx", []),
+            "dy": getattr(self, "dy", []),
+            "mosse": mosse_data,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """Reconstruct Tracker instance from serialized dictionary without unpickling."""
+        tracker = cls.__new__(cls)
+        tracker.history = data.get("history", [])
+        raw_type = data.get("tracker_type", 1)
+        tracker.tracker_type = TrackerType(raw_type) if isinstance(raw_type, int) else TrackerType.MOSSE
+        tracker.vehicle_width = data.get("vehicle_width", 0)
+        tracker.vehicle_height = data.get("vehicle_height", 0)
+        tracker.frame_width = data.get("frame_width", 480)
+        tracker.frame_height = data.get("frame_height", 360)
+        tracker.width = data.get("width", 0)
+        tracker.height = data.get("height", 0)
+        tracker.tracker_id = data.get("tracker_id", 0)
+        tracker.index = 0
+        tracker.avg_speed = data.get("avg_speed", [None] * 30)
+        tracker.estimationFutureCenter = [
+            tuple(c) if isinstance(c, list) else c
+            for c in data.get("estimationFutureCenter", [-1] * 30)
+        ]
+        tracker.dx = data.get("dx", [])
+        tracker.dy = data.get("dy", [])
+
+        if tracker.tracker_type == TrackerType.MOSSE:
+            class SerializedMOSSEProxy:
+                pass
+            m = SerializedMOSSEProxy()
+            m_data = data.get("mosse") or {}
+            m.center = tuple(m_data["center"]) if m_data.get("center") else (0, 0)
+            m.centers = [tuple(c) for c in m_data.get("centers", [])]
+            m.dx = m_data.get("dx", [])
+            m.dy = m_data.get("dy", [])
+            m.area = m_data.get("area", 0.0)
+            tracker.tracker = m
+        return tracker
+
 
 
 class TrackerManager:
