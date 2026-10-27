@@ -1,3 +1,4 @@
+from pathlib import Path
 import glob
 
 import cv2
@@ -5,9 +6,9 @@ import numpy as np
 
 from VIF.vif import VIF
 
+DEFAULT_DATASET_GLOB = str(Path(__file__).resolve().parent.parent / "dataset" / "BD_no_choques" / "subvideos" / "*.avi")
 
-
-def makeTrainSet(folderDir ="E:\Projects\GP_Crash_Saviour\dataset\BD_no_choques\subvideos\*.avi", outputFileDir="data_no_accidents.csv"):
+def makeTrainSet(folderDir=DEFAULT_DATASET_GLOB, outputFileDir="data_no_accidents.csv"):
     trainSet = []
     dir = folderDir
     vids = glob.glob(dir)
