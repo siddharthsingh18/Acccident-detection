@@ -3,6 +3,8 @@ import os
 def loadFile(videoName):
     stem = os.path.splitext(os.path.basename(videoName))[0]
     box_path = os.path.join('boxes', stem + '.txt')
+    if not os.path.exists(box_path):
+        box_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), stem + '.txt')
     print("Loading boxes from:", box_path)
     with open(box_path, "r") as f:
         lines = f.readlines()
