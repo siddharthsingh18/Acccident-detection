@@ -1,0 +1,170 @@
+services:
+  master:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: argus-master
+    command: python RunMaster.py
+    environment:
+      - ARGUS_BIND_HOST=0.0.0.0
+      - ARGUS_MASTER_HOST=master
+      - ARGUS_MASTER_PORT=10000
+      - ARGUS_DETECT_HOST=detect
+      - ARGUS_DETECT_PORT=10002
+      - ARGUS_GUI_HOST=bridge
+      - ARGUS_GUI_PORT=10010
+    volumes:
+      - argus-db:/app/System/Database
+      - argus-videos:/app/saved_crash_vid
+      - argus-frames:/app/saved_frames_vid
+      - argus-media:/app/backend/media
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s = socket.socket(); s.connect(('127.0.0.1', 10000)); s.close()\" || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 4s
+    restart: unless-stopped
+
+  detect:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: argus-detect
+    command: python RunDetect.py
+    environment:
+      - ARGUS_BIND_HOST=0.0.0.0
+      - ARGUS_DETECT_HOST=detect
+      - ARGUS_DETECT_PORT=10002
+      - ARGUS_TRACK_HOST=tracker
+      - ARGUS_TRACK_PORT=10004
+    depends_on:
+      master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s = socket.socket(); s.connect(('127.0.0.1', 10002)); s.close()\" || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 4s
+    restart: unless-stopped
+
+  tracker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: argus-tracker
+    command: python RunTracker.py
+    environment:
+      - ARGUS_BIND_HOST=0.0.0.0
+      - ARGUS_TRACK_HOST=tracker
+      - ARGUS_TRACK_PORT=10004
+      - ARGUS_CRASH_HOST=crash
+      - ARGUS_CRASH_PORT=10008
+    depends_on:
+      master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s = socket.socket(); s.connect(('127.0.0.1', 10004)); s.close()\" || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 4s
+    restart: unless-stopped
+
+  crash:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: argus-crash
+    command: python RunCrash.py
+    environment:
+      - ARGUS_BIND_HOST=0.0.0.0
+      - ARGUS_CRASH_HOST=crash
+      - ARGUS_CRASH_PORT=10008
+      - ARGUS_MASTER_HOST=master
+      - ARGUS_MASTER_PORT=10000
+    depends_on:
+      master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s = socket.socket(); s.connect(('127.0.0.1', 10008)); s.close()\" || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 4s
+    restart: unless-stopped
+
+  bridge:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: argus-bridge
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - ZMQ_HOST=0.0.0.0
+      - ZMQ_ALERT_PORT=10010
+      - ZMQ_MASTER_HOST=master
+      - ZMQ_MASTER_PORT=10000
+      - DATABASE_PATH=/app/System/Database/Argus_DB.db
+      - SAVED_CRASH_VID_DIR=/app/saved_crash_vid
+      - SAVED_FRAMES_VID_DIR=/app/saved_frames_vid
+    ports:
+      - "8000:8000"
+      - "10010:10010"
+    volumes:
+      - argus-db:/app/System/Database
+      - argus-videos:/app/saved_crash_vid
+      - argus-frames:/app/saved_frames_vid
+      - argus-media:/app/backend/media
+    depends_on:
+      master:
+        condition: service_healthy
+      detect:
+        condition: service_healthy
+      tracker:
+        condition: service_healthy
+      crash:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: argus-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      bridge:
+        condition: service_healthy
+    restart: unless-stopped
+
+  simulator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: argus-simulator
+    command: python scripts/fake_alert_publisher.py --port 10010 --camera-id 8820 --city Cairo --district "District 7"
+    environment:
+      - ARGUS_GUI_HOST=bridge
+      - ARGUS_GUI_PORT=10010
+    depends_on:
+      bridge:
+        condition: service_healthy
+    profiles:
+      - simulator
+
+volumes:
+  argus-db:
+  argus-videos:
+  argus-frames:
+  argus-media:
