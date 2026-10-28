@@ -12,7 +12,7 @@ stop:
 	@pkill -f "camera_worker.py" || true
 	@pkill -f "uvicorn app.main:app" || true
 	@pkill -f "vite" || true
-	@lsof -ti :10000,:10002,:10004,:10008,:10010,:8000,:5173 | xargs kill -9 2>/dev/null || true
+	@lsof -ti:10000 -ti:10002 -ti:10004 -ti:10008 -ti:10010 -ti:8000 -ti:5173 | xargs kill -9 2>/dev/null || true
 	@echo "All Argus processes stopped."
 
 check:
