@@ -1,7 +1,22 @@
 import type { paths } from '@/types/api';
 
-export type Incident = paths['/api/incidents']['get']['responses']['200']['content']['application/json']['items'][0];
-export type IncidentsResponse = paths['/api/incidents']['get']['responses']['200']['content']['application/json'];
+export type ReviewStatus = 'confirmed' | 'false_alarm' | 'unreviewed' | null;
+
+export type RawIncident = paths['/api/incidents']['get']['responses']['200']['content']['application/json']['items'][0];
+
+export interface Incident extends Omit<RawIncident, 'review_status'> {
+  review_status?: ReviewStatus;
+  review_note?: string | null;
+  reviewed_at?: string | null;
+}
+
+export interface IncidentsResponse {
+  items: Incident[];
+  count: number;
+  next_cursor?: number | null;
+  has_more: boolean;
+}
+
 export type HealthResponse = paths['/api/health']['get']['responses']['200']['content']['application/json'];
 export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['content']['application/json'];
 export type FeedCancelResponse = paths['/api/feeds/{id}/cancel']['post']['responses']['200']['content']['application/json'];
@@ -13,6 +28,7 @@ export interface IncidentFilters {
   end_time?: string;
   city?: string;
   district?: string;
+  review_status?: string;
   limit?: number;
   cursor?: number;
 }
@@ -76,6 +92,9 @@ export const api = {
     if (filters.end_time) params.append('end_time', filters.end_time);
     if (filters.city) params.append('city', filters.city);
     if (filters.district) params.append('district', filters.district);
+    if (filters.review_status && filters.review_status !== 'all') {
+      params.append('review_status', filters.review_status);
+    }
     if (filters.limit) params.append('limit', String(filters.limit));
     if (filters.cursor !== undefined && filters.cursor !== null) params.append('cursor', String(filters.cursor));
 
@@ -85,6 +104,20 @@ export const api = {
 
   async getIncident(id: string): Promise<Incident> {
     const res = await fetch(`/api/incidents/${id}`);
+    return handleResponse<Incident>(res);
+  },
+
+  async reviewIncident(
+    id: string,
+    body: { status: 'confirmed' | 'false_alarm'; note?: string }
+  ): Promise<Incident> {
+    const res = await fetch(`/api/incidents/${id}/review`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
     return handleResponse<Incident>(res);
   },
 
@@ -133,6 +166,9 @@ export const api = {
     if (filters.end_time) params.append('end_time', filters.end_time);
     if (filters.city) params.append('city', filters.city);
     if (filters.district) params.append('district', filters.district);
+    if (filters.review_status && filters.review_status !== 'all') {
+      params.append('review_status', filters.review_status);
+    }
     return `/api/incidents/export?${params.toString()}`;
   }
 };

@@ -6,19 +6,12 @@ import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
 import { useDemo } from '@/contexts/DemoContext';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
+import { ReviewBadge } from '@/components/ReviewBadge';
 
-interface DisplayIncident {
-  id: string;
-  camera_id: number;
-  starting_frame_id: number;
-  crash_time: string;
-  city?: string;
-  district?: string;
-  thumbnail_url: string;
-  video_url: string;
+type DisplayIncident = Incident & {
   isNewAlert?: boolean;
   isDemo?: boolean;
-}
+};
 
 export function LiveDashboard() {
   const [incidents, setIncidents] = useState<DisplayIncident[]>([]);
@@ -88,6 +81,7 @@ export function LiveDashboard() {
     // Convert AlertMessage to DisplayIncident and prepend
     const newIncident: DisplayIncident = {
       id: latestAlert.incident_id,
+      rowid: 0,
       camera_id: latestAlert.camera_id,
       starting_frame_id: latestAlert.starting_frame_id,
       crash_time: `${latestAlert.date} ${latestAlert.time}`,
@@ -95,6 +89,7 @@ export function LiveDashboard() {
       district: latestAlert.district,
       thumbnail_url: latestAlert.thumbnail_url,
       video_url: latestAlert.video_url,
+      review_status: null,
       isNewAlert: true,
       isDemo: false,
     };
@@ -130,6 +125,7 @@ export function LiveDashboard() {
 
     const demoIncident: DisplayIncident = {
       id: demoAlert.incident_id,
+      rowid: 0,
       camera_id: demoAlert.camera_id,
       starting_frame_id: demoAlert.starting_frame_id,
       crash_time: `${demoAlert.date} ${demoAlert.time}`,
@@ -137,6 +133,7 @@ export function LiveDashboard() {
       district: demoAlert.district,
       thumbnail_url: demoAlert.thumbnail_url,
       video_url: demoAlert.video_url,
+      review_status: null,
       isNewAlert: true,
       isDemo: true,
     };
@@ -300,21 +297,24 @@ export function LiveDashboard() {
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
 
                   {/* Highlight Ribbon / Incident Badge */}
-                  <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded font-mono text-xs font-bold bg-slate-950/80 text-cyan-400 border border-slate-700/80 backdrop-blur-sm">
-                      #{incident.id}
-                    </span>
-                    {incident.isDemo && (
-                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500 text-slate-950 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        DEMO
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded font-mono text-xs font-bold bg-slate-950/80 text-cyan-400 border border-slate-700/80 backdrop-blur-sm">
+                        #{incident.id}
                       </span>
-                    )}
-                    {isHighlighted && (
-                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500 text-slate-950 animate-pulse">
-                        NEW ALERT
-                      </span>
-                    )}
+                      {incident.isDemo && (
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500 text-slate-950 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          DEMO
+                        </span>
+                      )}
+                      {isHighlighted && (
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500 text-slate-950 animate-pulse">
+                          NEW ALERT
+                        </span>
+                      )}
+                    </div>
+                    <ReviewBadge status={incident.review_status} size="sm" />
                   </div>
 
                   {/* Play Indicator Overlay */}
@@ -355,6 +355,16 @@ export function LiveDashboard() {
       <IncidentVideoModal
         incident={selectedIncident}
         onClose={() => setSelectedIncident(null)}
+        onReviewUpdated={(updated) => {
+          setIncidents((prev) =>
+            prev.map((inc) =>
+              inc.id === updated.id
+                ? { ...inc, review_status: updated.review_status }
+                : inc
+            )
+          );
+          setSelectedIncident(updated);
+        }}
       />
     </div>
   );

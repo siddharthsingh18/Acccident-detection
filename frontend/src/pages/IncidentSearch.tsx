@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { api, type Incident, type IncidentFilters } from '@/lib/api';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
+import { ReviewBadge } from '@/components/ReviewBadge';
 
 const EGYPTIAN_CITIES = [
   'All Cities',
@@ -57,6 +58,7 @@ const searchFilterSchema = z
     end_time: z.string().optional(),
     city: z.string().optional(),
     district: z.string().optional(),
+    review_status: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -104,6 +106,7 @@ export function IncidentSearch() {
       end_time: searchParams.get('end_time') || '',
       city: searchParams.get('city') || '',
       district: searchParams.get('district') || '',
+      review_status: searchParams.get('review_status') || 'all',
     },
   });
 
@@ -132,6 +135,7 @@ export function IncidentSearch() {
       end_time: searchParams.get('end_time') || undefined,
       city: searchParams.get('city') || undefined,
       district: searchParams.get('district') || undefined,
+      review_status: searchParams.get('review_status') || undefined,
       limit: 20,
     };
     fetchResults(filters);
@@ -145,6 +149,7 @@ export function IncidentSearch() {
     if (data.end_time) params.set('end_time', data.end_time);
     if (data.city && data.city !== 'All Cities') params.set('city', data.city);
     if (data.district) params.set('district', data.district);
+    if (data.review_status && data.review_status !== 'all') params.set('review_status', data.review_status);
     setSearchParams(params);
   };
 
@@ -156,6 +161,7 @@ export function IncidentSearch() {
       end_time: '',
       city: '',
       district: '',
+      review_status: 'all',
     });
     setSearchParams(new URLSearchParams());
     try {
@@ -333,6 +339,23 @@ export function IncidentSearch() {
                 className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition"
               />
             </div>
+
+            {/* Review Status */}
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-cyan-400" />
+                Review Status
+              </label>
+              <select
+                {...register('review_status')}
+                className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-cyan-500 transition"
+              >
+                <option value="all">All Statuses</option>
+                <option value="unreviewed">Unreviewed</option>
+                <option value="confirmed">Confirmed Crash</option>
+                <option value="false_alarm">False Alarm</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -423,6 +446,7 @@ export function IncidentSearch() {
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
+                  <th className="px-4 py-3.5">Review Status</th>
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -479,6 +503,11 @@ export function IncidentSearch() {
                       </div>
                     </td>
 
+                    {/* Review Status */}
+                    <td className="px-4 py-3">
+                      <ReviewBadge status={item.review_status} size="sm" />
+                    </td>
+
                     {/* Actions */}
                     <td className="px-4 py-3 text-right">
                       <button
@@ -514,6 +543,7 @@ export function IncidentSearch() {
                     end_time: searchParams.get('end_time') || undefined,
                     city: searchParams.get('city') || undefined,
                     district: searchParams.get('district') || undefined,
+                    review_status: searchParams.get('review_status') || undefined,
                     limit: 20,
                     cursor: nextCursor,
                   };
@@ -533,6 +563,12 @@ export function IncidentSearch() {
       <IncidentVideoModal
         incident={selectedIncident}
         onClose={() => setSelectedIncident(null)}
+        onReviewUpdated={(updated) => {
+          setIncidents((prev) =>
+            prev.map((inc) => (inc.id === updated.id ? updated : inc))
+          );
+          setSelectedIncident(updated);
+        }}
       />
     </div>
   );
