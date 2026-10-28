@@ -1,7 +1,16 @@
 import sys
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+try:
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtCore import *
+except ImportError:
+    print(
+        "Error: PyQt5 is not installed.\n"
+        "Argus runs headless by default. To use the legacy desktop GUI, install the GUI extras:\n"
+        "    pip install -r requirements-gui.txt  (or pip install .[gui])",
+        file=sys.stderr
+    )
+    sys.exit(1)
 import cv2
 import time
 import zmq

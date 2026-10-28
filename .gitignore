@@ -43,3 +43,8 @@ saved_frames_vid/
 *.avi
 *.mkv
 
+# Packaging and build artifacts
+*.egg-info/
+build/
+dist/
+

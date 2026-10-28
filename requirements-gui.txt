@@ -1,0 +1,4 @@
+# Optional PyQt5 Desktop GUI dependencies
+-r requirements.txt
+PyQt5>=5.15.10
+PyQt5-sip>=12.13.0
