@@ -30,7 +30,8 @@ class FeedItem:
         self.district = district
         self.video_path = video_path
         self.thumbnail_path = thumbnail_path
-        self.status = "queued"  # queued, processing, done, failed, cancelled
+        self.status = "queued"  # queued, processing, done, failed, cancelled, low-quality detection mode
+        self.detection_mode = "standard"
         self.frames_sent = 0
         self.total_frames = 0
         self.percent = 0.0
@@ -46,6 +47,7 @@ class FeedItem:
             city=self.city,
             district=self.district,
             status=self.status,
+            detection_mode=self.detection_mode,
             progress=FeedProgress(
                 frames_sent=self.frames_sent,
                 total_frames=self.total_frames,
@@ -249,6 +251,11 @@ class FeedManager:
                     feed_item.status = status_val
                     if status_val == "done":
                         feed_item.percent = 100.0
+            elif line.startswith("DETECTION_MODE:"):
+                mode = line.split(":", 1)[1].strip()
+                feed_item.detection_mode = mode
+                if mode == "low-quality detection mode":
+                    feed_item.status = "low-quality detection mode"
             elif line.startswith("ERROR:"):
                 feed_item.error = line[6:].strip()
                 feed_item.status = "failed"

@@ -38,7 +38,7 @@ htmlcov/
 *.onnx
 *.pt
 *.pth
-models/
+/models/
 
 # Local temporary media & generated runtime video
 VIF/video2.avi

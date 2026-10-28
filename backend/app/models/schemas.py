@@ -59,7 +59,8 @@ class FeedResponse(BaseModel):
     camera_id: int
     city: str
     district: str
-    status: str = Field(..., description="queued, processing, done, failed, cancelled")
+    status: str = Field(..., description="queued, processing, done, failed, cancelled, low-quality detection mode")
+    detection_mode: Optional[str] = Field("standard", description="standard, yolo, or low-quality detection mode")
     progress: FeedProgress
     thumbnail_url: str
     error: Optional[str] = None

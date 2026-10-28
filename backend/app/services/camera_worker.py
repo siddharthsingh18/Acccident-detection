@@ -30,6 +30,7 @@ from System.Data.CONSTANTS import (
     BOXES, CITY, DISTRICT
 )
 from boxes.yoloFiles import loadFile
+from System.Functions.Detector import get_detector
 
 running = True
 
@@ -141,6 +142,12 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
 
     print(f"STATUS:PROCESSING:0:{total_frames}", flush=True)
 
+    detector = get_detector()
+    if not has_boxes and (detector.name == "legacy" or detector.is_low_quality):
+        print("DETECTION_MODE:low-quality detection mode", flush=True)
+    else:
+        print(f"DETECTION_MODE:{detector.name}", flush=True)
+
     t = time.time()
     while running:
         ret, frame = cap.read()
@@ -156,10 +163,17 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
             frames = frames[15:]
 
             box_index = no_of_frames - 30
-            if has_boxes and 0 <= box_index < len(file_boxes):
-                boxes = file_boxes[box_index]
-            else:
-                boxes = detect_motion_boxes(new_frames_list, frame_width, frame_height)
+            ref_idx = min(5, len(new_frames_list) - 1)
+            boxes = detector.detect(
+                new_frames_list[0],
+                ref_frame=new_frames_list[ref_idx],
+                video_name=video_file.stem,
+                camera_id=camera_id,
+                frame_index=box_index,
+                boxes_file=file_boxes if has_boxes else None,
+                frame_width=frame_width,
+                frame_height=frame_height
+            )
 
             msg = {
                 FUNCTION: FEED,

@@ -765,6 +765,16 @@ export function CameraFeeder() {
                   </div>
                 </div>
               )}
+              {/* Low-Quality Detection Mode Warning */}
+              {(activeFeed?.status === 'low-quality detection mode' || (activeFeed as any)?.detection_mode === 'low-quality detection mode') && (
+                <div className="mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                  <div>
+                    <span className="font-semibold uppercase tracking-wide">Low-Quality Detection Mode:</span>{' '}
+                    <span className="text-[11px] text-amber-200/90">Motion fallback active. Shadows & noise may be flagged as vehicles.</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Live Detection Outcome Banner */}
