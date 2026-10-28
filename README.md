@@ -141,12 +141,15 @@ brew install python@3.11 ffmpeg          # macOS
 python3.11 -m venv .venv
 source .venv/bin/activate
 
-# 3. Install dependencies
+# 3. Install consolidated core dependencies (headless-ready, Python 3.11 compatible)
 pip install -r requirements.txt
-pip install -r backend/requirements.txt
+# Or install in editable mode: pip install -e .
+
+# (Optional) If you need the legacy desktop PyQt5 GUI tools:
+# pip install -r requirements-gui.txt  (or pip install -e ".[gui]")
 
 # 4. Install frontend dependencies
-cd frontend && npm install --legacy-peer-deps && cd ..
+cd frontend && npm install && cd ..
 ```
 
 ---
@@ -188,6 +191,33 @@ cd frontend && npm run dev
 
 ### Option C: Client-Side Demo Mode
 Open the React app at [http://localhost:5173](http://localhost:5173) and click the **DEMO MODE** badge in the navigation bar. Demo Mode replays simulated alerts at regular intervals with visual and siren audio indicators, clearly tagged with `DEMO` badges, without modifying the underlying database.
+
+### Option D: Running with Docker Compose (Containerized Multi-Node)
+Run the entire production stack (Master, Detect, Tracker, Crash, FastAPI Bridge, and React Frontend) in containerized microservices with persistent shared volumes and automated health checks:
+
+```bash
+# 1. Build and launch all services in detached mode
+docker compose up --build -d
+
+# 2. View live service logs
+docker compose logs -f
+
+# 3. Trigger a simulated collision alert into the containerized stack
+docker compose run --rm simulator
+
+# Alternatively, launch the stack with the continuous simulator active:
+docker compose --profile simulator up
+
+# 4. Stop the containerized stack
+docker compose down
+```
+
+Once running:
+* **React Web Frontend**: [http://localhost:5173](http://localhost:5173)
+* **FastAPI Bridge Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+* **WebSocket Alerts Stream**: `ws://localhost:8000/ws/alerts`
+
+All video clips, thumbnails, and SQLite database records are persisted across container restarts in Docker named volumes (`argus-db`, `argus-videos`, `argus-frames`, `argus-media`).
 
 ---
 

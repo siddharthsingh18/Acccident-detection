@@ -201,7 +201,7 @@ class FeedManager:
             "--camera-id", str(camera_id),
             "--city", city,
             "--district", district,
-            "--master-ip", settings.ZMQ_HOST,
+            "--master-ip", settings.ZMQ_MASTER_HOST,
             "--master-port", str(settings.ZMQ_MASTER_PORT)
         ]
 

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import List, Union
 from pydantic import Field, field_validator
@@ -21,6 +22,7 @@ class Settings(BaseSettings):
 
     # ZeroMQ nodes configuration
     ZMQ_HOST: str = "127.0.0.1"
+    ZMQ_MASTER_HOST: str = Field(default_factory=lambda: os.getenv("ARGUS_MASTER_HOST", "127.0.0.1"))
     ZMQ_MASTER_PORT: int = 10000
     ZMQ_DETECT_PORT: int = 10002
     ZMQ_TRACK_PORT: int = 10004

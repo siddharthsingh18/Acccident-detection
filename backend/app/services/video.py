@@ -21,7 +21,7 @@ def send_req_video_to_master(camera_id: int, starting_frame_id: int, timeout_ms:
     socket = context.socket(zmq.REQ)
     socket.RCVTIMEO = timeout_ms
     socket.SNDTIMEO = timeout_ms
-    link = f"tcp://{settings.ZMQ_HOST}:{settings.ZMQ_MASTER_PORT}"
+    link = f"tcp://{settings.ZMQ_MASTER_HOST}:{settings.ZMQ_MASTER_PORT}"
     try:
         from System.Connections.protocol import serialize_message
         socket.connect(link)
