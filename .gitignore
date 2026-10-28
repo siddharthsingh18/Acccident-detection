@@ -17,6 +17,7 @@ node_modules/
 *.db-journal
 *.sqlite
 *.sqlite3
+*.bak
 
 # IDE and OS files
 .idea/

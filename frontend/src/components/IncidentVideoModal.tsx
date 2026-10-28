@@ -34,13 +34,18 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
   const [videoKey, setVideoKey] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  const handleClose = useCallback(() => {
+    setCurrentIncident(null);
+    onClose();
+  }, [onClose]);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     },
-    [onClose]
+    [handleClose]
   );
 
   useEffect(() => {
@@ -57,10 +62,12 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
       setHasError(false);
       setErrorMessage('');
       setVideoKey((prev) => prev + 1);
+    } else {
+      setCurrentIncident(null);
     }
   }, [incident]);
 
-  if (!currentIncident) return null;
+  if (!incident || !currentIncident) return null;
 
   const handleRetry = () => {
     setIsLoading(true);
@@ -91,11 +98,11 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in cursor-pointer"
+      onClick={handleClose}
     >
       <div
-        className="relative w-full max-w-4xl overflow-hidden rounded-xl bg-slate-900 border border-slate-700 shadow-2xl flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-4xl overflow-hidden rounded-xl bg-slate-900 border border-slate-700 shadow-2xl flex flex-col max-h-[92vh] cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -112,8 +119,9 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
             <ReviewBadge status={currentIncident.review_status} size="sm" />
           </div>
           <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />

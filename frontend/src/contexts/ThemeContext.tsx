@@ -5,14 +5,38 @@ type Theme = 'dark' | 'light';
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Synchronously apply theme class before hydration to prevent flickering
+try {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('argus-theme');
+    const root = document.documentElement;
+    if (saved === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    } else {
+      root.classList.add('dark');
+      root.classList.remove('light');
+      root.style.colorScheme = 'dark';
+    }
+  }
+} catch {
+  // Ignore localStorage restrictions
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('argus-theme');
-    return (saved as Theme) || 'dark';
+    try {
+      const saved = localStorage.getItem('argus-theme');
+      return (saved as Theme) || 'dark';
+    } catch {
+      return 'dark';
+    }
   });
 
   useEffect(() => {
@@ -20,11 +44,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (theme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      root.style.colorScheme = 'dark';
     } else {
       root.classList.add('light');
       root.classList.remove('dark');
+      root.style.colorScheme = 'light';
     }
-    localStorage.setItem('argus-theme', theme);
+    try {
+      localStorage.setItem('argus-theme', theme);
+    } catch {
+      // Ignore
+    }
   }, [theme]);
 
   const toggleTheme = () => {
@@ -32,7 +62,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

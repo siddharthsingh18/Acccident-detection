@@ -32,7 +32,7 @@ function AppLayout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 selection:bg-cyan-500/30 selection:text-cyan-600 dark:selection:text-cyan-300">
       <Navbar />
 
       {/* Demo Mode Banner */}
