@@ -1,36 +1,41 @@
-import cv2
-from PIL import Image
-from Car_Detection.detect import detect_image
-from Car_Detection.darknet import Darknet
+import logging
 from pathlib import Path
+from typing import List, Optional
+import cv2
 import numpy as np
-#from Car_Detection_TF.yolo import YOLO
-from Mosse_Tracker.TrackerManager import Tracker
 
+from System.Functions.Detector import get_detector
+
+logger = logging.getLogger("argus.detection")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-YOLO_CFG_PATH = PROJECT_ROOT / "Car_Detection" / "config" / "yolov3.cfg"
-YOLO_WEIGHTS_PATH = PROJECT_ROOT / "Car_Detection" / "config" / "yolov3.weights"
 
 
 class Detection:
+    """
+    Argus Vehicle Detection Stage.
+    Delegates to configured detector (legacy box files, modern YOLO, or motion fallback).
+    """
+
     def __init__(self, yolo=None):
         self.yolo = yolo
+        self.detector = get_detector()
 
-        # Uncomment these lines if using Darknet YOLO:
-        # self.model = Darknet(str(YOLO_CFG_PATH), CUDA=False)
-        # self.model.load_weight(str(YOLO_WEIGHTS_PATH))
+    def detect(self, frames, frame_width, frame_height, read_file, boxes_file=None, read_file_self=False, tf=True):
+        if not frames or len(frames) == 0:
+            return []
 
+        # 1. If pre-annotated dataset box files are available and legacy read is enabled
+        if read_file_self and boxes_file is not None:
+            return boxes_file
 
-    def detect(self,frames,frame_width,frame_height,read_file,boxes_file = None, read_file_self=False, tf=True):
-        boxes = []
-        # detect vehicles
-        if read_file_self:
-            # From files
-            boxes = boxes_file
-        elif tf:
-            img = Image.fromarray(frames[0])
-            _, boxes = self.yolo.detect_image(img)
-        else:
-            boxes = detect_image(frames[0], self.model)
+        # 2. Use configured modular detector
+        first_frame = frames[0]
+        ref_frame = frames[min(5, len(frames) - 1)] if len(frames) > 1 else None
 
-        return boxes
+        return self.detector.detect(
+            first_frame,
+            ref_frame=ref_frame,
+            boxes_file=boxes_file,
+            frame_width=frame_width,
+            frame_height=frame_height
+        )
