@@ -35,6 +35,10 @@ htmlcov/
 # Weights & ML artifacts
 *.weights
 *.h5
+*.onnx
+*.pt
+*.pth
+models/
 
 # Local temporary media & generated runtime video
 VIF/video2.avi
