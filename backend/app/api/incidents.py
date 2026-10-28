@@ -4,11 +4,12 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse, FileResponse
 
-from ..models.schemas import Incident, IncidentsListResponse
+from ..models.schemas import Incident, IncidentsListResponse, ReviewIncidentRequest
 from ..services.database import (
     query_incidents,
     query_recent_incidents,
     query_incident_by_id,
+    update_incident_review,
 )
 from ..services.media import sanitize_id
 from ..services.video import (
@@ -26,6 +27,7 @@ async def list_incidents(
     end_time: Optional[str] = Query(None, description="End time (HH:MM or HH:MM:SS)"),
     city: Optional[str] = Query(None, description="Filter by city name"),
     district: Optional[str] = Query(None, description="Filter by district designation"),
+    review_status: Optional[str] = Query(None, description="Filter by review status (unreviewed, confirmed, false_alarm)"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     cursor: Optional[int] = Query(None, description="Pagination cursor (rowid < cursor)"),
 ):
@@ -40,6 +42,7 @@ async def list_incidents(
         end_time=end_time,
         city=city,
         district=district,
+        review_status=review_status,
         limit=limit,
         cursor=cursor,
     )
@@ -67,6 +70,7 @@ async def export_incidents_csv(
     end_time: Optional[str] = Query(None, description="End time (HH:MM or HH:MM:SS)"),
     city: Optional[str] = Query(None, description="Filter by city name"),
     district: Optional[str] = Query(None, description="Filter by district designation"),
+    review_status: Optional[str] = Query(None, description="Filter by review status (unreviewed, confirmed, false_alarm)"),
 ):
     """Generate and download a CSV file of incidents matching the current search filters."""
     import csv
@@ -79,6 +83,7 @@ async def export_incidents_csv(
         end_time=end_time,
         city=city,
         district=district,
+        review_status=review_status,
         limit=10000,
         cursor=None,
     )
@@ -94,7 +99,10 @@ async def export_incidents_csv(
         "District",
         "Status",
         "Thumbnail URL",
-        "Video URL"
+        "Video URL",
+        "Review Status",
+        "Review Note",
+        "Reviewed At"
     ])
     for item in items:
         writer.writerow([
@@ -106,7 +114,10 @@ async def export_incidents_csv(
             item.district or "Unknown",
             "Complete" if item.from_no == 5 else f"Chunk {item.from_no}",
             item.thumbnail_url,
-            item.video_url
+            item.video_url,
+            item.review_status or "unreviewed",
+            item.review_note or "",
+            item.reviewed_at or ""
         ])
 
     return Response(
@@ -137,6 +148,32 @@ async def get_incident(id: str):
             detail={"code": "NOT_FOUND", "message": f"Incident '{safe_id}' not found"},
         )
     return incident
+
+@router.patch("/{id}/review", response_model=Incident, summary="Review an incident as confirmed or false_alarm")
+async def review_incident(id: str, payload: ReviewIncidentRequest):
+    """
+    Operator review endpoint to confirm a crash or flag a false alarm.
+    Updates review_status, review_note, and reviewed_at.
+    """
+    try:
+        safe_id = sanitize_id(id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "INVALID_ID", "message": str(e)},
+        )
+
+    updated = update_incident_review(
+        identifier=safe_id,
+        status=payload.status,
+        note=payload.note,
+    )
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"Incident '{safe_id}' not found"},
+        )
+    return updated
 
 @router.api_route("/{id}/video", methods=["GET", "HEAD"], summary="Stream stitched incident video clip with HTTP Range seeking")
 async def stream_incident_video(id: str, request: Request):

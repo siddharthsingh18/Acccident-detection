@@ -23,15 +23,14 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Argus FastAPI Bridge...")
     settings.init_directories()
 
-    # Ensure SQLite WAL mode and busy timeout on active database
+    # Ensure SQLite migrations, WAL mode and busy timeout on active database
     if settings.DATABASE_PATH.exists():
         try:
-            import sqlite3
-            with sqlite3.connect(settings.DATABASE_PATH, timeout=5.0) as wal_conn:
-                wal_conn.execute("PRAGMA journal_mode=WAL;")
-                wal_conn.execute("PRAGMA busy_timeout=5000;")
+            from .services.database import apply_migrations
+            apply_migrations()
+            logger.info("Database schema migrations verified.")
         except Exception as e:
-            logger.warning(f"Could not initialize WAL mode: {e}")
+            logger.warning(f"Could not initialize database migrations: {e}")
 
     loop = asyncio.get_running_loop()
 
@@ -99,14 +98,16 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         }
     return JSONResponse(status_code=exc.status_code, content=content)
 
+from fastapi.encoders import jsonable_encoder
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "code": "VALIDATION_ERROR",
-            "message": "Invalid request query or path parameters",
-            "details": exc.errors(),
+            "message": "Invalid request query, path, or body parameters",
+            "details": jsonable_encoder(exc.errors()),
         },
     )
 

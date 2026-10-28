@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 class ErrorResponse(BaseModel):
     code: str = Field(..., description="Machine-readable error code")
@@ -42,6 +42,20 @@ class Incident(BaseModel):
     from_no: Optional[int] = Field(None, description="Stitching chunk progress (5 = complete)")
     thumbnail_url: str
     video_url: str
+    review_status: Optional[str] = Field(None, description="NULL, 'confirmed', or 'false_alarm'")
+    review_note: Optional[str] = Field(None, description="Operator review comments (max 500 chars)")
+    reviewed_at: Optional[str] = Field(None, description="ISO timestamp when review occurred")
+
+class ReviewIncidentRequest(BaseModel):
+    status: str = Field(..., description="'confirmed' or 'false_alarm'")
+    note: Optional[str] = Field(None, max_length=500, description="Operator note (max 500 characters)")
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        if v not in ("confirmed", "false_alarm"):
+            raise ValueError("status must be 'confirmed' or 'false_alarm'")
+        return v
 
 class IncidentsListResponse(BaseModel):
     items: List[Incident]
