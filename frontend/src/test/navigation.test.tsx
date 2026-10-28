@@ -153,17 +153,29 @@ describe('Sidebar Navigation Component', () => {
   });
 });
 
-describe('New Phase Coming Soon Route Rendering', () => {
-  const routesToTest = [
-    { path: '/review', component: <ReviewQueue />, title: 'Review Queue', phase: 'Phase 2' },
+describe('Navigation Route Rendering', () => {
+  it('renders ReviewQueue at route /review', async () => {
+    render(
+      <MemoryRouter initialEntries={['/review']}>
+        <Routes>
+          <Route path="/review" element={<ReviewQueue />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('heading', { level: 1, name: /Review Queue/i })).toBeInTheDocument();
+    expect(screen.getByText(/Verify incident footage before initiating emergency response dispatch/i)).toBeInTheDocument();
+  });
+
+  const placeholdersToTest = [
+    { path: '/settings', component: <Settings />, title: 'System Settings', phase: 'Phase 3' },
+    { path: '/alerts', component: <Alerts />, title: 'Alerts & Notifications', phase: 'Phase 4' },
+    { path: '/cameras', component: <Cameras />, title: 'Cameras', phase: 'Phase 5' },
     { path: '/analytics', component: <Analytics />, title: 'Surveillance Analytics', phase: 'Phase 6' },
     { path: '/reports', component: <Reports />, title: 'Incident Reports', phase: 'Phase 7' },
-    { path: '/cameras', component: <Cameras />, title: 'Cameras', phase: 'Phase 5' },
-    { path: '/alerts', component: <Alerts />, title: 'Alerts & Notifications', phase: 'Phase 4' },
-    { path: '/settings', component: <Settings />, title: 'System Settings', phase: 'Phase 3' },
   ];
 
-  for (const { path, component, title, phase } of routesToTest) {
+  for (const { path, component, title, phase } of placeholdersToTest) {
     it(`renders ${title} placeholder at route ${path}`, () => {
       render(
         <MemoryRouter initialEntries={[path]}>
