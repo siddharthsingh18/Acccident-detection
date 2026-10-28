@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+from pathlib import Path
 import sqlite3
 from typing import Optional, List, Tuple, Dict, Any
 from ..config import settings
@@ -10,11 +12,54 @@ def get_db_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     return conn
 
+def get_write_connection(timeout: float = 5.0) -> sqlite3.Connection:
+    """Get read-write SQLite connection with row factory, busy timeout, and WAL mode."""
+    conn = sqlite3.connect(settings.DATABASE_PATH, timeout=timeout)
+    conn.execute("PRAGMA busy_timeout=5000;")
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def apply_migrations(db_path: Optional[str] = None) -> None:
+    """
+    Idempotently apply database schema migrations.
+    Safely checks table/column presence before executing ALTER TABLE or CREATE.
+    Never drops or deletes existing data.
+    """
+    target_path = Path(db_path) if db_path else settings.DATABASE_PATH
+    if not target_path.exists():
+        return
+
+    conn = sqlite3.connect(target_path, timeout=10.0)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+
+        cursor = conn.cursor()
+        existing_cols = {row[1] for row in cursor.execute("PRAGMA table_info(CrashFrames);").fetchall()}
+
+        if "review_status" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN review_status TEXT DEFAULT NULL;")
+        if "review_note" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN review_note TEXT DEFAULT NULL;")
+        if "reviewed_at" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN reviewed_at TEXT DEFAULT NULL;")
+
+        # Indexes & View
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_review_status ON CrashFrames(review_status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_time ON CrashFrames(crash_time);")
+        cursor.execute("CREATE VIEW IF NOT EXISTS incidents AS SELECT rowid, * FROM CrashFrames;")
+
+        conn.commit()
+    finally:
+        conn.close()
+
 def row_to_incident(row: sqlite3.Row) -> Incident:
     """Convert an SQLite Row from CrashFrames to Incident model."""
     camera_id = int(row["camera_id"])
     frame_id = int(row["frame_id"])
     canonical_id = f"{camera_id}_{frame_id}"
+    keys = row.keys()
     return Incident(
         id=canonical_id,
         rowid=int(row["rowid"]),
@@ -26,6 +71,9 @@ def row_to_incident(row: sqlite3.Row) -> Incident:
         from_no=int(row["from_no"]) if row["from_no"] is not None else None,
         thumbnail_url=f"/media/thumbnails/{canonical_id}.jpg",
         video_url=f"/api/incidents/{canonical_id}/video",
+        review_status=row["review_status"] if "review_status" in keys else None,
+        review_note=row["review_note"] if "review_note" in keys else None,
+        reviewed_at=row["reviewed_at"] if "reviewed_at" in keys else None,
     )
 
 def query_recent_incidents(limit: int = 10) -> List[Incident]:
@@ -34,7 +82,8 @@ def query_recent_incidents(limit: int = 10) -> List[Incident]:
     try:
         cursor = conn.cursor()
         query = """
-            SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time
+            SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
+                   review_status, review_note, reviewed_at
             FROM CrashFrames
             ORDER BY crash_time DESC, rowid DESC
             LIMIT ?
@@ -51,11 +100,12 @@ def query_incidents(
     end_time: Optional[str] = None,
     city: Optional[str] = None,
     district: Optional[str] = None,
+    review_status: Optional[str] = None,
     limit: int = 20,
     cursor: Optional[int] = None,
 ) -> Tuple[List[Incident], Optional[int], bool]:
     """
-    Search incidents with date, time, city, district filters and cursor pagination.
+    Search incidents with date, time, city, district, review_status filters and cursor pagination.
     Cursor pagination uses `rowid < cursor` on reverse chronological order.
     """
     conditions: List[str] = []
@@ -75,6 +125,15 @@ def query_incidents(
     if district and district.strip():
         conditions.append("district LIKE ?")
         params.append(f"%{district.strip()}%")
+
+    # Review status filter: 'unreviewed' | 'confirmed' | 'false_alarm'
+    if review_status and review_status.strip():
+        r_stat = review_status.strip().lower()
+        if r_stat == "unreviewed":
+            conditions.append("(review_status IS NULL OR review_status = '')")
+        elif r_stat in ("confirmed", "false_alarm"):
+            conditions.append("review_status = ?")
+            params.append(r_stat)
 
     # Format date/time filters
     # Convert DD/MM/YYYY to YYYY-MM-DD if needed
@@ -118,7 +177,8 @@ def query_incidents(
 
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     query = f"""
-        SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time
+        SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
+               review_status, review_note, reviewed_at
         FROM CrashFrames
         {where_clause}
         ORDER BY crash_time DESC, rowid DESC
@@ -142,15 +202,19 @@ def query_incident_by_id(identifier: str) -> Optional[Incident]:
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        select_cols = """
+            SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
+                   review_status, review_note, reviewed_at
+            FROM CrashFrames
+        """
         # Case 1: Composite key e.g. 1528_76
         if "_" in identifier:
             parts = identifier.split("_", 1)
             if parts[0].isdigit() and parts[1].isdigit():
                 cam_id = int(parts[0])
                 frame_id = int(parts[1])
-                row = cursor.execute("""
-                    SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time
-                    FROM CrashFrames
+                row = cursor.execute(f"""
+                    {select_cols}
                     WHERE camera_id = ? AND frame_id = ?
                     ORDER BY rowid DESC
                     LIMIT 1
@@ -161,9 +225,8 @@ def query_incident_by_id(identifier: str) -> Optional[Incident]:
         # Case 2: Integer rowid or camera_id
         if identifier.isdigit():
             row_id_val = int(identifier)
-            row = cursor.execute("""
-                SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time
-                FROM CrashFrames
+            row = cursor.execute(f"""
+                {select_cols}
                 WHERE rowid = ?
                 LIMIT 1
             """, (row_id_val,)).fetchone()
@@ -171,9 +234,8 @@ def query_incident_by_id(identifier: str) -> Optional[Incident]:
                 return row_to_incident(row)
 
             # Fallback check if it was just camera_id
-            row = cursor.execute("""
-                SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time
-                FROM CrashFrames
+            row = cursor.execute(f"""
+                {select_cols}
                 WHERE camera_id = ?
                 ORDER BY crash_time DESC, rowid DESC
                 LIMIT 1
@@ -182,5 +244,76 @@ def query_incident_by_id(identifier: str) -> Optional[Incident]:
                 return row_to_incident(row)
 
         return None
+    finally:
+        conn.close()
+
+def update_incident_review(
+    identifier: str,
+    status: str,
+    note: Optional[str] = None,
+    reviewed_at: Optional[str] = None
+) -> Optional[Incident]:
+    """
+    Update human verification status and review note for an incident.
+    Returns the updated Incident or None if not found.
+    """
+    if reviewed_at is None:
+        reviewed_at = datetime.now(timezone.utc).isoformat()
+
+    conn = get_write_connection()
+    try:
+        cursor = conn.cursor()
+        rowid_to_update = None
+
+        if "_" in identifier:
+            parts = identifier.split("_", 1)
+            if parts[0].isdigit() and parts[1].isdigit():
+                cam_id = int(parts[0])
+                frame_id = int(parts[1])
+                row = cursor.execute(
+                    "SELECT rowid FROM CrashFrames WHERE camera_id = ? AND frame_id = ? ORDER BY rowid DESC LIMIT 1",
+                    (cam_id, frame_id)
+                ).fetchone()
+                if row:
+                    rowid_to_update = int(row["rowid"])
+
+        if rowid_to_update is None and identifier.isdigit():
+            row_id_val = int(identifier)
+            row = cursor.execute("SELECT rowid FROM CrashFrames WHERE rowid = ? LIMIT 1", (row_id_val,)).fetchone()
+            if row:
+                rowid_to_update = int(row["rowid"])
+            else:
+                row = cursor.execute(
+                    "SELECT rowid FROM CrashFrames WHERE camera_id = ? ORDER BY crash_time DESC, rowid DESC LIMIT 1",
+                    (row_id_val,)
+                ).fetchone()
+                if row:
+                    rowid_to_update = int(row["rowid"])
+
+        if rowid_to_update is None:
+            return None
+
+        cursor.execute(
+            """
+            UPDATE CrashFrames
+            SET review_status = ?, review_note = ?, reviewed_at = ?
+            WHERE rowid = ?
+            """,
+            (status, note, reviewed_at, rowid_to_update)
+        )
+        conn.commit()
+
+        # Fetch and return updated incident
+        updated_row = cursor.execute(
+            """
+            SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
+                   review_status, review_note, reviewed_at
+            FROM CrashFrames
+            WHERE rowid = ?
+            """,
+            (rowid_to_update,)
+        ).fetchone()
+
+        return row_to_incident(updated_row) if updated_row else None
     finally:
         conn.close()
