@@ -281,9 +281,10 @@ export function CameraFeeder() {
             // Determine outcome: check database for cameraId incident and sample preset metadata
             let detectedIncident: Incident | null = null;
             try {
-              detectedIncident = await api.getIncident(String(cameraId));
-            } catch {
-              // Not in DB or 404
+              const res = await api.getIncidents({ camera_id: cameraId, limit: 1 });
+              detectedIncident = res.items[0] || null;
+            } catch (err) {
+              console.debug('No recent incident found for camera:', err);
             }
 
             if (detectedIncident || (selectedSample && selectedSample.has_accident)) {

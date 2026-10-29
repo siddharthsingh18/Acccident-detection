@@ -22,6 +22,7 @@ export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['cont
 export type FeedCancelResponse = paths['/api/feeds/{id}/cancel']['post']['responses']['200']['content']['application/json'];
 
 export interface IncidentFilters {
+  camera_id?: number;
   start_date?: string;
   end_date?: string;
   start_time?: string;
@@ -86,6 +87,9 @@ export const api = {
 
   async getIncidents(filters: IncidentFilters = {}): Promise<IncidentsResponse> {
     const params = new URLSearchParams();
+    if (filters.camera_id !== undefined && filters.camera_id !== null) {
+      params.append('camera_id', String(filters.camera_id));
+    }
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.start_time) params.append('start_time', filters.start_time);

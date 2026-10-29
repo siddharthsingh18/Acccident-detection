@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
 @router.get("", response_model=IncidentsListResponse, summary="List & search road accident incidents")
 async def list_incidents(
+    camera_id: Optional[int] = Query(None, description="Filter by camera ID"),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD or DD/MM/YYYY)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD or DD/MM/YYYY)"),
     start_time: Optional[str] = Query(None, description="Start time (HH:MM or HH:MM:SS)"),
@@ -36,6 +37,7 @@ async def list_incidents(
     Replaces RunGui.py search filter.
     """
     items, next_cursor, has_more = query_incidents(
+        camera_id=camera_id,
         start_date=start_date,
         end_date=end_date,
         start_time=start_time,

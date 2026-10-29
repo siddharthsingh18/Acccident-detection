@@ -94,6 +94,7 @@ def query_recent_incidents(limit: int = 10) -> List[Incident]:
         conn.close()
 
 def query_incidents(
+    camera_id: Optional[int] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     start_time: Optional[str] = None,
@@ -105,11 +106,16 @@ def query_incidents(
     cursor: Optional[int] = None,
 ) -> Tuple[List[Incident], Optional[int], bool]:
     """
-    Search incidents with date, time, city, district, review_status filters and cursor pagination.
+    Search incidents with camera_id, date, time, city, district, review_status filters and cursor pagination.
     Cursor pagination uses `rowid < cursor` on reverse chronological order.
     """
     conditions: List[str] = []
     params: List[Any] = []
+
+    # Camera ID filter
+    if camera_id is not None:
+        conditions.append("camera_id = ?")
+        params.append(camera_id)
 
     # Cursor condition
     if cursor is not None:
