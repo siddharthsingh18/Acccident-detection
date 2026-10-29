@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SoundProvider } from '@/contexts/SoundContext';
 import { DemoProvider, useDemo } from '@/contexts/DemoContext';
+import { AlertProvider } from '@/contexts/AlertContext';
 import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 import { LiveDashboard } from '@/pages/LiveDashboard';
@@ -74,9 +75,11 @@ export function App() {
       <ThemeProvider>
         <SoundProvider>
           <DemoProvider>
-            <BrowserRouter>
-              <AppLayout />
-            </BrowserRouter>
+            <AlertProvider>
+              <BrowserRouter>
+                <AppLayout />
+              </BrowserRouter>
+            </AlertProvider>
           </DemoProvider>
         </SoundProvider>
       </ThemeProvider>

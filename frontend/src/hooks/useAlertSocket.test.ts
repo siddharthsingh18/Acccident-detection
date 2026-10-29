@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { useAlertSocket } from './useAlertSocket';
+import { useAlertSocket, AlertProvider } from './useAlertSocket';
 import type { AlertMessage } from '@/lib/api';
 
 class MockWebSocket {
@@ -45,7 +45,7 @@ describe('useAlertSocket Hook', () => {
   });
 
   it('initializes and transitions to connected state', async () => {
-    const { result } = renderHook(() => useAlertSocket());
+    const { result } = renderHook(() => useAlertSocket(), { wrapper: AlertProvider });
     expect(result.current.connectionStatus).toBe('connecting');
 
     // Fast-forward open timer
@@ -59,7 +59,7 @@ describe('useAlertSocket Hook', () => {
   });
 
   it('receives incoming alert messages and updates state', () => {
-    const { result } = renderHook(() => useAlertSocket());
+    const { result } = renderHook(() => useAlertSocket(), { wrapper: AlertProvider });
 
     act(() => {
       vi.advanceTimersByTime(20);
@@ -96,7 +96,7 @@ describe('useAlertSocket Hook', () => {
   });
 
   it('handles disconnect and attempts exponential backoff reconnect', () => {
-    const { result } = renderHook(() => useAlertSocket());
+    const { result } = renderHook(() => useAlertSocket(), { wrapper: AlertProvider });
 
     act(() => {
       vi.advanceTimersByTime(20);
