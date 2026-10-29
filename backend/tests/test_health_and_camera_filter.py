@@ -28,3 +28,4 @@ def test_list_incidents_filter_by_camera_id(client):
     empty_data = response.json()
     assert empty_data["items"] == []
     assert empty_data["count"] == 0
+
