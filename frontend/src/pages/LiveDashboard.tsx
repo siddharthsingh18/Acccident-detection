@@ -21,10 +21,28 @@ export function LiveDashboard() {
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const { latestAlert, connectionStatus } = useAlertSocket();
+  const { alerts, latestAlert, connectionStatus, clearAlerts, dismissAlert } = useAlertSocket();
   const { playSiren } = useSound();
   const { demoAlert, setLastAlertTime } = useDemo();
   const processedAlertIds = useRef<Set<string>>(new Set());
+
+  const handleDismissCard = (id: string) => {
+    dismissAlert(id);
+    setHighlightedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setIncidents((prev) =>
+      prev.map((inc) => (inc.id === id ? { ...inc, isNewAlert: false } : inc))
+    );
+  };
+
+  const handleClearAll = () => {
+    clearAlerts();
+    setHighlightedIds(new Set());
+    setIncidents((prev) => prev.map((inc) => ({ ...inc, isNewAlert: false })));
+  };
 
   // Load 10 most recent incidents on mount
   useEffect(() => {
@@ -226,6 +244,27 @@ export function LiveDashboard() {
         </div>
       </div>
 
+      {/* Active Live Alerts Banner & Clear All */}
+      {alerts.length > 0 && (
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-200 animate-slide-in">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="w-4 h-4 text-red-400 animate-pulse" />
+            <span className="text-xs font-mono font-bold tracking-wide uppercase">
+              {alerts.length} Active Real-Time {alerts.length === 1 ? 'Alert' : 'Alerts'}
+            </span>
+          </div>
+          <button
+            type="button"
+            data-testid="clear-all-alerts-btn"
+            onClick={handleClearAll}
+            className="px-3 py-1 rounded-lg text-xs font-medium bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer"
+            title="Clear all active live alerts from current session"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {/* Loading Skeleton State */}
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -291,7 +330,9 @@ export function LiveDashboard() {
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/media/thumbnails/fallback';
+                      const target = e.currentTarget;
+                      target.onerror = null;
+                      target.src = '/placeholder-thumbnail.svg';
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
@@ -314,7 +355,24 @@ export function LiveDashboard() {
                         </span>
                       )}
                     </div>
-                    <ReviewBadge status={incident.review_status} size="sm" />
+                    <div className="flex items-center gap-1.5 pointer-events-auto">
+                      <ReviewBadge status={incident.review_status} size="sm" />
+                      {(incident.isNewAlert || isHighlighted || alerts.some((a) => a.incident_id === incident.id)) && (
+                        <button
+                          type="button"
+                          data-testid="dismiss-alert-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDismissCard(incident.id);
+                          }}
+                          className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-950/90 hover:bg-red-950/90 text-slate-300 hover:text-red-300 border border-slate-700 hover:border-red-500/50 shadow transition cursor-pointer"
+                          title="Dismiss alert"
+                          aria-label={`Dismiss alert ${incident.id}`}
+                        >
+                          Dismiss
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Play Indicator Overlay */}

@@ -466,7 +466,9 @@ export function IncidentSearch() {
                           loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/media/thumbnails/fallback';
+                            const target = e.currentTarget;
+                            target.onerror = null;
+                            target.src = '/placeholder-thumbnail.svg';
                           }}
                         />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/40">

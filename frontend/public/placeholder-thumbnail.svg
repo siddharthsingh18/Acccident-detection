@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" fill="none">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <pattern id="radarGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.8" stroke-opacity="0.6"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="640" height="360" fill="url(#bgGradient)" />
+  <rect width="640" height="360" fill="url(#radarGrid)" />
+
+  <!-- Outer frame border with corner notches -->
+  <rect x="20" y="20" width="600" height="320" rx="10" stroke="#334155" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.7" />
+  
+  <!-- Corner crosses -->
+  <path d="M 30 40 L 40 40 M 35 35 L 35 45" stroke="#06b6d4" stroke-width="1.5" />
+  <path d="M 600 40 L 610 40 M 605 35 L 605 45" stroke="#06b6d4" stroke-width="1.5" />
+  <path d="M 30 320 L 40 320 M 35 315 L 35 325" stroke="#06b6d4" stroke-width="1.5" />
+  <path d="M 600 320 L 610 320 M 605 315 L 605 325" stroke="#06b6d4" stroke-width="1.5" />
+
+  <!-- Center Icon: Camera with crosshair -->
+  <g transform="translate(320, 150)">
+    <!-- Radar ring -->
+    <circle r="46" stroke="#0ea5e9" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 4" />
+    <circle r="36" fill="#1e293b" fill-opacity="0.8" stroke="#38bdf8" stroke-width="1.5" />
+    <!-- Camera body -->
+    <rect x="-18" y="-10" width="24" height="20" rx="3" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5" />
+    <path d="M 6 -4 L 16 -10 L 16 10 L 6 4 Z" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5" stroke-linejoin="round" />
+    <circle cx="-6" cy="0" r="4" fill="#06b6d4" />
+    <!-- Signal slash -->
+    <line x1="-24" y1="20" x2="24" y2="-20" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" />
+  </g>
+
+  <!-- Labels -->
+  <text x="320" y="235" text-anchor="middle" fill="#f1f5f9" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="13" font-weight="700" letter-spacing="2">NO PREVIEW AVAILABLE</text>
+  <text x="320" y="258" text-anchor="middle" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="11" letter-spacing="1">CLIP STILL PENDING OR ARCHIVED</text>
+</svg>
