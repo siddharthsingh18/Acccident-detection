@@ -19,6 +19,7 @@ class HealthResponse(BaseModel):
     services: Dict[str, ServiceHealth]
     database: Dict[str, Any]
     ffmpeg: Dict[str, Any]
+    zmq_listener: Optional[Dict[str, Any]] = None
 
 class Alert(BaseModel):
     incident_id: str = Field(..., description="Unique incident identifier, e.g. 1528_76")

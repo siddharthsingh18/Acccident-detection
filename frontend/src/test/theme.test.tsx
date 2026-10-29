@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { Navbar } from '@/components/Navbar';
 import { SoundProvider } from '@/contexts/SoundContext';
@@ -62,16 +63,21 @@ describe('ThemeContext & Navbar Theme Toggle', () => {
   });
 
   it('Navbar theme toggle button switches theme on click', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <SoundProvider>
-            <DemoProvider>
-              <Navbar />
-            </DemoProvider>
-          </SoundProvider>
-        </ThemeProvider>
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <ThemeProvider>
+            <SoundProvider>
+              <DemoProvider>
+                <Navbar />
+              </DemoProvider>
+            </SoundProvider>
+          </ThemeProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     const themeToggleBtn = screen.getByRole('button', { name: /toggle theme/i });

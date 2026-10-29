@@ -1,12 +1,32 @@
 import { Volume2, VolumeX, Moon, Sun, Sparkles } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useDemo } from '@/contexts/DemoContext';
+import { api } from '@/lib/api';
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { isSoundEnabled, volume, enableSound, toggleSound, setVolume } = useSound();
   const { isDemoMode, toggleDemoMode } = useDemo();
+
+  const { data: health, isError } = useQuery({
+    queryKey: ['system-health'],
+    queryFn: api.getHealth,
+    refetchInterval: 15000,
+    retry: 1,
+  });
+
+  const getHealthTooltip = () => {
+    if (isError || !health) {
+      return 'Argus Core: Unreachable (Backend Offline)';
+    }
+    const dbStatus = health.database?.accessible ? 'Connected' : 'Offline';
+    const totalIncidents = health.database?.total_incidents !== undefined ? ` (${health.database.total_incidents} incidents)` : '';
+    const ffmpegStatus = health.ffmpeg?.available ? 'Available' : 'Missing';
+    const zmqStatus = health.zmq_listener?.running ? 'Running' : 'Stopped';
+    return `Argus Core: ${health.status.toUpperCase()} | DB: ${dbStatus}${totalIncidents} | ZMQ: ${zmqStatus} | FFmpeg: ${ffmpegStatus}`;
+  };
 
   return (
     <header className="h-16 px-4 md:px-6 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-40 transition-colors duration-200">
@@ -42,8 +62,35 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Controls: Demo Mode, Sound, Theme */}
+      {/* Controls: Health Status, Demo Mode, Sound, Theme */}
       <div className="flex items-center gap-2.5">
+        {/* System Health Dot */}
+        <div
+          role="status"
+          aria-label={
+            isError || !health
+              ? 'System status: Unreachable'
+              : `System status: ${health.status.toUpperCase()}`
+          }
+          data-testid="health-status-indicator"
+          title={getHealthTooltip()}
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono select-none"
+        >
+          <span
+            data-testid="health-status-dot"
+            className={`w-2 h-2 rounded-full transition-colors ${
+              isError || !health || health.status === 'down'
+                ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'
+                : health.status === 'degraded'
+                ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
+                : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+            }`}
+          />
+          <span className="hidden sm:inline text-slate-600 dark:text-slate-400 uppercase text-[10px] font-semibold">
+            {isError || !health ? 'OFFLINE' : health.status.toUpperCase()}
+          </span>
+        </div>
+
         {/* Demo Mode Toggle */}
         <button
           type="button"

@@ -62,8 +62,8 @@ def check_ffmpeg() -> Dict[str, Any]:
     except Exception as e:
         return {"available": True, "path": path, "error": str(e)}
 
-async def get_system_health() -> HealthResponse:
-    """Check health across all 4 Argus microservices, database, and ffmpeg."""
+async def get_system_health(request: Any = None) -> HealthResponse:
+    """Check health across all 4 Argus microservices, database, ffmpeg, and ZeroMQ listener."""
     services_to_check = [
         ("master", settings.ZMQ_HOST, settings.ZMQ_MASTER_PORT),
         ("detect", settings.ZMQ_HOST, settings.ZMQ_DETECT_PORT),
@@ -92,6 +92,17 @@ async def get_system_health() -> HealthResponse:
     db_health = check_database()
     ffmpeg_health = check_ffmpeg()
 
+    # ZeroMQ alert listener status from app state
+    zmq_listener_info: Dict[str, Any] = {"running": False, "status": "not_initialized"}
+    if request and hasattr(getattr(request, "app", None), "state"):
+        listener = getattr(request.app.state, "zmq_listener", None)
+        if listener:
+            is_alive = getattr(listener, "is_alive", lambda: False)()
+            zmq_listener_info = {
+                "running": is_alive,
+                "status": "running" if is_alive else "stopped",
+            }
+
     if reachable_count == len(services_to_check) and db_health["accessible"]:
         status = "ok"
     elif reachable_count > 0 or db_health["accessible"]:
@@ -104,4 +115,5 @@ async def get_system_health() -> HealthResponse:
         services=services,
         database=db_health,
         ffmpeg=ffmpeg_health,
+        zmq_listener=zmq_listener_info,
     )

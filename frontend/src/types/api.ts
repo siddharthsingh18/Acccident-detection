@@ -367,10 +367,19 @@ export interface components {
             };
             /** Database */
             database: {
+                accessible?: boolean;
+                total_incidents?: number;
                 [key: string]: unknown;
             };
             /** Ffmpeg */
             ffmpeg: {
+                available?: boolean;
+                [key: string]: unknown;
+            };
+            /** ZeroMQ Listener */
+            zmq_listener?: {
+                running?: boolean;
+                status?: string;
                 [key: string]: unknown;
             };
         };
