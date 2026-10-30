@@ -85,3 +85,20 @@ class FeedCancelResponse(BaseModel):
     id: str
     status: str
     message: str
+
+class SystemSettings(BaseModel):
+    alert_sound_enabled: bool = Field(default=False, description="Whether incident audio alarm is enabled")
+    siren_volume: int = Field(default=80, ge=0, le=100, description="Control room siren volume (0-100)")
+    clip_retention_days: int = Field(default=30, ge=1, le=365, description="Video clip retention period in days (1-365)")
+    min_alert_confidence: float = Field(default=0.5, ge=0.0, le=1.0, description="Minimum incident confidence threshold (0.0-1.0)")
+    updated_at: Optional[str] = Field(None, description="ISO timestamp of last settings update")
+    confidence_note: str = Field(
+        default="Stored in system profile; not yet applied to legacy pipeline",
+        description="Explains confidence filter applicability"
+    )
+
+class UpdateSettingsRequest(BaseModel):
+    alert_sound_enabled: bool = Field(..., description="Whether incident audio alarm is enabled")
+    siren_volume: int = Field(..., ge=0, le=100, description="Control room siren volume (0-100)")
+    clip_retention_days: int = Field(..., ge=1, le=365, description="Video clip retention period in days (1-365)")
+    min_alert_confidence: float = Field(..., ge=0.0, le=1.0, description="Minimum incident confidence threshold (0.0-1.0)")

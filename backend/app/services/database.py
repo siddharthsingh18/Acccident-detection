@@ -3,7 +3,7 @@ from pathlib import Path
 import sqlite3
 from typing import Optional, List, Tuple, Dict, Any
 from ..config import settings
-from ..models.schemas import Incident
+from ..models.schemas import Incident, SystemSettings, UpdateSettingsRequest
 
 def get_db_connection() -> sqlite3.Connection:
     """Get read-only SQLite connection with row factory and busy timeout."""
@@ -49,6 +49,26 @@ def apply_migrations(db_path: Optional[str] = None) -> None:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_review_status ON CrashFrames(review_status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_time ON CrashFrames(crash_time);")
         cursor.execute("CREATE VIEW IF NOT EXISTS incidents AS SELECT rowid, * FROM CrashFrames;")
+
+        # Settings table migration (Phase 2)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+        """)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        default_settings = [
+            ("alert_sound_enabled", "false", now_iso),
+            ("siren_volume", "80", now_iso),
+            ("clip_retention_days", "30", now_iso),
+            ("min_alert_confidence", "0.5", now_iso),
+        ]
+        cursor.executemany("""
+            INSERT OR IGNORE INTO settings (key, value, updated_at)
+            VALUES (?, ?, ?);
+        """, default_settings)
 
         conn.commit()
     finally:
@@ -321,5 +341,53 @@ def update_incident_review(
         ).fetchone()
 
         return row_to_incident(updated_row) if updated_row else None
+    finally:
+        conn.close()
+
+def get_system_settings() -> SystemSettings:
+    """Retrieve current system settings from SQLite database."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        rows = cursor.execute("SELECT key, value, updated_at FROM settings;").fetchall()
+        settings_map: Dict[str, str] = {row["key"]: row["value"] for row in rows}
+        latest_updated_at = max((row["updated_at"] for row in rows), default=None)
+
+        return SystemSettings(
+            alert_sound_enabled=settings_map.get("alert_sound_enabled", "false").lower() in ("true", "1"),
+            siren_volume=int(settings_map.get("siren_volume", 80)),
+            clip_retention_days=int(settings_map.get("clip_retention_days", 30)),
+            min_alert_confidence=float(settings_map.get("min_alert_confidence", 0.5)),
+            updated_at=latest_updated_at,
+        )
+    finally:
+        conn.close()
+
+def update_system_settings(req: UpdateSettingsRequest) -> SystemSettings:
+    """Update system settings with parameterized values and return updated model."""
+    conn = get_write_connection()
+    try:
+        cursor = conn.cursor()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        records = [
+            ("alert_sound_enabled", "true" if req.alert_sound_enabled else "false", now_iso),
+            ("siren_volume", str(req.siren_volume), now_iso),
+            ("clip_retention_days", str(req.clip_retention_days), now_iso),
+            ("min_alert_confidence", str(req.min_alert_confidence), now_iso),
+        ]
+        cursor.executemany("""
+            INSERT INTO settings (key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at;
+        """, records)
+        conn.commit()
+
+        return SystemSettings(
+            alert_sound_enabled=req.alert_sound_enabled,
+            siren_volume=req.siren_volume,
+            clip_retention_days=req.clip_retention_days,
+            min_alert_confidence=req.min_alert_confidence,
+            updated_at=now_iso,
+        )
     finally:
         conn.close()

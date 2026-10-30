@@ -1,4 +1,4 @@
-.PHONY: dev stop check test backend-test frontend-build clean
+.PHONY: dev stop check test backend-test frontend-build clean cleanup
 
 dev:
 	.venv/bin/python scripts/supervisor.py
@@ -28,3 +28,6 @@ frontend-build:
 
 clean:
 	rm -rf backend/media/videos/* backend/uploads/* frontend/dist
+
+cleanup:
+	.venv/bin/python scripts/cleanup_clips.py $(ARGS)
