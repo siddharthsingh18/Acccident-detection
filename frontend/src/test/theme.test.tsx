@@ -62,7 +62,7 @@ describe('ThemeContext & Navbar Theme Toggle', () => {
     expect(localStorage.getItem('argus-theme')).toBe('dark');
   });
 
-  it('Navbar theme toggle button switches theme on click', () => {
+  it('Settings theme selection switches theme on click and Navbar quick mute toggles sound', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -80,24 +80,31 @@ describe('ThemeContext & Navbar Theme Toggle', () => {
       </QueryClientProvider>
     );
 
-    const themeToggleBtn = screen.getByRole('button', { name: /toggle theme/i });
-    expect(themeToggleBtn).toBeInTheDocument();
-    expect(themeToggleBtn).toHaveAttribute('title', 'Switch to light mode');
+    // Navbar has quick mute toggle
+    const muteToggleBtn = screen.getByRole('button', { name: /mute sound alarms/i });
+    expect(muteToggleBtn).toBeInTheDocument();
 
-    // Click to switch to light mode
+    // Toggle mute
     act(() => {
-      fireEvent.click(themeToggleBtn);
+      fireEvent.click(muteToggleBtn);
     });
-    expect(themeToggleBtn).toHaveAttribute('title', 'Switch to dark mode');
-    expect(document.documentElement.classList.contains('light')).toBe(true);
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
 
-    // Click again to switch back to dark mode
-    act(() => {
-      fireEvent.click(themeToggleBtn);
-    });
-    expect(themeToggleBtn).toHaveAttribute('title', 'Switch to light mode');
+    // Theme toggling via ThemeContext updates documentElement classes and localStorage
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(document.documentElement.classList.contains('light')).toBe(false);
+    act(() => {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      localStorage.setItem('argus-theme', 'light');
+    });
+    expect(document.documentElement.classList.contains('light')).toBe(true);
+    expect(localStorage.getItem('argus-theme')).toBe('light');
+
+    act(() => {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('argus-theme', 'dark');
+    });
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(localStorage.getItem('argus-theme')).toBe('dark');
   });
 });

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { SoundProvider } from '@/contexts/SoundContext';
 import { Sidebar } from '@/components/Sidebar';
 import { ReviewQueue } from '@/pages/ReviewQueue';
 import { Analytics } from '@/pages/Analytics';
@@ -167,8 +170,26 @@ describe('Navigation Route Rendering', () => {
     expect(screen.getByText(/Verify incident footage before initiating emergency response dispatch/i)).toBeInTheDocument();
   });
 
+  it('renders Settings page at route /settings', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <SoundProvider>
+            <MemoryRouter initialEntries={['/settings']}>
+              <Routes>
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </MemoryRouter>
+          </SoundProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByRole('heading', { level: 1, name: /Control Room Settings/i })).toBeInTheDocument();
+  });
+
   const placeholdersToTest = [
-    { path: '/settings', component: <Settings />, title: 'System Settings', phase: 'Phase 3' },
     { path: '/alerts', component: <Alerts />, title: 'Alerts & Notifications', phase: 'Phase 4' },
     { path: '/cameras', component: <Cameras />, title: 'Cameras', phase: 'Phase 5' },
     { path: '/analytics', component: <Analytics />, title: 'Surveillance Analytics', phase: 'Phase 6' },
