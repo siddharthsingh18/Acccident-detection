@@ -1,13 +1,11 @@
-import { Volume2, VolumeX, Moon, Sun, Sparkles } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useDemo } from '@/contexts/DemoContext';
 import { api } from '@/lib/api';
 
 export function Navbar() {
-  const { theme, toggleTheme } = useTheme();
-  const { isSoundEnabled, volume, enableSound, toggleSound, setVolume } = useSound();
+  const { isSoundEnabled, toggleSound } = useSound();
   const { isDemoMode, toggleDemoMode } = useDemo();
 
   const { data: health, isError } = useQuery({
@@ -107,51 +105,29 @@ export function Navbar() {
           {isDemoMode && <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>}
         </button>
 
-        {/* Audio Siren Unlock / Controls */}
-        <div className="flex items-center gap-2 bg-slate-100/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
-          {!isSoundEnabled ? (
-            <button
-              type="button"
-              onClick={enableSound}
-              className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500 transition cursor-pointer"
-              title="Click to unlock browser audio for incident sirens"
-            >
-              <VolumeX className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-              <span className="hidden sm:inline">Enable Sound</span>
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={toggleSound}
-                className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition cursor-pointer"
-                title="Mute incident siren audio"
-              >
-                <Volume2 className="w-4 h-4" />
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={volume}
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="w-16 h-1 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500 dark:accent-cyan-400"
-                title={`Volume: ${Math.round(volume * 100)}%`}
-              />
-            </>
-          )}
-        </div>
-
-        {/* Theme Toggle */}
+        {/* Quick Mute Toggle */}
         <button
           type="button"
-          onClick={toggleTheme}
-          className="p-2 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
-          aria-label="Toggle theme"
-          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          onClick={toggleSound}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
+            isSoundEnabled
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+              : 'bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800'
+          }`}
+          title={isSoundEnabled ? 'Audio Alarms Active (Click to mute)' : 'Audio Muted (Click to enable sound)'}
+          aria-label={isSoundEnabled ? 'Mute sound alarms' : 'Unmute sound alarms'}
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-600" />}
+          {isSoundEnabled ? (
+            <>
+              <Volume2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+              <span className="hidden sm:inline">ALARM ON</span>
+            </>
+          ) : (
+            <>
+              <VolumeX className="w-4 h-4 text-slate-400" />
+              <span className="hidden sm:inline">MUTED</span>
+            </>
+          )}
         </button>
       </div>
     </header>

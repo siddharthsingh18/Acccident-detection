@@ -46,6 +46,22 @@ export interface AlertMessage {
   video_url: string;
 }
 
+export interface SystemSettings {
+  alert_sound_enabled: boolean;
+  siren_volume: number;
+  clip_retention_days: number;
+  min_alert_confidence: number;
+  updated_at?: string | null;
+  confidence_note?: string;
+}
+
+export interface UpdateSettingsRequest {
+  alert_sound_enabled: boolean;
+  siren_volume: number;
+  clip_retention_days: number;
+  min_alert_confidence: number;
+}
+
 export interface SampleFeed {
   id: string;
   filename: string;
@@ -174,5 +190,21 @@ export const api = {
       params.append('review_status', filters.review_status);
     }
     return `/api/incidents/export?${params.toString()}`;
+  },
+
+  async getSettings(): Promise<SystemSettings> {
+    const res = await fetch('/api/settings');
+    return handleResponse<SystemSettings>(res);
+  },
+
+  async updateSettings(body: UpdateSettingsRequest): Promise<SystemSettings> {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    return handleResponse<SystemSettings>(res);
   }
 };
