@@ -136,3 +136,4 @@ def test_dry_run_and_apply_clip_cleanup(tmp_path):
     # Verify old file is deleted, new file is preserved
     assert not old_clip.exists(), "Applied cleanup should delete expired file!"
     assert new_clip.exists(), "Newer file within retention window must be preserved!"
+

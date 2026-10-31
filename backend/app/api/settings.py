@@ -22,3 +22,4 @@ async def update_settings(payload: UpdateSettingsRequest):
     - min_alert_confidence: 0.0-1.0
     """
     return update_system_settings(payload)
+
