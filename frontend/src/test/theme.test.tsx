@@ -17,7 +17,7 @@ function TestThemeConsumer() {
   );
 }
 
-describe('ThemeContext & Navbar Theme Toggle', () => {
+describe('ThemeContext & Navbar Controls', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.className = '';
@@ -62,7 +62,7 @@ describe('ThemeContext & Navbar Theme Toggle', () => {
     expect(localStorage.getItem('argus-theme')).toBe('dark');
   });
 
-  it('Settings theme selection switches theme on click and Navbar quick mute toggles sound', async () => {
+  it('Navbar controls: theme toggle button switches theme and audio controls work', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -80,31 +80,40 @@ describe('ThemeContext & Navbar Theme Toggle', () => {
       </QueryClientProvider>
     );
 
-    // Navbar has quick mute toggle
+    // Navbar has theme toggle button
+    const themeBtn = screen.getByRole('button', { name: /toggle theme/i });
+    expect(themeBtn).toBeInTheDocument();
+
+    // Toggle theme to light via Navbar button
+    act(() => {
+      fireEvent.click(themeBtn);
+    });
+    expect(document.documentElement.classList.contains('light')).toBe(true);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(localStorage.getItem('argus-theme')).toBe('light');
+
+    // Toggle theme back to dark via Navbar button
+    act(() => {
+      fireEvent.click(themeBtn);
+    });
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(document.documentElement.classList.contains('light')).toBe(false);
+    expect(localStorage.getItem('argus-theme')).toBe('dark');
+
+    // Navbar has audio controls: mute toggle and volume slider
     const muteToggleBtn = screen.getByRole('button', { name: /mute sound alarms/i });
     expect(muteToggleBtn).toBeInTheDocument();
 
-    // Toggle mute
+    const volumeSlider = screen.getByLabelText(/siren volume slider/i);
+    expect(volumeSlider).toBeInTheDocument();
+
     act(() => {
       fireEvent.click(muteToggleBtn);
     });
 
-    // Theme toggling via ThemeContext updates documentElement classes and localStorage
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
     act(() => {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-      localStorage.setItem('argus-theme', 'light');
+      fireEvent.change(volumeSlider, { target: { value: '0.6' } });
     });
-    expect(document.documentElement.classList.contains('light')).toBe(true);
-    expect(localStorage.getItem('argus-theme')).toBe('light');
-
-    act(() => {
-      document.documentElement.classList.remove('light');
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('argus-theme', 'dark');
-    });
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('argus-theme')).toBe('dark');
+    expect(localStorage.getItem('argus-volume')).toBe('0.6');
   });
 });

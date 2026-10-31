@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SoundProvider } from '@/contexts/SoundContext';
@@ -9,12 +9,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { LiveDashboard } from '@/pages/LiveDashboard';
 import { ReviewQueue } from '@/pages/ReviewQueue';
 import { IncidentSearch } from '@/pages/IncidentSearch';
-import { Analytics } from '@/pages/Analytics';
-import { Reports } from '@/pages/Reports';
 import { CameraFeeder } from '@/pages/CameraFeeder';
-import { Cameras } from '@/pages/Cameras';
-import { Alerts } from '@/pages/Alerts';
-import { Settings } from '@/pages/Settings';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { Sparkles } from 'lucide-react';
 
@@ -54,14 +49,11 @@ function AppLayout() {
         >
           <Routes>
             <Route path="/" element={<LiveDashboard />} />
-            <Route path="/review" element={<ReviewQueue />} />
-            <Route path="/search" element={<IncidentSearch />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/reports" element={<Reports />} />
             <Route path="/feeder" element={<CameraFeeder />} />
-            <Route path="/cameras" element={<Cameras />} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/search" element={<IncidentSearch />} />
+            <Route path="/review" element={<ReviewQueue />} />
+            {/* Catch-all route: redirects unknown/legacy URLs to Live Dashboard */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

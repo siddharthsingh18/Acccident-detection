@@ -6,11 +6,6 @@ import {
   Video,
   ShieldAlert,
   ClipboardCheck,
-  BarChart3,
-  FileText,
-  Camera,
-  Bell,
-  Settings,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,135 +19,105 @@ export interface NavItem {
   badge?: number | null;
 }
 
-export interface NavSection {
-  title: string;
-  items: NavItem[];
-}
-
 export function Sidebar({ alertCount = 0 }: SidebarProps) {
-  const sections: NavSection[] = [
+  const navItems: NavItem[] = [
     {
-      title: 'MONITORING',
-      items: [
-        {
-          to: '/',
-          label: 'Live Dashboard',
-          icon: Radio,
-          badge: alertCount > 0 ? alertCount : null,
-        },
-        {
-          to: '/review',
-          label: 'Review Queue',
-          icon: ClipboardCheck,
-        },
-      ],
+      to: '/',
+      label: 'Live Dashboard',
+      icon: Radio,
+      badge: alertCount > 0 ? alertCount : null,
     },
     {
-      title: 'INCIDENTS',
-      items: [
-        {
-          to: '/search',
-          label: 'Incident Search',
-          icon: Search,
-        },
-        {
-          to: '/analytics',
-          label: 'Analytics',
-          icon: BarChart3,
-        },
-        {
-          to: '/reports',
-          label: 'Reports',
-          icon: FileText,
-        },
-      ],
+      to: '/feeder',
+      label: 'Input / Output',
+      icon: Video,
     },
     {
-      title: 'SOURCES',
-      items: [
-        {
-          to: '/feeder',
-          label: 'Input / Output',
-          icon: Video,
-        },
-        {
-          to: '/cameras',
-          label: 'Cameras',
-          icon: Camera,
-        },
-      ],
+      to: '/search',
+      label: 'Incident Search',
+      icon: Search,
     },
     {
-      title: 'CONFIGURATION',
-      items: [
-        {
-          to: '/alerts',
-          label: 'Alerts',
-          icon: Bell,
-        },
-        {
-          to: '/settings',
-          label: 'Settings',
-          icon: Settings,
-        },
-      ],
+      to: '/review',
+      label: 'Review Queue',
+      icon: ClipboardCheck,
     },
   ];
 
   return (
     <aside className="w-full md:w-64 bg-white/70 dark:bg-slate-950/70 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800/80 p-3 md:p-4 flex flex-col justify-between shrink-0 transition-colors duration-200">
       <div className="w-full space-y-3">
+        {/* ARGUS / SURVEILLANCE OPS Header */}
+        <div className="hidden md:flex items-center gap-2.5 px-3 py-1.5 mb-2 border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+          <div className="relative w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-400/40 dark:border-cyan-500/40 flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+            <svg viewBox="0 0 32 32" className="w-5 h-5 text-cyan-600 dark:text-cyan-400" fill="none">
+              <path
+                d="M16 4 L28 10 L28 22 L16 28 L4 22 L4 10 Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8 16 C12 11 20 11 24 16 C20 21 12 21 8 16 Z"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="#0f172a"
+              />
+              <circle cx="16" cy="16" r="3" fill="#06b6d4" />
+              <circle cx="16" cy="16" r="1.2" fill="#ef4444" />
+            </svg>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold tracking-wider text-slate-900 dark:text-white text-base leading-none">
+              ARGUS
+            </span>
+            <span className="text-cyan-600 dark:text-cyan-400 text-[10px] font-mono tracking-widest uppercase font-semibold">
+              Surveillance Ops
+            </span>
+          </div>
+        </div>
+
         <nav
           aria-label="Main Navigation"
-          className="flex md:flex-col gap-3 md:gap-2.5 w-full overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 scrollbar-thin"
+          className="flex md:flex-col gap-1.5 md:gap-1 w-full overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 scrollbar-thin"
         >
-          {sections.map((section) => (
-            <div key={section.title} className="flex flex-col gap-0.5 shrink-0 md:shrink min-w-0">
-              <div className="px-3 pt-1.5 pb-1 text-[10px] md:text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-500 font-mono select-none">
-                {section.title}
-              </div>
-
-              <div className="flex md:flex-col gap-1 min-w-0">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      title={item.label}
-                      className={({ isActive }) =>
-                        `flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
-                          isActive
-                            ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-400/40 dark:border-cyan-500/30 shadow-[0_0_12px_rgba(6,182,212,0.15)] font-semibold'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent'
-                        }`
-                      }
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
-                        <Icon className="w-4 h-4 shrink-0" />
-                        <span
-                          className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap block flex-1"
-                          style={{
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                      </div>
-                      {item.badge && (
-                        <span className="ml-2 px-1.5 py-0.5 text-xs font-mono font-bold rounded-full bg-red-500/20 text-red-500 dark:text-red-400 border border-red-500/40 shrink-0 animate-pulse">
-                          {item.badge}
-                        </span>
-                      )}
-                    </NavLink>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                title={item.label}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${
+                    isActive
+                      ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-400/40 dark:border-cyan-500/30 shadow-[0_0_12px_rgba(6,182,212,0.15)] font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span
+                    className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap block flex-1"
+                    style={{
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+                {item.badge && (
+                  <span className="ml-2 px-1.5 py-0.5 text-xs font-mono font-bold rounded-full bg-red-500/20 text-red-500 dark:text-red-400 border border-red-500/40 shrink-0 animate-pulse">
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 
