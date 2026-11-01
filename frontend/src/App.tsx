@@ -10,6 +10,7 @@ import { LiveDashboard } from '@/pages/LiveDashboard';
 import { ReviewQueue } from '@/pages/ReviewQueue';
 import { IncidentSearch } from '@/pages/IncidentSearch';
 import { CameraFeeder } from '@/pages/CameraFeeder';
+import { DevComponentShowcase } from '@/pages/DevComponentShowcase';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { Sparkles } from 'lucide-react';
 
@@ -52,6 +53,7 @@ function AppLayout() {
             <Route path="/feeder" element={<CameraFeeder />} />
             <Route path="/search" element={<IncidentSearch />} />
             <Route path="/review" element={<ReviewQueue />} />
+            {import.meta.env.DEV && <Route path="/dev/components" element={<DevComponentShowcase />} />}
             {/* Catch-all route: redirects unknown/legacy URLs to Live Dashboard */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

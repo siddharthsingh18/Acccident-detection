@@ -10,6 +10,16 @@ const DEMO_ALERTS_POOL: Omit<AlertMessage, 'date' | 'time'>[] = [
     district: 'District 13',
     thumbnail_url: '/media/thumbnails/1528_76.jpg',
     video_url: '/api/incidents/1528_76/video',
+    model_scores: {
+      policy: 'majority',
+      threshold: 0.5,
+      decision: true,
+      scorers: [
+        { name: 'vif_svm', score: 0.92, fired: true, calibrated: true, available: true, latency_ms: 18 },
+        { name: 'convae', score: 0.85, fired: true, calibrated: false, available: true, latency_ms: 45 },
+        { name: 'resnet_onnx', score: 0.78, fired: true, calibrated: false, available: true, latency_ms: 32 },
+      ],
+    },
   },
   {
     incident_id: 'DEMO-1566',
@@ -19,6 +29,16 @@ const DEMO_ALERTS_POOL: Omit<AlertMessage, 'date' | 'time'>[] = [
     district: 'District 16',
     thumbnail_url: '/media/thumbnails/1566_151.jpg',
     video_url: '/api/incidents/1528_76/video',
+    model_scores: {
+      policy: 'majority',
+      threshold: 0.5,
+      decision: true,
+      scorers: [
+        { name: 'vif_svm', score: 0.82, fired: true, calibrated: true, available: true, latency_ms: 19 },
+        { name: 'convae', score: 0.73, fired: true, calibrated: false, available: true, latency_ms: 43 },
+        { name: 'resnet_onnx', score: 0.36, fired: false, calibrated: false, available: true, latency_ms: 31 },
+      ],
+    },
   },
   {
     incident_id: 'DEMO-1559',
@@ -28,6 +48,16 @@ const DEMO_ALERTS_POOL: Omit<AlertMessage, 'date' | 'time'>[] = [
     district: 'District 7',
     thumbnail_url: '/media/thumbnails/1559_91.jpg',
     video_url: '/api/incidents/1528_76/video',
+    model_scores: {
+      policy: 'any',
+      threshold: 0.5,
+      decision: true,
+      scorers: [
+        { name: 'vif_svm', score: 0.78, fired: true, calibrated: true, available: true, latency_ms: 17 },
+        { name: 'convae', score: 0.32, fired: false, calibrated: false, available: true, latency_ms: 40 },
+        { name: 'resnet_onnx', score: 0.21, fired: false, calibrated: false, available: true, latency_ms: 28 },
+      ],
+    },
   },
   {
     incident_id: 'DEMO-1521',
@@ -37,6 +67,16 @@ const DEMO_ALERTS_POOL: Omit<AlertMessage, 'date' | 'time'>[] = [
     district: 'District 2',
     thumbnail_url: '/media/thumbnails/1521_121.jpg',
     video_url: '/api/incidents/1528_76/video',
+    model_scores: {
+      policy: 'majority',
+      threshold: 0.5,
+      decision: true,
+      scorers: [
+        { name: 'vif_svm', score: 0.89, fired: true, calibrated: true, available: true, latency_ms: 16 },
+        { name: 'convae', score: 0.0, fired: false, calibrated: false, available: false, reason_unavailable: 'Model weights file missing' },
+        { name: 'resnet_onnx', score: 0.84, fired: true, calibrated: false, available: true, latency_ms: 34 },
+      ],
+    },
   },
 ];
 
@@ -46,6 +86,7 @@ interface DemoContextType {
   demoAlert: AlertMessage | null;
   lastAlertTime: Date | null;
   setLastAlertTime: (time: Date) => void;
+  triggerNextDemoAlert: () => void;
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
@@ -109,6 +150,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         demoAlert,
         lastAlertTime,
         setLastAlertTime,
+        triggerNextDemoAlert,
       }}
     >
       {children}
