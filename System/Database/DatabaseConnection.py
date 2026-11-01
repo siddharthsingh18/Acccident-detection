@@ -17,24 +17,33 @@ class DatabaseConnection:
         self.db_path = db_path or DATABASE_PATH
         self.conn = None
         self.cursor = None
+        self._ensure_wal()
+
+    def _ensure_wal(self):
+        """Ensure WAL journal mode is set once on the database file."""
+        try:
+            with sqlite3.connect(self.db_path, timeout=5.0) as conn:
+                mode = conn.cursor().execute("PRAGMA journal_mode;").fetchone()[0]
+                if mode.lower() != "wal":
+                    conn.execute("PRAGMA journal_mode=WAL;")
+        except Exception:
+            pass
 
     @contextmanager
     def connection(self):
         """Context manager providing an SQLite connection with WAL mode and busy timeout."""
-        conn = sqlite3.connect(self.db_path, timeout=5.0)
+        conn = sqlite3.connect(self.db_path, timeout=15.0)
         try:
-            conn.execute("PRAGMA journal_mode=WAL;")
-            conn.execute("PRAGMA busy_timeout=5000;")
+            conn.execute("PRAGMA busy_timeout=15000;")
             yield conn
         finally:
             conn.close()
 
     def connect(self):
         """Legacy helper for manual connection management."""
-        self.conn = sqlite3.connect(self.db_path, timeout=5.0)
+        self.conn = sqlite3.connect(self.db_path, timeout=15.0)
         try:
-            self.conn.execute("PRAGMA journal_mode=WAL;")
-            self.conn.execute("PRAGMA busy_timeout=5000;")
+            self.conn.execute("PRAGMA busy_timeout=15000;")
         except Exception:
             pass
         self.cursor = self.conn.cursor()

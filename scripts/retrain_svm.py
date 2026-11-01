@@ -81,6 +81,10 @@ def extract_features_for_split(
                     else:
                         gray_frames.append(f)
 
+                # Guard against legacy VIF off-by-one boundary index error when len % 6 == 3
+                if len(gray_frames) % 6 == 3:
+                    gray_frames.append(gray_frames[-1])
+
                 feat = vif.process(gray_frames)
                 if feat.shape == (304,):
                     X_list.append(feat)

@@ -114,6 +114,10 @@ class VifSvmScorer:
             else:
                 gray_frames.append(f)
 
+        # Guard against legacy VIF off-by-one boundary index error when len % 6 == 3
+        if len(gray_frames) % 6 == 3:
+            gray_frames.append(gray_frames[-1])
+
         try:
             feature_vec = self.vif.process(gray_frames)
             features = feature_vec.reshape(1, 304).astype(np.float32)

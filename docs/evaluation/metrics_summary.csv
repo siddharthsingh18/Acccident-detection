@@ -1,0 +1,8 @@
+candidate,accuracy,precision,recall,f1,f1_ci_low,f1_ci_high,roc_auc,pr_auc,false_alarms,far_per_hour,fps,latency_p50_ms,latency_p95_ms
+VIF SVM (Legacy),0.7333,0.8462,0.5238,0.6471,0.4315,0.8155,0.752,0.8126,2,59.7,1816.2,13.56,218.76
+VIF SVM (Retrained),0.7556,0.7778,0.6667,0.7179,0.5375,0.8493,0.8433,0.7852,4,119.5,1844.1,13.45,215.2
+ConvAE Anomaly,0.6444,0.8571,0.2857,0.4286,0.1568,0.6415,0.7381,0.7265,1,29.9,825.1,123.78,133.07
+Ensemble: Legacy + ConvAE (Policy=Any),0.7778,0.8235,0.6667,0.7368,0.5714,0.8735,0.5,0.7333,3,89.6,547.2,139.7,381.02
+Ensemble: Legacy + ConvAE (Policy=All),0.6,1.0,0.1429,0.25,0.0,0.4642,0.5,0.7333,0,0.0,538.6,147.63,367.1
+Ensemble: Retrained + ConvAE (Policy=Majority),0.6444,1.0,0.2381,0.3846,0.1211,0.6204,0.5,0.7333,0,0.0,537.4,154.5,359.32
+Ensemble: Retrained + ConvAE (Policy=Weighted),0.7333,1.0,0.4286,0.6,0.3754,0.7692,0.5,0.7333,0,0.0,558.5,140.55,358.62
