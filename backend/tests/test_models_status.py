@@ -26,6 +26,36 @@ def test_get_models_status(client):
         assert "version" in s
         assert "trained_on" in s
 
+    # When no trained weights are present in artifacts/, convae must report available=False
+    convae_scorer = next(s for s in data["scorers"] if s["name"] == "convae")
+    assert convae_scorer["available"] is False
+    assert "checkpoint not found" in (convae_scorer["reason_unavailable"] or "").lower()
+    assert data["degraded"] is True
+
+
+def test_models_status_honors_crash_policy_env(client, monkeypatch):
+    """Verify that CRASH_POLICY env var takes precedence and configures ensemble policy."""
+    monkeypatch.setenv("CRASH_POLICY", "all")
+    response = client.get("/api/models/status")
+    assert response.status_code == 200
+    assert response.json()["policy"] == "all"
+
+
+def test_models_status_with_dev_checkpoint(client, monkeypatch, tmp_path):
+    """Verify that ARGUS_ALLOW_DEV_CHECKPOINT=true allows a smoke checkpoint tagged DEV."""
+    ckpt_dir = tmp_path / "artifacts" / "checkpoints" / "convae"
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    smoke_dest = ckpt_dir / "smoke_checkpoint.pth"
+    smoke_dest.write_text("dummy checkpoint")
+
+    monkeypatch.setenv("CONVAE_CHECKPOINT_DIR", str(ckpt_dir))
+    monkeypatch.setenv("ARGUS_ALLOW_DEV_CHECKPOINT", "true")
+    response = client.get("/api/models/status")
+    assert response.status_code == 200
+    convae = next(s for s in response.json()["scorers"] if s["name"] == "convae")
+    assert convae["available"] is True
+    assert "DEV SMOKE TEST" in convae["trained_on"]
+
 
 def test_incident_with_null_model_scores(client):
     """Verify incidents without model_scores default to null gracefully."""

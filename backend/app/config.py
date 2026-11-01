@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: List[str] = [".mp4", ".avi", ".mkv", ".mov"]
     FEED_RETENTION_HOURS: int = 24
 
+    # Ensemble & Scorer configuration
+    ARGUS_ENABLE_ENSEMBLE: bool = Field(default_factory=lambda: os.getenv("ARGUS_ENABLE_ENSEMBLE", "false").lower() in ("true", "1", "yes"))
+    CRASH_SCORERS: str = Field(default_factory=lambda: os.getenv("CRASH_SCORERS", "vif_svm,convae,resnet_onnx"))
+    CRASH_POLICY: str = Field(default_factory=lambda: os.getenv("CRASH_POLICY", os.getenv("ARGUS_ENSEMBLE_POLICY", "majority")))
+    ARGUS_ALLOW_DEV_CHECKPOINT: bool = Field(default_factory=lambda: os.getenv("ARGUS_ALLOW_DEV_CHECKPOINT", "false").lower() in ("true", "1", "yes"))
+    ARTIFACTS_DIR: Path = Field(default_factory=lambda: PROJECT_ROOT / "artifacts")
+
     @field_validator("DATABASE_PATH", "SAVED_CRASH_VID_DIR", "SAVED_FRAMES_VID_DIR", "FALLBACK_IMAGE_PATH", "PLAY_BUTTON_PATH", "MEDIA_DIR", "THUMBNAILS_DIR", "VIDEO_CACHE_DIR", "UPLOADS_DIR", "FEEDS_DIR", mode="before")
     @classmethod
     def resolve_paths(cls, v: Union[str, Path]) -> Path:

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import threading
 import time
@@ -8,7 +9,7 @@ from numpy import ndarray
 import zmq
 
 from ..config import settings
-from ..models.schemas import Alert
+from ..models.schemas import Alert, ModelScores
 from .broadcaster import get_alert_queue
 
 from System.Connections.protocol import deserialize_message, serialize_reply
@@ -142,6 +143,18 @@ class ZmqAlertListener(threading.Thread):
                 except Exception as ex:
                     logger.error(f"Failed to save thumbnail: {ex}")
 
+            # Parse optional model_scores from message
+            model_scores_data = message.get("MODEL_SCORES")
+            model_scores = None
+            if model_scores_data:
+                try:
+                    if isinstance(model_scores_data, str):
+                        model_scores = ModelScores.model_validate(json.loads(model_scores_data))
+                    elif isinstance(model_scores_data, dict):
+                        model_scores = ModelScores.model_validate(model_scores_data)
+                except Exception as me:
+                    logger.warning(f"Failed to parse MODEL_SCORES in alert for {incident_id}: {me}")
+
             alert = Alert(
                 incident_id=incident_id,
                 camera_id=camera_id,
@@ -152,6 +165,7 @@ class ZmqAlertListener(threading.Thread):
                 district=district,
                 thumbnail_url=f"/media/thumbnails/{incident_id}.jpg",
                 video_url=f"/api/incidents/{incident_id}/video",
+                model_scores=model_scores,
             )
 
             # Safely schedule put into asyncio.Queue

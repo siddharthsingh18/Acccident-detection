@@ -1,8 +1,10 @@
 import os
 import logging
+from pathlib import Path
 from typing import List
 from fastapi import APIRouter
 
+from ..config import settings, PROJECT_ROOT
 from ..models.schemas import ModelsStatusResponse, ScorerStatus
 
 logger = logging.getLogger("argus.api.models")
@@ -15,16 +17,34 @@ async def get_models_status():
     Returns the real-time operational status of all registered crash scoring models,
     including version, training provenance, calibration dates, and ensemble policy.
     """
-    policy = os.environ.get("ARGUS_ENSEMBLE_POLICY", "majority")
+    policy = os.environ.get("CRASH_POLICY", os.environ.get("ARGUS_ENSEMBLE_POLICY", settings.CRASH_POLICY))
     if policy not in ("any", "all", "majority", "weighted"):
         policy = "majority"
 
-    # Check whether PyTorch and ConvAE are importable
-    convae_available = True
+    # Check whether PyTorch and ConvAE are importable AND have a trained checkpoint
+    convae_available = False
     convae_reason = None
+    convae_version = "0.2.0-dota"
+    convae_trained_on = "DoTA Benchmark (Detection of Traffic Anomaly)"
     try:
         import torch
         from ConvAE import ConvLSTMED
+        allow_dev = os.environ.get("ARGUS_ALLOW_DEV_CHECKPOINT", str(settings.ARGUS_ALLOW_DEV_CHECKPOINT)).lower() in ("1", "true", "yes")
+        checkpoint_dir = Path(os.environ.get("CONVAE_CHECKPOINT_DIR", str(PROJECT_ROOT / "artifacts" / "checkpoints" / "convae")))
+        custom_ckpt = os.environ.get("CONVAE_CHECKPOINT_PATH")
+        ckpt_path = Path(custom_ckpt) if custom_ckpt else (checkpoint_dir / "best_model.pth")
+        smoke_path = checkpoint_dir / "smoke_checkpoint.pth"
+
+        if ckpt_path.exists():
+            convae_available = True
+            convae_reason = None
+        elif allow_dev and smoke_path.exists():
+            convae_available = True
+            convae_reason = None
+            convae_trained_on = "DEV SMOKE TEST (not for real use)"
+        else:
+            convae_available = False
+            convae_reason = "Trained weights checkpoint not found in artifacts/checkpoints/convae/"
     except Exception as e:
         convae_available = False
         convae_reason = f"ConvAE module unavailable: {e}"
@@ -45,8 +65,8 @@ async def get_models_status():
         ScorerStatus(
             name="convae",
             available=convae_available,
-            version="0.2.0-dota",
-            trained_on="DoTA Benchmark (Detection of Traffic Anomaly)",
+            version=convae_version,
+            trained_on=convae_trained_on,
             calibration_date=None,
             reason_unavailable=convae_reason,
         ),
@@ -60,7 +80,7 @@ async def get_models_status():
         ),
     ]
 
-    # Degraded if any active or expected model is unavailable
+    # Degraded if any expected/configured model is unavailable
     degraded = any(not s.available for s in scorers if s.name in ("vif_svm", "convae"))
 
     return ModelsStatusResponse(
