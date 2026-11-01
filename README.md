@@ -126,21 +126,77 @@ flowchart TB
 
 ---
 
-## Multi-Model Crash Scoring Ensemble & Operator UI
+## Multi-Model Crash Scoring Ensemble & Decision Support
 
-Argus features a unified multi-model crash scoring ensemble accessible via the frontend control room:
+Argus features a pluggable, multi-model crash scoring ensemble (`argus_ml.scoring`) that fuses diverse computer vision and deep learning paradigms behind a single uniform interface (`CrashScorer`).
 
-- **Ensemble Scorers**:
-  - `vif_svm`: Spatio-temporal kinetic flow variance via Horn-Schunck optical flow + SVM.
-  - `convae`: Unsupervised spatio-temporal Convolutional Autoencoder irregularity reconstruction error.
-  - `resnet_onnx`: Deep convolutional visual feature classifier (ONNX).
-- **Ensemble Policies**: `majority` (default), `any`, `all`, and `weighted`.
-- **Degraded Mode**: If optional dependencies (e.g. PyTorch) or trained weights are unavailable, Argus falls back cleanly to the baseline VIF+SVM detector without crashing. To resolve degraded mode, run `pip install -e ".[torch]"` and download weights.
-- **Operator Visualization**:
-  - Navbar **Models Status Indicator** and accessible popover detailing active policies, scorer availability, and calibration records.
-  - Live alert strip and historical search records with **Model Agreement Badges** (e.g. `2/3 agree`).
-  - Search filter dropdown for agreement levels (`Any`, `All models flagged`, `Only one model flagged`).
-  - Detection Studio **Event Timeline**, **Model Score Breakdown**, and side-by-side **Model Comparison**.
+### 1. The Crash Scorers
+* **`vif_svm` (Violent Flows + Linear SVM)**:
+  - Extracts spatio-temporal optical flow variance across consecutive subsampled frames using Horn-Schunck optical flow, mapped to a 336-dimensional histogram.
+  - Runs in ONNX Runtime (`artifacts/models/vif_svm.onnx` or `artifacts/models/vif_svm_retrained.onnx`) with pure scikit-learn fallback.
+  - Subsampling: $N=3$, spatial grid $4 \times 4$. Includes a boundary pad guard for sequences where `len(frames) % 6 == 3`.
+  - Detailed specs in [Model Card: VIF+SVM](docs/model_cards/vif_svm.md).
+* **`convae` (ConvLSTM Spatio-Temporal Autoencoder)**:
+  - Deep neural network (`ConvLSTMED`) trained in an unsupervised fashion on normal vehicle flow.
+  - High reconstruction Mean Squared Error (MSE) denotes abnormal motion, sudden stops, or collision deformation.
+  - Calibrated on the validation split with zero-FAR thresholds and logistic Platt scaling (`artifacts/calibration/convae_calibration.json`).
+  - PyTorch backend with dynamic hardware acceleration (CUDA, Apple Silicon MPS, or CPU).
+  - Detailed specs in [Model Card: ConvAE](docs/model_cards/convae.md).
+* **`resnet_onnx` (Pluggable Deep Classifier Slot)**:
+  - Deep convolutional feature classifier slot loaded via ONNX Runtime.
+  - Reads weights dynamically from `artifacts/models/resnet_onnx.onnx` when mounted by operators.
+  - Automatically reports `available=false` with human-readable reason when weights are absent.
+
+### 2. CCTV vs Dashcam Domain Limitations
+> [!IMPORTANT]
+> - **In-Domain (CCTV Surveillance)**: Stationary pole-mounted CCTV cameras isolate vehicle motion against static road geometry. Optical flow algorithms and spatial autoencoders perform reliably in this environment.
+> - **Cross-Domain (Dashcams / Mobile Units)**: Dashcam footage (such as the DoTA dataset) contains significant camera ego-motion. Moving vehicle cameras induce global optical flow vectors that simulate collision dynamics unless stabilized. ConvAE and VIF require ego-stabilization or fine-tuning prior to vehicle-mounted deployment.
+
+### 3. Feature Flags & Configuration Reference
+The legacy single-model VIF+SVM pipeline remains the active default. You can enable and configure the multi-model ensemble via environment variables:
+
+| Environment Variable | Default Value | Allowed Values | Description |
+| :--- | :--- | :--- | :--- |
+| `ARGUS_ENABLE_ENSEMBLE` | `false` | `true`, `false` | Master toggle. When `false`, executes legacy VIF+SVM byte-for-byte. When `true`, delegates to `CrashEnsemble`. |
+| `CRASH_SCORERS` | `vif_svm,convae,resnet_onnx` | Comma-separated names | List of scorers to register into the active ensemble. |
+| `CRASH_POLICY` | `majority` | `majority`, `any`, `all`, `weighted` | Consensus decision policy: `majority` (default), `any` (high recall), `all` (zero false alarms), `weighted` (confidence-weighted). |
+| `CRASH_CALIBRATION_PATH` | `artifacts/calibration/convae_calibration.json` | Filesystem path | Path to calibrated threshold and Platt scaling parameters. |
+| `ARGUS_ALLOW_DEV_CHECKPOINT` | `false` | `true`, `false` | Safeguard flag. Prevents accidental loading of synthetic dev-only smoke checkpoints in production. |
+| `CONVAE_CHECKPOINT_PATH` | *(auto-discovered)* | Filesystem path | Explicit override path to a trained `.pth` state dictionary. |
+| `CONVAE_CHECKPOINT_DIR` | `artifacts/checkpoints/convae` | Directory path | Directory scanned for available model checkpoints (`best_model.pth`, `smoke_checkpoint.pth`). |
+
+### 4. Degraded Mode Explained
+When `ARGUS_ENABLE_ENSEMBLE=true`, Argus continuously monitors the health of all registered scorers.
+- If an optional library (e.g. `torch` or `onnxruntime`) is uninstalled, or a model weight file is missing, the scorer reports `available=false` along with a clear diagnostic reason (e.g. `"Weights not mounted"`, `"PyTorch not installed"`).
+- The ensemble enters **Degraded Mode**: available scorers continue evaluating clips, and consensus policies adapt to available models.
+- The web frontend displays a amber **"Degraded (legacy only)"** pill in the top navigation bar, allowing operators to inspect individual model health with one click.
+
+### 5. Reproducing Training, Calibration & Evaluation
+
+```bash
+# 1. Generate split manifest with zero camera group leakage (252 train, 45 val, 45 test)
+python scripts/data/make_manifest.py
+
+# 2. Train ConvAE on normal CCTV clips (Apple Silicon MPS / CUDA / CPU)
+python scripts/train_convae.py --config configs/convae_full.json
+
+# 3. Retrain VIF+SVM with balanced class weighting and export to ONNX
+python scripts/retrain_svm.py
+
+# 4. Calibrate thresholds strictly on the validation split (zero test leakage)
+python scripts/calibrate.py
+
+# 5. Benchmark all models and ensembles on the held-out test split
+python scripts/evaluate.py
+```
+
+Full benchmark figures, 95% bootstrap confidence intervals, and latency percentiles are documented in [docs/evaluation/report.md](docs/evaluation/report.md).
+
+### 6. Operator Visualization in Control Center
+- **Navbar Models Status Indicator**: Accessible popover detailing active policies, versioning, and calibration dates.
+- **Model Agreement Badges**: Live dashboard and archive search highlight consensus (e.g., `2/3 agree`, `1/2 agree`).
+- **Archive Search Filtering**: Filter historical records client-side by consensus level (`All models flagged`, `Only one model flagged`).
+- **Detection Studio**: Event timeline with interactive model score breakdown, per-model progress bars, and side-by-side comparison.
 
 ---
 
