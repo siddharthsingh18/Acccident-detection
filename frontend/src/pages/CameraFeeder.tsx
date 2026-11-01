@@ -370,6 +370,21 @@ export function CameraFeeder() {
         </Link>
       </div>
 
+      {/* Degraded Pipeline Mode Advisory Banner */}
+      {activeFeed?.degraded && (
+        <div
+          data-testid="feed-degraded-banner"
+          role="status"
+          className="p-4 rounded-xl border bg-amber-950/30 border-amber-500/50 text-amber-300 flex items-center gap-3 text-xs"
+        >
+          <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400" />
+          <div>
+            <span className="font-semibold uppercase tracking-wider font-mono">Degraded Mode:</span>{' '}
+            Running with fewer models than configured. Alerts may be less reliable.
+          </div>
+        </div>
+      )}
+
       {/* Global Alerts / Conflicts */}
       {errorMessage && (
         <div
