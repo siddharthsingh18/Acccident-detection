@@ -18,12 +18,16 @@ import {
   Search,
   CheckCircle2,
   ChevronRight,
-  Radio
+  Radio,
+  Info,
+  Columns
 } from 'lucide-react';
 import { api, type FeedResponse, type Incident, type SampleFeed } from '@/lib/api';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
+import { ModelScoreBreakdown } from '@/components/ModelScoreBreakdown';
+import { formatScore, scorerLabel } from '@/lib/modelFormatters';
 
 const EGYPTIAN_CITIES = [
   'Cairo',
@@ -98,6 +102,7 @@ export function CameraFeeder() {
   const [outputIncident, setOutputIncident] = useState<Incident | null>(null);
   const [outputVideoUrl, setOutputVideoUrl] = useState<string | null>(null);
   const [modalIncident, setModalIncident] = useState<Incident | null>(null);
+  const [isCompareModels, setIsCompareModels] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pollingIntervalRef = useRef<number | null>(null);
@@ -152,6 +157,7 @@ export function CameraFeeder() {
         from_no: 5,
         thumbnail_url: latestAlert.thumbnail_url,
         video_url: latestAlert.video_url,
+        model_scores: latestAlert.model_scores || null,
       };
       setOutputIncident(inc);
       setOutputVideoUrl(latestAlert.video_url);
@@ -301,6 +307,7 @@ export function CameraFeeder() {
                 from_no: 5,
                 thumbnail_url: selectedSample?.incident_id ? `/media/thumbnails/${selectedSample.incident_id}.jpg` : `/media/thumbnails/${cameraId}_106.jpg`,
                 video_url: selectedSample?.output_video_url || `/api/incidents/${cameraId}_106/video`,
+                model_scores: detectedIncident?.model_scores || null,
               };
               setOutputIncident(inc);
               setOutputVideoUrl(inc.video_url || selectedSample?.output_video_url || `/api/incidents/${inc.id}/video`);
@@ -899,29 +906,131 @@ export function CameraFeeder() {
               </div>
             </div>
 
-            {/* Incident Telemetry Details Table */}
-            {outputIncident && (
-              <div className="mt-4 p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                <h5 className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
-                  Incident Telemetry Record
-                </h5>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-slate-500 block">Incident ID</span>
-                    <span className="text-white font-bold">{outputIncident.id}</span>
+            {/* Detected Events Timeline & Model Scoring (Shown after processing completes) */}
+            {detectionOutcome !== 'idle' && detectionOutcome !== 'processing' && (
+              <div data-testid="events-timeline-section" className="mt-4 p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-cyan-400" />
+                    <h5 className="text-xs font-mono uppercase tracking-wider text-white font-bold">
+                      Detected Event Timeline ({outputIncident ? '1 Event' : '0 Events'})
+                    </h5>
                   </div>
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-slate-500 block">Starting Frame</span>
-                    <span className="text-cyan-400 font-bold">{outputIncident.starting_frame_id}</span>
+                  {outputIncident?.model_scores && (
+                    <button
+                      type="button"
+                      data-testid="compare-models-toggle"
+                      onClick={() => setIsCompareModels(!isCompareModels)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition cursor-pointer border ${
+                        isCompareModels
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                      }`}
+                    >
+                      <Columns className="w-3.5 h-3.5" />
+                      <span>Compare models</span>
+                    </button>
+                  )}
+                </div>
+
+                {outputIncident ? (
+                  <div className="space-y-3">
+                    {/* Event Telemetry Row / Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800/80">
+                          <tr>
+                            <th className="pb-1.5 font-semibold">Event ID</th>
+                            <th className="pb-1.5 font-semibold">Time</th>
+                            <th className="pb-1.5 font-semibold">Starting Frame</th>
+                            <th className="pb-1.5 font-semibold">Location</th>
+                            <th className="pb-1.5 font-semibold">Classification</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/40">
+                          <tr>
+                            <td className="py-2 text-cyan-400 font-bold">#{outputIncident.id}</td>
+                            <td className="py-2 text-slate-300">{outputIncident.crash_time}</td>
+                            <td className="py-2 text-amber-300">Frame {outputIncident.starting_frame_id}</td>
+                            <td className="py-2 text-slate-300">{outputIncident.city || city}</td>
+                            <td className="py-2">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-950/80 text-red-300 border border-red-500/40">
+                                Crash Detected
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Compare Models Side-by-Side View */}
+                    {isCompareModels && outputIncident.model_scores && (
+                      <div data-testid="models-side-by-side" className="p-3 rounded-lg bg-slate-900/50 border border-slate-800 space-y-2">
+                        <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+                          Side-by-Side Model Comparison
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                          {outputIncident.model_scores.scorers.map((s) => {
+                            const meta = scorerLabel(s.name);
+                            return (
+                              <div
+                                key={s.name}
+                                data-testid={`compare-card-${s.name}`}
+                                className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-white truncate">{meta.label}</span>
+                                  {s.fired ? (
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-500/40 font-bold">
+                                      Flagged
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                                      Not flagged
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-[11px] font-mono">
+                                    <span className="text-slate-400">Score:</span>
+                                    <span className="text-white font-bold">{formatScore(s.score)}</span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full ${s.fired ? 'bg-red-400' : 'bg-cyan-500'}`}
+                                      style={{ width: `${Math.round((s.score || 0) * 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="text-[10px] font-mono text-slate-500 flex justify-between">
+                                  <span>{s.calibrated ? 'Calibrated' : 'Uncalibrated'}</span>
+                                  <span>{s.available ? 'Available' : 'Unavailable'}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Integrated Model Score Breakdown */}
+                    <div className="pt-2">
+                      <ModelScoreBreakdown incident={outputIncident} />
+                    </div>
                   </div>
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-slate-500 block">Location</span>
-                    <span className="text-white truncate block">{outputIncident.city || city}</span>
+                ) : (
+                  <div data-testid="timeline-empty" className="p-4 rounded-lg bg-slate-900/30 border border-slate-800/80 text-center text-xs text-slate-500">
+                    No collision anomaly events detected across analyzed frame batches.
                   </div>
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-slate-500 block">Status</span>
-                    <span className="text-red-400 font-bold">Verified Crash</span>
-                  </div>
+                )}
+
+                {/* Trajectory Time-series note */}
+                <div
+                  data-testid="trajectory-scores-notice"
+                  className="p-3 rounded-lg bg-slate-900/40 border border-slate-800/80 text-xs text-slate-400 flex items-center gap-2"
+                >
+                  <Info className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Per-frame trajectory scores not available for legacy pipeline runs</span>
                 </div>
               </div>
             )}
