@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardCheck,
@@ -17,6 +17,7 @@ import {
 import { api, type Incident } from '@/lib/api';
 import { ReviewBadge } from '@/components/ReviewBadge';
 import { ModelScoreBreakdown } from '@/components/ModelScoreBreakdown';
+import { VideoPlayer } from '@/components/VideoPlayer';
 
 export function ReviewQueue() {
   const [queue, setQueue] = useState<Incident[]>([]);
@@ -28,7 +29,6 @@ export function ReviewQueue() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [reviewedSessionCount, setReviewedSessionCount] = useState(0);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const loadUnreviewedIncidents = useCallback(async () => {
     try {
@@ -264,18 +264,18 @@ export function ReviewQueue() {
           {/* Left Column: Video Player & Navigation (2/3 width) */}
           <div className="lg:col-span-2 space-y-4">
             <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-2xl flex items-center justify-center">
-              <video
-                key={currentItem.id}
-                ref={videoRef}
-                data-testid="review-video-player"
+              <VideoPlayer
+                src={`/api/incidents/${currentItem.id}/video`}
+                poster={currentItem.thumbnail_url}
+                title={`Review Incident #${currentItem.id}`}
+                safeDownloadName={`incident_${currentItem.id}.mp4`}
+                testId="review-video-player"
+                autoPlay={false}
+                muted={false}
                 controls
-                autoPlay
                 playsInline
-                className="w-full h-full object-contain"
-              >
-                <source src={`/api/incidents/${currentItem.id}/video`} type="video/mp4" />
-                Your browser does not support HTML5 video playback.
-              </video>
+                preload="metadata"
+              />
 
               {/* Overlay Top Bar */}
               <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">

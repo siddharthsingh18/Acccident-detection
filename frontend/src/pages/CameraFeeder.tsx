@@ -33,6 +33,7 @@ import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
 import { ModelScoreBreakdown } from '@/components/ModelScoreBreakdown';
+import { VideoPlayer } from '@/components/VideoPlayer';
 import { formatScore, scorerLabel } from '@/lib/modelFormatters';
 
 const EGYPTIAN_CITIES = [
@@ -169,8 +170,6 @@ export function CameraFeeder() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pollingIntervalRef = useRef<number | null>(null);
-  const inputVideoRef = useRef<HTMLVideoElement | null>(null);
-  const outputVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Batch Test Runner State
   const [isBatchRunning, setIsBatchRunning] = useState<boolean>(false);
@@ -1111,12 +1110,13 @@ export function CameraFeeder() {
 
             <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner flex items-center justify-center">
               {inputVideoUrl ? (
-                <video
-                  ref={inputVideoRef}
+                <VideoPlayer
                   src={inputVideoUrl}
+                  title={`Raw Input Footage - Camera #${cameraId}`}
+                  safeDownloadName={`input_camera_${cameraId}.mp4`}
                   controls
                   playsInline
-                  className="w-full h-full object-cover"
+                  preload="metadata"
                 />
               ) : (
                 <div className="text-center text-slate-500 text-xs">
@@ -1408,14 +1408,15 @@ export function CameraFeeder() {
 
               <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner flex items-center justify-center">
                 {outputVideoUrl ? (
-                  <video
-                    ref={outputVideoRef}
+                  <VideoPlayer
                     key={outputVideoUrl}
                     src={outputVideoUrl}
+                    title={outputIncident ? `Detection Footage - Incident #${outputIncident.id}` : 'Detection Output Footage'}
+                    safeDownloadName={outputIncident ? `incident_${outputIncident.id}.mp4` : 'output_clip.mp4'}
                     controls
                     playsInline
-                    autoPlay
-                    className="w-full h-full object-cover"
+                    autoPlay={false}
+                    preload="metadata"
                   />
                 ) : (
                   <div className="text-center text-slate-500 text-xs p-6">
@@ -1871,13 +1872,18 @@ export function CameraFeeder() {
 
             {/* Video Player */}
             <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner">
-              <video
-                data-testid="sample-preview-video"
+              <VideoPlayer
                 src={previewSample.video_url}
+                poster={previewSample.thumbnail_url}
+                title={`Preview ${previewSample.name}`}
+                safeDownloadName={previewSample.name}
+                testId="sample-preview-video"
+                autoPlay={false}
+                muted={false}
                 controls
-                autoPlay
                 playsInline
-                className="w-full h-full object-contain"
+                preload="metadata"
+                onClose={() => setPreviewSample(null)}
               />
             </div>
 

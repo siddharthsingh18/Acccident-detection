@@ -1,21 +1,20 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   X,
-  AlertTriangle,
-  RefreshCw,
-  ExternalLink,
-  ShieldAlert,
   MapPin,
   Calendar,
   Camera,
   CheckCircle2,
   XCircle,
   FileEdit,
+  ShieldAlert,
+  ExternalLink,
 } from 'lucide-react';
 import type { Incident } from '@/lib/api';
 import { api } from '@/lib/api';
 import { ReviewBadge } from '@/components/ReviewBadge';
 import { ModelScoreBreakdown } from '@/components/ModelScoreBreakdown';
+import { VideoPlayer } from '@/components/VideoPlayer';
 
 interface IncidentVideoModalProps {
   incident: Incident | null;
@@ -28,12 +27,6 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
   const [reviewNote, setReviewNote] = useState<string>('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [videoKey, setVideoKey] = useState(0);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const handleClose = useCallback(() => {
     setCurrentIncident(null);
@@ -59,23 +52,12 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
       setCurrentIncident(incident);
       setReviewNote(incident.review_note || '');
       setReviewFeedback(null);
-      setIsLoading(true);
-      setHasError(false);
-      setErrorMessage('');
-      setVideoKey((prev) => prev + 1);
     } else {
       setCurrentIncident(null);
     }
   }, [incident]);
 
   if (!incident || !currentIncident) return null;
-
-  const handleRetry = () => {
-    setIsLoading(true);
-    setHasError(false);
-    setErrorMessage('');
-    setVideoKey((prev) => prev + 1);
-  };
 
   const handleReview = async (status: 'confirmed' | 'false_alarm') => {
     setIsSubmittingReview(true);
@@ -133,48 +115,19 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
         <div className="grid grid-cols-1 md:grid-cols-3 gap-0 overflow-y-auto flex-1">
           {/* Video Player Column */}
           <div className="md:col-span-2 relative aspect-video bg-black flex items-center justify-center">
-            {isLoading && !hasError && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10">
-                <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin mb-2" />
-                <span className="text-sm text-slate-300">Transcoding & streaming footage...</span>
-              </div>
-            )}
-
-            {hasError ? (
-              <div className="p-6 text-center flex flex-col items-center justify-center">
-                <AlertTriangle className="w-12 h-12 text-red-400 mb-3" />
-                <h3 className="text-lg font-medium text-white mb-1">Failed to Load Footage</h3>
-                <p className="text-sm text-slate-400 mb-4 max-w-sm">
-                  {errorMessage || 'The incident video could not be streamed or transcoded by the server.'}
-                </p>
-                <button
-                  onClick={handleRetry}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg transition"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Retry Footage
-                </button>
-              </div>
-            ) : (
-              <video
-                key={videoKey}
-                ref={videoRef}
-                data-testid="incident-video-player"
-                controls
-                autoPlay
-                playsInline
-                className="w-full h-full object-contain"
-                onLoadedData={() => setIsLoading(false)}
-                onError={() => {
-                  setIsLoading(false);
-                  setHasError(true);
-                  setErrorMessage('Failed to decode or retrieve video stream from Master node.');
-                }}
-              >
-                <source src={videoUrl} type="video/mp4" />
-                Your browser does not support HTML5 video playback.
-              </video>
-            )}
+            <VideoPlayer
+              src={videoUrl}
+              poster={currentIncident.thumbnail_url}
+              title={`Incident Footage #${currentIncident.id}`}
+              safeDownloadName={`incident_${currentIncident.id}.mp4`}
+              testId="incident-video-player"
+              autoPlay={false}
+              muted={false}
+              controls
+              playsInline
+              preload="metadata"
+              onClose={handleClose}
+            />
           </div>
 
           {/* Details & Review Column */}
