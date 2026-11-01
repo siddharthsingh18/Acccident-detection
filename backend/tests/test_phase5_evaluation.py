@@ -73,3 +73,4 @@ def test_test_clips_composition_and_no_train_labels():
     labels = {c["label_str"] for c in clips}
     assert "normal" in labels
     assert "accident" in labels
+

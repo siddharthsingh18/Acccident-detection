@@ -86,3 +86,4 @@ All metrics measured on Apple Silicon M5 (macOS Darwin arm64) using strictly hel
 > [!WARNING]
 > ConvAE anomaly scores indicate reconstruction divergence, which may be triggered by non-crash events such as sudden pedestrian crossings, large shadows, debris blowing across lanes, or camera lens obstructions.
 > **Human verification is mandatory before taking any operational or emergency response action.**
+

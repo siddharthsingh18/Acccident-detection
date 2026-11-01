@@ -71,3 +71,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release of Argus distributed computer vision accident detection pipeline.
 - Four-stage CV topology: YOLO vehicle detection, MOSSE tracking with TCFI, crash estimation filtering, and VIF+SVM classification.
 - Presented at 2021 17th International Computer Engineering Conference (ICENCO).
+

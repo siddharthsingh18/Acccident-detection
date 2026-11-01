@@ -65,3 +65,4 @@ All metrics measured on Apple Silicon M5 (macOS Darwin arm64) using strictly hel
 - **Fixed Mount Assumption**: ViF assumes optical flow changes originate from object movements, not camera shaking or panning. Windy conditions causing pole vibration may increase false alarm rates.
 - **Extreme Weather & Glare**: Heavy snowfall, rain streaks on camera housing, or direct sun glare into the lens can degrade optical flow fidelity.
 - **Mandatory Human Verification**: Model scores are algorithmic screening estimates, not confirmed facts. Human operators must inspect video replays prior to dispatching emergency responders.
+
