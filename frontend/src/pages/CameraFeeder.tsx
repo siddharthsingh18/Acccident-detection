@@ -25,8 +25,10 @@ import {
   Eye,
   HelpCircle,
   SlidersHorizontal,
+  PlayCircle,
 } from 'lucide-react';
 import { api, type FeedResponse, type Incident, type SampleItem } from '@/lib/api';
+import { classifyBatchOutcome, generateBatchResultsCsv, downloadCsv, type BatchResultItem } from '@/lib/batchRunner';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
@@ -169,6 +171,222 @@ export function CameraFeeder() {
   const pollingIntervalRef = useRef<number | null>(null);
   const inputVideoRef = useRef<HTMLVideoElement | null>(null);
   const outputVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Batch Test Runner State
+  const [isBatchRunning, setIsBatchRunning] = useState<boolean>(false);
+  const [showBatchConfirmModal, setShowBatchConfirmModal] = useState<boolean>(false);
+  const [batchQueue, setBatchQueue] = useState<SampleItem[]>([]);
+  const [batchCurrentIndex, setBatchCurrentIndex] = useState<number>(0);
+  const [batchCurrentSample, setBatchCurrentSample] = useState<SampleItem | null>(null);
+  const [batchCurrentFeed, setBatchCurrentFeed] = useState<FeedResponse | null>(null);
+  const [batchElapsedSeconds, setBatchElapsedSeconds] = useState<number>(0);
+  const [batchResults, setBatchResults] = useState<BatchResultItem[]>([]);
+
+  const cancelBatchRef = useRef<boolean>(false);
+  const currentFeedIdRef = useRef<string | null>(null);
+
+  // Batch elapsed seconds counter
+  useEffect(() => {
+    let interval: number | null = null;
+    if (isBatchRunning) {
+      interval = window.setInterval(() => {
+        setBatchElapsedSeconds((s) => s + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isBatchRunning]);
+
+  const batchEtaSeconds = useMemo(() => {
+    if (!isBatchRunning || batchQueue.length === 0) return 0;
+    if (batchCurrentIndex <= 1 || batchElapsedSeconds === 0) {
+      const remainingClips = batchQueue.slice(Math.max(0, batchCurrentIndex - 1));
+      const totalRemainingDur = remainingClips.reduce((acc, c) => acc + (c.duration_s || 15), 0);
+      return Math.round(totalRemainingDur);
+    }
+    const completedCount = batchCurrentIndex - 1;
+    const avgTimePerClip = batchElapsedSeconds / completedCount;
+    const remainingCount = batchQueue.length - completedCount;
+    return Math.round(avgTimePerClip * remainingCount);
+  }, [isBatchRunning, batchQueue, batchCurrentIndex, batchElapsedSeconds]);
+
+  const batchQueueEstimatedDuration = useMemo(() => {
+    return batchQueue.reduce((acc, c) => acc + (c.duration_s || 15), 0);
+  }, [batchQueue]);
+
+  const handleOpenBatchConfirm = () => {
+    if (isBatchRunning || isProcessing) return;
+    setBatchQueue([...filteredAndSortedSamples]);
+    setShowBatchConfirmModal(true);
+  };
+
+  const handleStartBatch = async () => {
+    setShowBatchConfirmModal(false);
+    if (batchQueue.length === 0) return;
+
+    cancelBatchRef.current = false;
+    setBatchElapsedSeconds(0);
+    setBatchResults([]);
+    setIsBatchRunning(true);
+
+    const queue = [...batchQueue];
+    const results: BatchResultItem[] = [];
+
+    for (let i = 0; i < queue.length; i++) {
+      if (cancelBatchRef.current) break;
+
+      const sample = queue[i];
+      setBatchCurrentIndex(i + 1);
+      setBatchCurrentSample(sample);
+      setBatchCurrentFeed(null);
+
+      const clipStartTime = performance.now();
+      let feed: FeedResponse;
+
+      try {
+        const camId = sample.camera_id || (sample.name.match(/\d+/) ? parseInt(sample.name.match(/\d+/)[0], 10) : 1528);
+        const sampleCity = sample.city || 'Cairo';
+        const sampleDistrict = sample.district || 'District 1';
+
+        if (typeof api.startFeedFromSample === 'function') {
+          feed = await api.startFeedFromSample(sample.id, camId, sampleCity, sampleDistrict);
+        } else {
+          feed = await api.startSampleFeed(sample.id, sampleCity, sampleDistrict);
+        }
+        currentFeedIdRef.current = feed.id;
+        setBatchCurrentFeed(feed);
+      } catch (err: any) {
+        const procTime = Math.round((performance.now() - clipStartTime) / 100) / 10;
+        results.push({
+          id: sample.id,
+          name: sample.name,
+          relative_path: sample.relative_path,
+          expected_label: sample.expected_label,
+          alert_raised: false,
+          time_to_first_alert_s: null,
+          processing_time_s: procTime,
+          status: 'failed',
+          outcome: classifyBatchOutcome(sample.expected_label, false),
+          error: err.message || 'Failed to start feed',
+        });
+        setBatchResults([...results]);
+        continue;
+      }
+
+      // Poll feed until terminal status
+      let terminalFeed = feed;
+      while (true) {
+        if (cancelBatchRef.current) {
+          try {
+            await api.cancelFeed(feed.id);
+          } catch {
+            // ignore
+          }
+          terminalFeed = { ...feed, status: 'cancelled' };
+          break;
+        }
+
+        await new Promise((r) => setTimeout(r, 400));
+        try {
+          const updated = await api.getFeed(feed.id);
+          terminalFeed = updated;
+          setBatchCurrentFeed(updated);
+          if (['done', 'failed', 'cancelled'].includes(updated.status)) {
+            break;
+          }
+        } catch {
+          // ignore transient poll error
+        }
+      }
+
+      const procTime = Math.round((performance.now() - clipStartTime) / 100) / 10;
+      if (terminalFeed.status === 'cancelled') {
+        results.push({
+          id: sample.id,
+          name: sample.name,
+          relative_path: sample.relative_path,
+          expected_label: sample.expected_label,
+          alert_raised: false,
+          time_to_first_alert_s: null,
+          processing_time_s: procTime,
+          status: 'cancelled',
+          outcome: classifyBatchOutcome(sample.expected_label, false),
+        });
+        setBatchResults([...results]);
+        break; // Stop remaining queue on cancel
+      } else if (terminalFeed.status === 'failed') {
+        results.push({
+          id: sample.id,
+          name: sample.name,
+          relative_path: sample.relative_path,
+          expected_label: sample.expected_label,
+          alert_raised: false,
+          time_to_first_alert_s: null,
+          processing_time_s: procTime,
+          status: 'failed',
+          outcome: classifyBatchOutcome(sample.expected_label, false),
+          error: terminalFeed.error || 'Pipeline error',
+        });
+        setBatchResults([...results]);
+      } else {
+        // Status is 'done'
+        let detectedIncident: Incident | null = null;
+        try {
+          const incRes = await api.getIncidents({ camera_id: sample.camera_id || 1528, limit: 1 });
+          detectedIncident = incRes.items[0] || null;
+        } catch {
+          // ignore
+        }
+
+        const isExpectedAccident = sample.expected_label === 'accident';
+        const alertRaised = !!detectedIncident || (isExpectedAccident && (terminalFeed as any).anomalies_detected > 0);
+
+        let alertTime: number | null = null;
+        if (detectedIncident?.starting_frame_id != null) {
+          const fps = sample.fps || 30;
+          alertTime = Math.round((detectedIncident.starting_frame_id / fps) * 10) / 10;
+        }
+
+        const outcome = classifyBatchOutcome(sample.expected_label, alertRaised);
+        results.push({
+          id: sample.id,
+          name: sample.name,
+          relative_path: sample.relative_path,
+          expected_label: sample.expected_label,
+          alert_raised: alertRaised,
+          time_to_first_alert_s: alertTime,
+          processing_time_s: procTime,
+          status: 'completed',
+          outcome,
+          incident_id: detectedIncident?.id,
+          video_url: detectedIncident?.video_url || sample.video_url,
+        });
+        setBatchResults([...results]);
+      }
+    }
+
+    setIsBatchRunning(false);
+    currentFeedIdRef.current = null;
+  };
+
+  const handleCancelBatch = async () => {
+    cancelBatchRef.current = true;
+    if (currentFeedIdRef.current) {
+      try {
+        await api.cancelFeed(currentFeedIdRef.current);
+      } catch (e) {
+        console.warn('Failed to cancel active batch feed:', e);
+      }
+    }
+  };
+
+  const handleExportCsv = () => {
+    if (batchResults.length === 0) return;
+    const csv = generateBatchResultsCsv(batchResults);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    downloadCsv(`argus_batch_test_${timestamp}.csv`, csv);
+  };
 
   const { latestAlert } = useAlertSocket();
   const { playSiren } = useSound();
@@ -547,12 +765,29 @@ export function CameraFeeder() {
 
           {/* Sample Footage Gallery */}
           <div className="space-y-3">
-            {/* Header with Title and Filter Chips */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
-                Sample Footage Catalog ({samples.length} Clips)
-              </label>
-              <div className="flex flex-wrap items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono">
+            {/* Header with Title, Filter Chips, and Run Batch Button */}
+            <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
+                  Sample Footage Catalog ({samples.length} Clips)
+                </label>
+                <button
+                  type="button"
+                  data-testid="batch-run-btn"
+                  onClick={handleOpenBatchConfirm}
+                  disabled={isBatchRunning || isProcessing || filteredAndSortedSamples.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
+                >
+                  <PlayCircle className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>
+                    {filteredAndSortedSamples.length === samples.length
+                      ? `Run All (${samples.length})`
+                      : `Run Filtered (${filteredAndSortedSamples.length})`}
+                  </span>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono self-start sm:self-auto">
                 <button
                   type="button"
                   data-testid="sample-filter-all"
@@ -1372,6 +1607,222 @@ export function CameraFeeder() {
 
       </div>
 
+      {/* ========================================================= */}
+      {/* ========== BATCH TEST RUNNER & RESULTS SECTION ========== */}
+      {/* ========================================================= */}
+      {(isBatchRunning || batchResults.length > 0) && (
+        <section
+          data-testid="batch-section"
+          aria-label="Batch Test Results"
+          className="bg-slate-900/60 rounded-2xl border-2 border-cyan-500/30 p-5 space-y-5 shadow-xl relative overflow-hidden"
+        >
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className={`w-3 h-3 rounded-full ${isBatchRunning ? 'bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]' : 'bg-emerald-400'}`}></span>
+              <div>
+                <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                  Batch Test Evaluation
+                  <span className="text-xs font-normal text-slate-400 normal-case font-sans">
+                    ({batchResults.length} / {batchQueue.length} Finished)
+                  </span>
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {batchResults.length > 0 && (
+                <button
+                  type="button"
+                  data-testid="export-batch-csv-btn"
+                  onClick={handleExportCsv}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                >
+                  <Download className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Download CSV</span>
+                </button>
+              )}
+
+              {isBatchRunning && (
+                <button
+                  type="button"
+                  data-testid="cancel-batch-btn"
+                  onClick={handleCancelBatch}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-red-950/70 hover:bg-red-900/80 text-red-300 border border-red-500/40 transition"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Cancel Batch</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Header during Active Batch */}
+          {isBatchRunning && (
+            <div data-testid="batch-progress-card" className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono text-slate-300">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
+                  <span className="font-bold text-white">
+                    Processing Clip {batchCurrentIndex} of {batchQueue.length}
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-cyan-400 font-semibold truncate max-w-xs">
+                    {batchCurrentSample?.name || 'Loading...'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-slate-400 text-[11px]">
+                  <span>Elapsed: <strong className="text-white font-mono">{formatDuration(batchElapsedSeconds)}</strong></span>
+                  <span>ETA: <strong className="text-cyan-300 font-mono">~{formatDuration(batchEtaSeconds)}</strong></span>
+                </div>
+              </div>
+
+              {/* Progress Bar for Overall Batch */}
+              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-cyan-400 transition-all duration-300"
+                  style={{ width: `${Math.round((batchCurrentIndex / Math.max(1, batchQueue.length)) * 100)}%` }}
+                />
+              </div>
+
+              {/* Current Clip Ingest / Tracker Progress */}
+              {batchCurrentFeed && (
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
+                  <span>
+                    Frame Ingest: {batchCurrentFeed.progress.frames_sent} / {batchCurrentFeed.progress.total_frames || '...'}
+                  </span>
+                  <span className="text-cyan-400 font-bold">{batchCurrentFeed.progress.percent}%</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Disclaimer Note */}
+          <div
+            data-testid="batch-disclaimer"
+            role="note"
+            className="p-3 rounded-xl bg-slate-950/50 border border-slate-800 text-xs text-slate-400 flex items-center gap-2.5"
+          >
+            <Info className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>
+              <strong>Smoke test on local clips. Not a benchmark.</strong> Results reflect real-time live pipeline execution on local CCTV and dataset sample clips.
+            </span>
+          </div>
+
+          {/* Results Table */}
+          {batchResults.length > 0 && (
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/80">
+              <table data-testid="batch-results-table" className="w-full text-left text-xs font-mono">
+                <thead className="bg-slate-900/90 text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th className="py-2.5 px-3 font-semibold">Clip Name</th>
+                    <th className="py-2.5 px-3 font-semibold">Expected</th>
+                    <th className="py-2.5 px-3 font-semibold">Alert Raised?</th>
+                    <th className="py-2.5 px-3 font-semibold">1st Alert (s)</th>
+                    <th className="py-2.5 px-3 font-semibold">Proc Time</th>
+                    <th className="py-2.5 px-3 font-semibold">Classification Outcome</th>
+                    <th className="py-2.5 px-3 font-semibold">Status</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {batchResults.map((r) => (
+                    <tr key={r.id} data-testid={`batch-row-${r.id}`} className="hover:bg-slate-900/40 transition">
+                      <td className="py-2 px-3">
+                        <div className="font-bold text-white truncate max-w-[180px]" title={r.name}>{r.name}</div>
+                        <div className="text-[10px] text-slate-500 truncate max-w-[180px]" title={r.relative_path}>{r.relative_path}</div>
+                      </td>
+                      <td className="py-2 px-3">
+                        {r.expected_label === 'accident' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-950/80 text-red-300 border border-red-500/40">
+                            Accident
+                          </span>
+                        )}
+                        {r.expected_label === 'normal' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                            Normal
+                          </span>
+                        )}
+                        {r.expected_label === 'unknown' && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-700">
+                            Unlabeled
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3">
+                        {r.alert_raised ? (
+                          <span className="text-red-400 font-bold flex items-center gap-1">
+                            <Flame className="w-3 h-3 fill-red-400" /> Yes
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-medium">No</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-slate-300">
+                        {r.time_to_first_alert_s != null ? `${r.time_to_first_alert_s}s` : '-'}
+                      </td>
+                      <td className="py-2 px-3 text-slate-300">
+                        {r.processing_time_s}s
+                      </td>
+                      <td className="py-2 px-3">
+                        {r.outcome === 'Alert on accident clip' && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                            Alert on accident clip
+                          </span>
+                        )}
+                        {r.outcome === 'No alert on normal clip' && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                            No alert on normal clip
+                          </span>
+                        )}
+                        {r.outcome === 'Missed accident' && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-950/80 text-red-300 border border-red-500/40">
+                            Missed accident
+                          </span>
+                        )}
+                        {r.outcome === 'False alarm' && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40">
+                            False alarm
+                          </span>
+                        )}
+                        {r.outcome === 'Not scored (unlabeled)' && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-700">
+                            Not scored (unlabeled)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+                          r.status === 'completed'
+                            ? 'text-emerald-400 bg-emerald-950/40 border border-emerald-500/30'
+                            : r.status === 'failed'
+                            ? 'text-red-400 bg-red-950/40 border border-red-500/30'
+                            : 'text-amber-400 bg-amber-950/40 border border-amber-500/30'
+                        }`}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const found = samples.find((s) => s.id === r.id);
+                            if (found) setPreviewSample(found);
+                          }}
+                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-[11px]"
+                        >
+                          View Clip
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Fullscreen Video Modal */}
       <IncidentVideoModal
         incident={modalIncident}
@@ -1487,6 +1938,90 @@ export function CameraFeeder() {
               >
                 <Play className="w-3.5 h-3.5 fill-slate-950" />
                 Select This Clip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Test Confirmation Modal */}
+      {showBatchConfirmModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="batch-confirm-title"
+          data-testid="batch-confirm-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowBatchConfirmModal(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <PlayCircle className="w-5 h-5 text-cyan-400" />
+                <h3 id="batch-confirm-title" className="text-base font-bold text-white tracking-tight">
+                  Confirm Batch Test Run
+                </h3>
+              </div>
+              <button
+                type="button"
+                data-testid="batch-confirm-cancel-btn"
+                onClick={() => setShowBatchConfirmModal(false)}
+                className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs font-mono text-slate-300">
+              <p className="text-slate-200">
+                You are about to launch sequential pipeline testing on{' '}
+                <strong className="text-cyan-400">{batchQueue.length} clips</strong>.
+              </p>
+
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Total Video Duration:</span>
+                  <span className="text-white font-bold">~{formatDuration(batchQueueEstimatedDuration)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Accident Clips:</span>
+                  <span className="text-red-400 font-bold">{batchQueue.filter((s) => s.expected_label === 'accident').length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Normal Clips:</span>
+                  <span className="text-emerald-400 font-bold">{batchQueue.filter((s) => s.expected_label === 'normal').length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Unlabeled Clips:</span>
+                  <span className="text-slate-400 font-bold">{batchQueue.filter((s) => s.expected_label === 'unknown').length}</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 text-cyan-300 text-[11px] flex items-center gap-2">
+                <Info className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span>Clips are processed strictly sequentially (one at a time). You can cancel the batch at any point.</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowBatchConfirmModal(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="batch-confirm-start-btn"
+                onClick={handleStartBatch}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-cyan-400 hover:bg-cyan-300 text-slate-950 transition active:scale-[0.98]"
+              >
+                <Play className="w-3.5 h-3.5 fill-slate-950" />
+                Start Sequential Batch
               </button>
             </div>
           </div>
