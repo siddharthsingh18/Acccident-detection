@@ -105,3 +105,4 @@ This document records all modifications made to the imported upstream [DoTA](htt
 - **Specification:**
   In `ConvAE/convlstm_ae.py`, `ConvEncoder` performs spatial downsampling using kernels/strides that map an input of size `(Batch, Channels, 227, 227)` to `(Batch, Channels, 26, 26)`. The subsequent `ConvLSTMDecoder` expects this exact spatial feature map to invert cleanly.
 - **Integration Note:** Video preprocessing for ConvAE must resize frames to `227x227` pixels prior to passing into the model.
+

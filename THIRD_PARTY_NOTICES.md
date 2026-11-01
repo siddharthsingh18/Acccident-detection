@@ -75,3 +75,4 @@ SOFTWARE.
 * **Source:** Public dashcam videos hosted on YouTube and research Google Drive mirrors provided by the DoTA authors.
 * **Terms of Use:** Non-commercial research and academic evaluation only.
 * **Storage Policy:** Videos and extracted raw frames are NEVER tracked in Git. They are fetched on demand via download manifests and stored under `data/` (which is `.gitignore`d).
+

@@ -110,3 +110,4 @@ def test_database_and_data_dir_are_gitignored():
             text=True,
         )
         assert res.returncode == 0, f"Expected {check_path} to be ignored by git."
+
