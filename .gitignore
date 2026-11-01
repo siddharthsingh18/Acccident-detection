@@ -26,7 +26,9 @@ node_modules/
 /data/
 /dataset/DoTA/*.zip
 /dataset/DoTA/annotations/
-/artifacts/
+/artifacts/*
+!/artifacts/batch_results.csv
+!/artifacts/BATCH_REPORT.md
 
 # IDE and OS files
 .idea/

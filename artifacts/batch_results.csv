@@ -1,0 +1,464 @@
+Clip Name,Relative Path,Expected Label,Alert Raised,Time to First Alert (s),Processing Time (s),Classification Outcome,Status,Incident ID,Category,Notes
+1500.mp4,Joiner/vids/1500.mp4,accident,Yes,1.1,0.55,Alert on accident clip,completed,1500_crash,E (Verified Accident),Intersection collision
+1501.mp4,Joiner/vids/1501.mp4,accident,Yes,1.1,0.54,Alert on accident clip,completed,1501_crash,E (Verified Accident),Roadway accident
+1502.mp4,Joiner/vids/1502.mp4,accident,Yes,2.0,1.01,Alert on accident clip,completed,1502_crash,E (Verified Accident),Multi-vehicle collision
+1503.mp4,Joiner/vids/1503.mp4,accident,Yes,2.9,1.46,Alert on accident clip,completed,1503_crash,E (Verified Accident),Crash at frame 76
+1504.mp4,Joiner/vids/1504.mp4,accident,Yes,1.2,0.62,Alert on accident clip,completed,1504_crash,E (Verified Accident),Vehicle collision
+1505.mp4,Joiner/vids/1505.mp4,accident,Yes,1.3,0.65,Alert on accident clip,completed,1505_crash,E (Verified Accident),Lateral impact
+1506.mp4,Joiner/vids/1506.mp4,accident,Yes,3.2,1.61,Alert on accident clip,completed,1506_crash,E (Verified Accident),Asyut Junction - Van Collision at frame 106
+1507.mp4,Joiner/vids/1507.mp4,unknown,No,-,2.55,Not scored (unlabeled),completed,-,D (Ambiguous/Unlabeled),Ambiguous traffic scene - unverified
+1508.mp4,Joiner/vids/1508.mp4,accident,Yes,4.1,2.03,Alert on accident clip,completed,1508_crash,E (Verified Accident),Fayyum Expressway - Impact at frame 31
+1509.mp4,Joiner/vids/1509.mp4,accident,Yes,2.1,1.03,Alert on accident clip,completed,1509_crash,E (Verified Accident),Highway collision
+1510.mp4,Joiner/vids/1510.mp4,accident,Yes,0.9,0.5,Alert on accident clip,completed,1510_crash,E (Verified Accident),Vehicle impact
+1511.mp4,Joiner/vids/1511.mp4,accident,Yes,3.7,1.86,Alert on accident clip,completed,1511_crash,E (Verified Accident),Urban intersection collision
+1513.mp4,Joiner/vids/1513.mp4,accident,Yes,1.2,0.61,Alert on accident clip,completed,1513_crash,E (Verified Accident),Aswan Highway - Side Collision at frame 61
+1515.mp4,Joiner/vids/1515.mp4,accident,Yes,2.9,1.45,Alert on accident clip,completed,1515_crash,E (Verified Accident),Roadway collision
+1516.mp4,Joiner/vids/1516.mp4,accident,Yes,3.8,1.88,Alert on accident clip,completed,1516_crash,E (Verified Accident),Shubra Corridor - Junction Crash at frame 61
+1517.mp4,Joiner/vids/1517.mp4,accident,Yes,4.0,2.01,Alert on accident clip,completed,1517_crash,E (Verified Accident),Highway collision verified by Gif/1517.gif
+1518.mp4,Joiner/vids/1518.mp4,accident,Yes,2.4,1.18,Alert on accident clip,completed,1518_crash,E (Verified Accident),Shubra Boulevard - Side Impact at frame 1
+1519.mp4,Joiner/vids/1519.mp4,accident,Yes,3.0,1.5,Alert on accident clip,completed,1519_crash,E (Verified Accident),Qalyub Highway Entry - Ramp Merging Collision at frame 16
+1521.mp4,Joiner/vids/1521.mp4,accident,Yes,3.1,1.57,Alert on accident clip,completed,1521_crash,E (Verified Accident),Qena Avenue - Crossroad Impact at frame 121
+1522.mp4,Joiner/vids/1522.mp4,accident,Yes,5.3,2.67,Alert on accident clip,completed,1522_crash,E (Verified Accident),Marsa Matruh Road - Lateral Crash at frame 61
+1524.mp4,Joiner/vids/1524.mp4,accident,Yes,1.9,0.94,Alert on accident clip,completed,1524_crash,E (Verified Accident),Vehicle crash
+1525.mp4,Joiner/vids/1525.mp4,accident,Yes,3.9,1.93,Alert on accident clip,completed,1525_crash,E (Verified Accident),Crossroad collision
+1526.mp4,Joiner/vids/1526.mp4,accident,Yes,3.0,1.5,Alert on accident clip,completed,1526_crash,E (Verified Accident),Highway incident
+1527.mp4,Joiner/vids/1527.mp4,accident,Yes,4.4,2.19,Alert on accident clip,completed,1527_crash,E (Verified Accident),Intersection crash
+1528.mp4,Joiner/vids/1528.mp4,accident,Yes,3.8,1.91,Alert on accident clip,completed,1528_crash,E (Verified Accident),Shibin El Kom - High-Speed Junction Impact at frame 76
+1529.mp4,Joiner/vids/1529.mp4,accident,Yes,4.7,2.37,Alert on accident clip,completed,1529_crash,E (Verified Accident),Bilbais Arterial - Multi-Vehicle Crash at frame 181
+1530.mp4,Joiner/vids/1530.mp4,accident,Yes,4.4,2.22,Alert on accident clip,completed,1530_crash,E (Verified Accident),Urban crash
+1531.mp4,Joiner/vids/1531.mp4,accident,Yes,4.2,2.1,Alert on accident clip,completed,1531_crash,E (Verified Accident),Roadway impact
+1532.mp4,Joiner/vids/1532.mp4,accident,Yes,3.9,1.93,Alert on accident clip,completed,1532_crash,E (Verified Accident),Intersection collision verified by Gif/1532.gif
+1533.mp4,Joiner/vids/1533.mp4,accident,Yes,3.2,1.58,Alert on accident clip,completed,1533_crash,E (Verified Accident),Cairo Boulevard - T-Bone Collision at frame 91
+1534.mp4,Joiner/vids/1534.mp4,accident,Yes,3.5,1.77,Alert on accident clip,completed,1534_crash,E (Verified Accident),Ismailia Junction - Vehicle Crash at frame 91
+1535.mp4,Joiner/vids/1535.mp4,accident,Yes,3.7,1.83,Alert on accident clip,completed,1535_crash,E (Verified Accident),Roadway collision verified by Gif/1535.gif
+1536.mp4,Joiner/vids/1536.mp4,accident,Yes,2.2,1.09,Alert on accident clip,completed,1536_crash,E (Verified Accident),Vehicle collision
+1537.mp4,Joiner/vids/1537.mp4,accident,Yes,4.9,2.45,Alert on accident clip,completed,1537_crash,E (Verified Accident),Roadway collision verified by Gif/1537.gif
+1538.mp4,Joiner/vids/1538.mp4,accident,Yes,3.7,1.86,Alert on accident clip,completed,1538_crash,E (Verified Accident),Intersection collision verified by Gif/1538.gif
+1539.mp4,Joiner/vids/1539.mp4,accident,Yes,2.5,1.26,Alert on accident clip,completed,1539_crash,E (Verified Accident),Junction collision
+1540.mp4,Joiner/vids/1540.mp4,accident,Yes,3.6,1.8,Alert on accident clip,completed,1540_crash,E (Verified Accident),Vehicle impact
+1541.mp4,Joiner/vids/1541.mp4,accident,Yes,5.0,2.49,Alert on accident clip,completed,1541_crash,E (Verified Accident),Urban collision at frame 121
+1543.mp4,Joiner/vids/1543.mp4,accident,Yes,3.8,1.88,Alert on accident clip,completed,1543_crash,E (Verified Accident),Asyut Avenue - Multi-Lane Urban Crash at frame 166
+1544.mp4,Joiner/vids/1544.mp4,accident,Yes,5.3,2.63,Alert on accident clip,completed,1544_crash,E (Verified Accident),Crash at frame 76
+1545.mp4,Joiner/vids/1545.mp4,accident,Yes,3.1,1.54,Alert on accident clip,completed,1545_crash,E (Verified Accident),Highway accident
+1546.mp4,Joiner/vids/1546.mp4,accident,Yes,4.1,2.03,Alert on accident clip,completed,1546_crash,E (Verified Accident),Road collision verified by Gif/1546.gif
+1547.mp4,Joiner/vids/1547.mp4,accident,Yes,4.8,2.42,Alert on accident clip,completed,1547_crash,E (Verified Accident),Road collision verified by Gif/1547.gif
+1548.mp4,Joiner/vids/1548.mp4,accident,Yes,5.0,2.52,Alert on accident clip,completed,1548_crash,E (Verified Accident),Luxor Avenue - Night Collision at frame 226
+1549.mp4,Joiner/vids/1549.mp4,accident,Yes,4.4,2.19,Alert on accident clip,completed,1549_crash,E (Verified Accident),Vehicle impact
+1550.mp4,Joiner/vids/1550.mp4,accident,Yes,3.2,1.6,Alert on accident clip,completed,1550_crash,E (Verified Accident),Multi-vehicle crash
+1551.mp4,Joiner/vids/1551.mp4,accident,Yes,3.7,1.87,Alert on accident clip,completed,1551_crash,E (Verified Accident),Intersection collision
+1552.mp4,Joiner/vids/1552.mp4,accident,Yes,3.0,1.49,Alert on accident clip,completed,1552_crash,E (Verified Accident),Highway crash at frame 16
+1553.mp4,Joiner/vids/1553.mp4,accident,Yes,3.9,1.93,Alert on accident clip,completed,1553_crash,E (Verified Accident),Junction accident
+1554.mp4,Joiner/vids/1554.mp4,accident,Yes,4.5,2.27,Alert on accident clip,completed,1554_crash,E (Verified Accident),Side collision
+1555.mp4,Joiner/vids/1555.mp4,accident,Yes,4.7,2.36,Alert on accident clip,completed,1555_crash,E (Verified Accident),Roadway crash
+1556.mp4,Joiner/vids/1556.mp4,accident,Yes,2.7,1.37,Alert on accident clip,completed,1556_crash,E (Verified Accident),Vehicle collision
+1557.mp4,Joiner/vids/1557.mp4,accident,Yes,6.0,2.99,Alert on accident clip,completed,1557_crash,E (Verified Accident),Road collision verified by Gif/1557.gif
+1558.mp4,Joiner/vids/1558.mp4,accident,Yes,7.3,3.67,Alert on accident clip,completed,1558_crash,E (Verified Accident),Intersection collision verified by Gif/1558.gif
+1559.mp4,Joiner/vids/1559.mp4,accident,Yes,4.1,2.03,Alert on accident clip,completed,1559_crash,E (Verified Accident),Roadway collision verified by Gif/1559.gif
+1560.mp4,Joiner/vids/1560.mp4,accident,Yes,5.1,2.56,Alert on accident clip,completed,1560_crash,E (Verified Accident),Highway crash
+1561.mp4,Joiner/vids/1561.mp4,accident,Yes,3.9,1.95,Alert on accident clip,completed,1561_crash,E (Verified Accident),Urban collision
+1562.mp4,Joiner/vids/1562.mp4,accident,Yes,4.0,1.99,Alert on accident clip,completed,1562_crash,E (Verified Accident),Roadway collision
+1563.mp4,Joiner/vids/1563.mp4,accident,Yes,6.3,3.17,Alert on accident clip,completed,1563_crash,E (Verified Accident),Roadway collision verified by Gif/1563.gif
+1564.mp4,Joiner/vids/1564.mp4,accident,Yes,4.2,2.11,Alert on accident clip,completed,1564_crash,E (Verified Accident),Impact at frame 1
+1565.mp4,Joiner/vids/1565.mp4,accident,Yes,6.3,3.15,Alert on accident clip,completed,1565_crash,E (Verified Accident),Roadway collision verified by Gif/1565.gif
+1566.mp4,Joiner/vids/1566.mp4,accident,Yes,5.1,2.57,Alert on accident clip,completed,1566_crash,E (Verified Accident),Hurghada Coastal - Road Impact at frame 136
+1567.mp4,Joiner/vids/1567.mp4,accident,Yes,4.9,2.43,Alert on accident clip,completed,1567_crash,E (Verified Accident),Roadway collision verified by Gif/1567.gif
+1568.mp4,Joiner/vids/1568.mp4,accident,Yes,5.2,2.58,Alert on accident clip,completed,1568_crash,E (Verified Accident),Roadway collision verified by Gif/1568.gif
+1.avi,dataset/Accidents/subvideos/1.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,1_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+10.avi,dataset/Accidents/subvideos/10.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,10_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+100.avi,dataset/Accidents/subvideos/100.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,100_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+101.avi,dataset/Accidents/subvideos/101.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,101_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+102.avi,dataset/Accidents/subvideos/102.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,102_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+103.avi,dataset/Accidents/subvideos/103.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,103_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+104.avi,dataset/Accidents/subvideos/104.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,104_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+105.avi,dataset/Accidents/subvideos/105.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,105_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+106.avi,dataset/Accidents/subvideos/106.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,106_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+107.avi,dataset/Accidents/subvideos/107.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,107_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+108.avi,dataset/Accidents/subvideos/108.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,108_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+109.avi,dataset/Accidents/subvideos/109.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,109_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+11.avi,dataset/Accidents/subvideos/11.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,11_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+110.avi,dataset/Accidents/subvideos/110.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,110_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+111.avi,dataset/Accidents/subvideos/111.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,111_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+112.avi,dataset/Accidents/subvideos/112.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,112_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+113.avi,dataset/Accidents/subvideos/113.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,113_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+114.avi,dataset/Accidents/subvideos/114.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,114_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+115.avi,dataset/Accidents/subvideos/115.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,115_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+116.avi,dataset/Accidents/subvideos/116.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,116_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+117.avi,dataset/Accidents/subvideos/117.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,117_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+118.avi,dataset/Accidents/subvideos/118.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,118_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+119.avi,dataset/Accidents/subvideos/119.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,119_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+12.avi,dataset/Accidents/subvideos/12.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,12_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+120.avi,dataset/Accidents/subvideos/120.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,120_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+121.avi,dataset/Accidents/subvideos/121.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,121_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+122.avi,dataset/Accidents/subvideos/122.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,122_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+123.avi,dataset/Accidents/subvideos/123.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,123_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+124.avi,dataset/Accidents/subvideos/124.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,124_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+125.avi,dataset/Accidents/subvideos/125.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,125_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+126.avi,dataset/Accidents/subvideos/126.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,126_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+127.avi,dataset/Accidents/subvideos/127.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,127_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+128.avi,dataset/Accidents/subvideos/128.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,128_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+129.avi,dataset/Accidents/subvideos/129.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,129_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+13.avi,dataset/Accidents/subvideos/13.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,13_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+130.avi,dataset/Accidents/subvideos/130.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,130_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+131.avi,dataset/Accidents/subvideos/131.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,131_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+132.avi,dataset/Accidents/subvideos/132.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,132_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+133.avi,dataset/Accidents/subvideos/133.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,133_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+134.avi,dataset/Accidents/subvideos/134.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,134_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+135.avi,dataset/Accidents/subvideos/135.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,135_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+136.avi,dataset/Accidents/subvideos/136.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,136_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+137.avi,dataset/Accidents/subvideos/137.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,137_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+138.avi,dataset/Accidents/subvideos/138.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,138_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+139.avi,dataset/Accidents/subvideos/139.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,139_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+14.avi,dataset/Accidents/subvideos/14.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,14_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+140.avi,dataset/Accidents/subvideos/140.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,140_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+141.avi,dataset/Accidents/subvideos/141.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,141_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+142.avi,dataset/Accidents/subvideos/142.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,142_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+143.avi,dataset/Accidents/subvideos/143.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,143_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+144.avi,dataset/Accidents/subvideos/144.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,144_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+145.avi,dataset/Accidents/subvideos/145.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,145_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+146.avi,dataset/Accidents/subvideos/146.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,146_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+147.avi,dataset/Accidents/subvideos/147.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,147_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+148.avi,dataset/Accidents/subvideos/148.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,148_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+149.avi,dataset/Accidents/subvideos/149.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,149_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+15.avi,dataset/Accidents/subvideos/15.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,15_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+150.avi,dataset/Accidents/subvideos/150.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,150_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+151.avi,dataset/Accidents/subvideos/151.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,151_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+152.avi,dataset/Accidents/subvideos/152.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,152_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+153.avi,dataset/Accidents/subvideos/153.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,153_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+16.avi,dataset/Accidents/subvideos/16.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,16_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+17.avi,dataset/Accidents/subvideos/17.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,17_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+18.avi,dataset/Accidents/subvideos/18.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,18_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+19.avi,dataset/Accidents/subvideos/19.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,19_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+2.avi,dataset/Accidents/subvideos/2.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,2_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+20.avi,dataset/Accidents/subvideos/20.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,20_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+21.avi,dataset/Accidents/subvideos/21.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,21_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+22.avi,dataset/Accidents/subvideos/22.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,22_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+23.avi,dataset/Accidents/subvideos/23.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,23_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+24.avi,dataset/Accidents/subvideos/24.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,24_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+25.avi,dataset/Accidents/subvideos/25.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,25_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+26.avi,dataset/Accidents/subvideos/26.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,26_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+27.avi,dataset/Accidents/subvideos/27.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,27_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+28.avi,dataset/Accidents/subvideos/28.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,28_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+29.avi,dataset/Accidents/subvideos/29.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,29_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+3.avi,dataset/Accidents/subvideos/3.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,3_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+30.avi,dataset/Accidents/subvideos/30.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,30_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+31.avi,dataset/Accidents/subvideos/31.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,31_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+32.avi,dataset/Accidents/subvideos/32.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,32_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+33.avi,dataset/Accidents/subvideos/33.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,33_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+34.avi,dataset/Accidents/subvideos/34.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,34_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+35.avi,dataset/Accidents/subvideos/35.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,35_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+36.avi,dataset/Accidents/subvideos/36.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,36_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+37.avi,dataset/Accidents/subvideos/37.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,37_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+38.avi,dataset/Accidents/subvideos/38.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,38_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+39.avi,dataset/Accidents/subvideos/39.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,39_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+4.avi,dataset/Accidents/subvideos/4.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,4_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+40.avi,dataset/Accidents/subvideos/40.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,40_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+41.avi,dataset/Accidents/subvideos/41.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,41_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+42.avi,dataset/Accidents/subvideos/42.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,42_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+43.avi,dataset/Accidents/subvideos/43.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,43_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+44.avi,dataset/Accidents/subvideos/44.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,44_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+45.avi,dataset/Accidents/subvideos/45.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,45_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+46.avi,dataset/Accidents/subvideos/46.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,46_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+47.avi,dataset/Accidents/subvideos/47.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,47_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+48.avi,dataset/Accidents/subvideos/48.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,48_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+49.avi,dataset/Accidents/subvideos/49.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,49_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+5.avi,dataset/Accidents/subvideos/5.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,5_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+50.avi,dataset/Accidents/subvideos/50.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,50_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+51.avi,dataset/Accidents/subvideos/51.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,51_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+52.avi,dataset/Accidents/subvideos/52.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,52_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+53.avi,dataset/Accidents/subvideos/53.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,53_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+54.avi,dataset/Accidents/subvideos/54.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,54_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+55.avi,dataset/Accidents/subvideos/55.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,55_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+56.avi,dataset/Accidents/subvideos/56.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,56_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+57.avi,dataset/Accidents/subvideos/57.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,57_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+58.avi,dataset/Accidents/subvideos/58.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,58_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+59.avi,dataset/Accidents/subvideos/59.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,59_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+6.avi,dataset/Accidents/subvideos/6.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,6_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+60.avi,dataset/Accidents/subvideos/60.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,60_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+61.avi,dataset/Accidents/subvideos/61.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,61_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+62.avi,dataset/Accidents/subvideos/62.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,62_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+63.avi,dataset/Accidents/subvideos/63.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,63_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+64.avi,dataset/Accidents/subvideos/64.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,64_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+65.avi,dataset/Accidents/subvideos/65.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,65_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+66.avi,dataset/Accidents/subvideos/66.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,66_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+67.avi,dataset/Accidents/subvideos/67.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,67_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+68.avi,dataset/Accidents/subvideos/68.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,68_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+69.avi,dataset/Accidents/subvideos/69.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,69_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+7.avi,dataset/Accidents/subvideos/7.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,7_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+70.avi,dataset/Accidents/subvideos/70.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,70_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+71.avi,dataset/Accidents/subvideos/71.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,71_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+72.avi,dataset/Accidents/subvideos/72.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,72_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+73.avi,dataset/Accidents/subvideos/73.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,73_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+74.avi,dataset/Accidents/subvideos/74.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,74_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+75.avi,dataset/Accidents/subvideos/75.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,75_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+76.avi,dataset/Accidents/subvideos/76.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,76_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+77.avi,dataset/Accidents/subvideos/77.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,77_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+78.avi,dataset/Accidents/subvideos/78.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,78_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+79.avi,dataset/Accidents/subvideos/79.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,79_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+8.avi,dataset/Accidents/subvideos/8.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,8_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+80.avi,dataset/Accidents/subvideos/80.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,80_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+81.avi,dataset/Accidents/subvideos/81.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,81_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+82.avi,dataset/Accidents/subvideos/82.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,82_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+83.avi,dataset/Accidents/subvideos/83.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,83_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+84.avi,dataset/Accidents/subvideos/84.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,84_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+85.avi,dataset/Accidents/subvideos/85.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,85_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+86.avi,dataset/Accidents/subvideos/86.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,86_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+87.avi,dataset/Accidents/subvideos/87.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,87_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+88.avi,dataset/Accidents/subvideos/88.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,88_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+89.avi,dataset/Accidents/subvideos/89.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,89_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+9.avi,dataset/Accidents/subvideos/9.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,9_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+90.avi,dataset/Accidents/subvideos/90.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,90_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+91.avi,dataset/Accidents/subvideos/91.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,91_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+92.avi,dataset/Accidents/subvideos/92.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,92_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+93.avi,dataset/Accidents/subvideos/93.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,93_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+94.avi,dataset/Accidents/subvideos/94.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,94_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+95.avi,dataset/Accidents/subvideos/95.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,95_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+96.avi,dataset/Accidents/subvideos/96.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,96_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+97.avi,dataset/Accidents/subvideos/97.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,97_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+98.avi,dataset/Accidents/subvideos/98.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,98_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+99.avi,dataset/Accidents/subvideos/99.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,99_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+10.avi,dataset/Accidents/subvideos/best/10.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,10_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+100.avi,dataset/Accidents/subvideos/best/100.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,100_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+101.avi,dataset/Accidents/subvideos/best/101.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,101_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+104.avi,dataset/Accidents/subvideos/best/104.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,104_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+107.avi,dataset/Accidents/subvideos/best/107.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,107_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+11.avi,dataset/Accidents/subvideos/best/11.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,11_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+110.avi,dataset/Accidents/subvideos/best/110.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,110_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+113.avi,dataset/Accidents/subvideos/best/113.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,113_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+122.avi,dataset/Accidents/subvideos/best/122.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,122_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+124.avi,dataset/Accidents/subvideos/best/124.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,124_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+126.avi,dataset/Accidents/subvideos/best/126.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,126_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+127.avi,dataset/Accidents/subvideos/best/127.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,127_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+134.avi,dataset/Accidents/subvideos/best/134.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,134_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+142.avi,dataset/Accidents/subvideos/best/142.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,142_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+144.avi,dataset/Accidents/subvideos/best/144.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,144_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+148.avi,dataset/Accidents/subvideos/best/148.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,148_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+15.avi,dataset/Accidents/subvideos/best/15.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,15_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+151.avi,dataset/Accidents/subvideos/best/151.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,151_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+152.avi,dataset/Accidents/subvideos/best/152.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,152_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+18.avi,dataset/Accidents/subvideos/best/18.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,18_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+24.avi,dataset/Accidents/subvideos/best/24.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,24_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+25.avi,dataset/Accidents/subvideos/best/25.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,25_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+26.avi,dataset/Accidents/subvideos/best/26.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,26_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+27.avi,dataset/Accidents/subvideos/best/27.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,27_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+29.avi,dataset/Accidents/subvideos/best/29.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,29_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+30.avi,dataset/Accidents/subvideos/best/30.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,30_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+31.avi,dataset/Accidents/subvideos/best/31.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,31_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+35.avi,dataset/Accidents/subvideos/best/35.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,35_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+36.avi,dataset/Accidents/subvideos/best/36.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,36_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+37.avi,dataset/Accidents/subvideos/best/37.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,37_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+43.avi,dataset/Accidents/subvideos/best/43.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,43_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+50.avi,dataset/Accidents/subvideos/best/50.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,50_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+52.avi,dataset/Accidents/subvideos/best/52.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,52_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+53.avi,dataset/Accidents/subvideos/best/53.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,53_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+57.avi,dataset/Accidents/subvideos/best/57.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,57_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+58.avi,dataset/Accidents/subvideos/best/58.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,58_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+59.avi,dataset/Accidents/subvideos/best/59.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,59_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+6.avi,dataset/Accidents/subvideos/best/6.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,6_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+62.avi,dataset/Accidents/subvideos/best/62.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,62_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+65.avi,dataset/Accidents/subvideos/best/65.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,65_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+71.avi,dataset/Accidents/subvideos/best/71.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,71_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+72.avi,dataset/Accidents/subvideos/best/72.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,72_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+73.avi,dataset/Accidents/subvideos/best/73.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,73_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+77.avi,dataset/Accidents/subvideos/best/77.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,77_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+78.avi,dataset/Accidents/subvideos/best/78.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,78_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+8.avi,dataset/Accidents/subvideos/best/8.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,8_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+82.avi,dataset/Accidents/subvideos/best/82.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,82_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+83.avi,dataset/Accidents/subvideos/best/83.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,83_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+84.avi,dataset/Accidents/subvideos/best/84.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,84_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+86.avi,dataset/Accidents/subvideos/best/86.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,86_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+89.avi,dataset/Accidents/subvideos/best/89.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,89_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+9.avi,dataset/Accidents/subvideos/best/9.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,9_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+93.avi,dataset/Accidents/subvideos/best/93.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,93_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+94.avi,dataset/Accidents/subvideos/best/94.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,94_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+95.avi,dataset/Accidents/subvideos/best/95.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,95_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+96.avi,dataset/Accidents/subvideos/best/96.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,96_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+97.avi,dataset/Accidents/subvideos/best/97.avi,accident,Yes,0.4,0.5,Alert on accident clip,completed,97_crash,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+1.avi,dataset/No_Accidents/subvideos/1.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+10.avi,dataset/No_Accidents/subvideos/10.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+100.avi,dataset/No_Accidents/subvideos/100.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+101.avi,dataset/No_Accidents/subvideos/101.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+102.avi,dataset/No_Accidents/subvideos/102.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+103.avi,dataset/No_Accidents/subvideos/103.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+104.avi,dataset/No_Accidents/subvideos/104.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+105.avi,dataset/No_Accidents/subvideos/105.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+106.avi,dataset/No_Accidents/subvideos/106.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+107.avi,dataset/No_Accidents/subvideos/107.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+108.avi,dataset/No_Accidents/subvideos/108.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+109.avi,dataset/No_Accidents/subvideos/109.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+11.avi,dataset/No_Accidents/subvideos/11.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+110.avi,dataset/No_Accidents/subvideos/110.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+111.avi,dataset/No_Accidents/subvideos/111.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+112.avi,dataset/No_Accidents/subvideos/112.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+113.avi,dataset/No_Accidents/subvideos/113.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+114.avi,dataset/No_Accidents/subvideos/114.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+115.avi,dataset/No_Accidents/subvideos/115.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+116.avi,dataset/No_Accidents/subvideos/116.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+117.avi,dataset/No_Accidents/subvideos/117.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+118.avi,dataset/No_Accidents/subvideos/118.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+119.avi,dataset/No_Accidents/subvideos/119.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+12.avi,dataset/No_Accidents/subvideos/12.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+120.avi,dataset/No_Accidents/subvideos/120.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+121.avi,dataset/No_Accidents/subvideos/121.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+13.avi,dataset/No_Accidents/subvideos/13.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+14.avi,dataset/No_Accidents/subvideos/14.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+15.avi,dataset/No_Accidents/subvideos/15.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+16.avi,dataset/No_Accidents/subvideos/16.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+17.avi,dataset/No_Accidents/subvideos/17.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+18.avi,dataset/No_Accidents/subvideos/18.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+19.avi,dataset/No_Accidents/subvideos/19.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+2.avi,dataset/No_Accidents/subvideos/2.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+20.avi,dataset/No_Accidents/subvideos/20.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+21.avi,dataset/No_Accidents/subvideos/21.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+22.avi,dataset/No_Accidents/subvideos/22.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+23.avi,dataset/No_Accidents/subvideos/23.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+24.avi,dataset/No_Accidents/subvideos/24.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+25.avi,dataset/No_Accidents/subvideos/25.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+26.avi,dataset/No_Accidents/subvideos/26.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+27.avi,dataset/No_Accidents/subvideos/27.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+28.avi,dataset/No_Accidents/subvideos/28.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+29.avi,dataset/No_Accidents/subvideos/29.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+3.avi,dataset/No_Accidents/subvideos/3.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+30.avi,dataset/No_Accidents/subvideos/30.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+31.avi,dataset/No_Accidents/subvideos/31.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+32.avi,dataset/No_Accidents/subvideos/32.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+33.avi,dataset/No_Accidents/subvideos/33.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+34.avi,dataset/No_Accidents/subvideos/34.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+35.avi,dataset/No_Accidents/subvideos/35.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+36.avi,dataset/No_Accidents/subvideos/36.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+37.avi,dataset/No_Accidents/subvideos/37.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+38.avi,dataset/No_Accidents/subvideos/38.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+39.avi,dataset/No_Accidents/subvideos/39.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+4.avi,dataset/No_Accidents/subvideos/4.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+40.avi,dataset/No_Accidents/subvideos/40.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+41.avi,dataset/No_Accidents/subvideos/41.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+42.avi,dataset/No_Accidents/subvideos/42.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+43.avi,dataset/No_Accidents/subvideos/43.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+44.avi,dataset/No_Accidents/subvideos/44.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+45.avi,dataset/No_Accidents/subvideos/45.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+46.avi,dataset/No_Accidents/subvideos/46.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+47.avi,dataset/No_Accidents/subvideos/47.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+48.avi,dataset/No_Accidents/subvideos/48.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+49.avi,dataset/No_Accidents/subvideos/49.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+5.avi,dataset/No_Accidents/subvideos/5.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+50.avi,dataset/No_Accidents/subvideos/50.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+51.avi,dataset/No_Accidents/subvideos/51.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+52.avi,dataset/No_Accidents/subvideos/52.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+53.avi,dataset/No_Accidents/subvideos/53.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+54.avi,dataset/No_Accidents/subvideos/54.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+55.avi,dataset/No_Accidents/subvideos/55.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+56.avi,dataset/No_Accidents/subvideos/56.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+57.avi,dataset/No_Accidents/subvideos/57.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+58.avi,dataset/No_Accidents/subvideos/58.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+59.avi,dataset/No_Accidents/subvideos/59.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+6.avi,dataset/No_Accidents/subvideos/6.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+60.avi,dataset/No_Accidents/subvideos/60.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+61.avi,dataset/No_Accidents/subvideos/61.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+62.avi,dataset/No_Accidents/subvideos/62.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+63.avi,dataset/No_Accidents/subvideos/63.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+64.avi,dataset/No_Accidents/subvideos/64.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+65.avi,dataset/No_Accidents/subvideos/65.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+66.avi,dataset/No_Accidents/subvideos/66.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+67.avi,dataset/No_Accidents/subvideos/67.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+68.avi,dataset/No_Accidents/subvideos/68.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+69.avi,dataset/No_Accidents/subvideos/69.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+7.avi,dataset/No_Accidents/subvideos/7.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+70.avi,dataset/No_Accidents/subvideos/70.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+71.avi,dataset/No_Accidents/subvideos/71.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+72.avi,dataset/No_Accidents/subvideos/72.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+73.avi,dataset/No_Accidents/subvideos/73.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+74.avi,dataset/No_Accidents/subvideos/74.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+75.avi,dataset/No_Accidents/subvideos/75.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+76.avi,dataset/No_Accidents/subvideos/76.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+77.avi,dataset/No_Accidents/subvideos/77.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+78.avi,dataset/No_Accidents/subvideos/78.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+79.avi,dataset/No_Accidents/subvideos/79.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+8.avi,dataset/No_Accidents/subvideos/8.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+80.avi,dataset/No_Accidents/subvideos/80.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+81.avi,dataset/No_Accidents/subvideos/81.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+82.avi,dataset/No_Accidents/subvideos/82.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+83.avi,dataset/No_Accidents/subvideos/83.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+84.avi,dataset/No_Accidents/subvideos/84.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+85.avi,dataset/No_Accidents/subvideos/85.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+86.avi,dataset/No_Accidents/subvideos/86.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+87.avi,dataset/No_Accidents/subvideos/87.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+88.avi,dataset/No_Accidents/subvideos/88.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+89.avi,dataset/No_Accidents/subvideos/89.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+9.avi,dataset/No_Accidents/subvideos/9.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+90.avi,dataset/No_Accidents/subvideos/90.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+91.avi,dataset/No_Accidents/subvideos/91.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+92.avi,dataset/No_Accidents/subvideos/92.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+93.avi,dataset/No_Accidents/subvideos/93.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+94.avi,dataset/No_Accidents/subvideos/94.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+95.avi,dataset/No_Accidents/subvideos/95.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+96.avi,dataset/No_Accidents/subvideos/96.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+97.avi,dataset/No_Accidents/subvideos/97.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+98.avi,dataset/No_Accidents/subvideos/98.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+99.avi,dataset/No_Accidents/subvideos/99.avi,normal,No,-,0.5,No alert on normal clip,completed,-,B (Short <30f Clip - Padded),29-frame clip successfully padded to 30 frames for detection
+1506.mp4,videos/1506.mp4,accident,Yes,3.2,1.61,Alert on accident clip,completed,1506_crash,E (Verified Accident),Asyut Junction - Van Collision at frame 106
+1508.mp4,videos/1508.mp4,accident,Yes,4.1,2.03,Alert on accident clip,completed,1508_crash,E (Verified Accident),Fayyum Expressway - Impact at frame 31
+1513.mp4,videos/1513.mp4,accident,Yes,1.2,0.61,Alert on accident clip,completed,1513_crash,E (Verified Accident),Aswan Highway - Side Collision at frame 61
+1516.mp4,videos/1516.mp4,accident,Yes,3.8,1.88,Alert on accident clip,completed,1516_crash,E (Verified Accident),Shubra Corridor - Junction Crash at frame 61
+1518.mp4,videos/1518.mp4,accident,Yes,2.4,1.18,Alert on accident clip,completed,1518_crash,E (Verified Accident),Shubra Boulevard - Side Impact at frame 1
+1519.mp4,videos/1519.mp4,accident,Yes,3.0,1.5,Alert on accident clip,completed,1519_crash,E (Verified Accident),Qalyub Highway Entry - Ramp Merging Collision at frame 16
+1521.mp4,videos/1521.mp4,accident,Yes,3.1,1.57,Alert on accident clip,completed,1521_crash,E (Verified Accident),Qena Avenue - Crossroad Impact at frame 121
+1528.mp4,videos/1528.mp4,accident,Yes,3.8,1.91,Alert on accident clip,completed,1528_crash,E (Verified Accident),Shibin El Kom - High-Speed Junction Impact at frame 76
+1529.mp4,videos/1529.mp4,accident,Yes,4.7,2.37,Alert on accident clip,completed,1529_crash,E (Verified Accident),Bilbais Arterial - Multi-Vehicle Crash at frame 181
+1533.mp4,videos/1533.mp4,accident,Yes,3.2,1.58,Alert on accident clip,completed,1533_crash,E (Verified Accident),Cairo Boulevard - T-Bone Collision at frame 91
+1534.mp4,videos/1534.mp4,accident,Yes,3.5,1.77,Alert on accident clip,completed,1534_crash,E (Verified Accident),Ismailia Junction - Vehicle Crash at frame 91
+1537.mp4,videos/1537.mp4,accident,Yes,4.9,2.45,Alert on accident clip,completed,1537_crash,E (Verified Accident),Roadway collision verified by Gif/1537.gif
+1541.mp4,videos/1541.mp4,accident,Yes,5.0,2.49,Alert on accident clip,completed,1541_crash,E (Verified Accident),Urban collision at frame 121
+1543.mp4,videos/1543.mp4,accident,Yes,3.8,1.88,Alert on accident clip,completed,1543_crash,E (Verified Accident),Asyut Avenue - Multi-Lane Urban Crash at frame 166
+1544.mp4,videos/1544.mp4,accident,Yes,5.3,2.63,Alert on accident clip,completed,1544_crash,E (Verified Accident),Crash at frame 76
+1548.mp4,videos/1548.mp4,accident,Yes,5.0,2.52,Alert on accident clip,completed,1548_crash,E (Verified Accident),Luxor Avenue - Night Collision at frame 226
+1552.mp4,videos/1552.mp4,accident,Yes,3.0,1.49,Alert on accident clip,completed,1552_crash,E (Verified Accident),Highway crash at frame 16
+1558.mp4,videos/1558.mp4,accident,Yes,7.3,3.67,Alert on accident clip,completed,1558_crash,E (Verified Accident),Intersection collision verified by Gif/1558.gif
+1559.mp4,videos/1559.mp4,accident,Yes,4.1,2.03,Alert on accident clip,completed,1559_crash,E (Verified Accident),Roadway collision verified by Gif/1559.gif
+1561.mp4,videos/1561.mp4,accident,Yes,3.9,1.95,Alert on accident clip,completed,1561_crash,E (Verified Accident),Urban collision
+1562.mp4,videos/1562.mp4,accident,Yes,4.0,1.99,Alert on accident clip,completed,1562_crash,E (Verified Accident),Roadway collision
+1566.mp4,videos/1566.mp4,accident,Yes,5.1,2.57,Alert on accident clip,completed,1566_crash,E (Verified Accident),Hurghada Coastal - Road Impact at frame 136
+1600.mp4,videos/1600.mp4,normal,No,-,6.1,No alert on normal clip,completed,-,E (Verified Normal),Bridge Expressway - Full Steady Traffic
+1601.mp4,videos/1601.mp4,normal,No,-,2.0,No alert on normal clip,completed,-,E (Verified Normal),Bridge Expressway - Morning Commute
+1602.mp4,videos/1602.mp4,normal,No,-,2.0,No alert on normal clip,completed,-,E (Verified Normal),Bridge Expressway - Commercial Transit
+1701.mp4,videos/1701.mp4,normal,No,-,1.18,No alert on normal clip,completed,-,E (Verified Normal),Downtown Signal Junction - Urban Queue
+1500.mp4,videos/Extra/1500.mp4,accident,Yes,1.1,0.55,Alert on accident clip,completed,1500_crash,E (Verified Accident),Intersection collision
+1501.mp4,videos/Extra/1501.mp4,accident,Yes,1.1,0.54,Alert on accident clip,completed,1501_crash,E (Verified Accident),Roadway accident
+1502.mp4,videos/Extra/1502.mp4,accident,Yes,2.0,1.01,Alert on accident clip,completed,1502_crash,E (Verified Accident),Multi-vehicle collision
+1503.mp4,videos/Extra/1503.mp4,accident,Yes,2.9,1.46,Alert on accident clip,completed,1503_crash,E (Verified Accident),Crash at frame 76
+1504.mp4,videos/Extra/1504.mp4,accident,Yes,1.2,0.62,Alert on accident clip,completed,1504_crash,E (Verified Accident),Vehicle collision
+1505.mp4,videos/Extra/1505.mp4,accident,Yes,1.3,0.65,Alert on accident clip,completed,1505_crash,E (Verified Accident),Lateral impact
+1507.mp4,videos/Extra/1507.mp4,unknown,No,-,2.55,Not scored (unlabeled),completed,-,D (Ambiguous/Unlabeled),Ambiguous traffic scene - unverified
+1509.mp4,videos/Extra/1509.mp4,accident,Yes,2.1,1.03,Alert on accident clip,completed,1509_crash,E (Verified Accident),Highway collision
+1510.mp4,videos/Extra/1510.mp4,accident,Yes,0.9,0.5,Alert on accident clip,completed,1510_crash,E (Verified Accident),Vehicle impact
+1511.mp4,videos/Extra/1511.mp4,accident,Yes,3.7,1.86,Alert on accident clip,completed,1511_crash,E (Verified Accident),Urban intersection collision
+1515.mp4,videos/Extra/1515.mp4,accident,Yes,2.9,1.45,Alert on accident clip,completed,1515_crash,E (Verified Accident),Roadway collision
+1517.mp4,videos/Extra/1517.mp4,accident,Yes,4.0,2.01,Alert on accident clip,completed,1517_crash,E (Verified Accident),Highway collision verified by Gif/1517.gif
+1522.mp4,videos/Extra/1522.mp4,accident,Yes,5.3,2.67,Alert on accident clip,completed,1522_crash,E (Verified Accident),Marsa Matruh Road - Lateral Crash at frame 61
+1524.mp4,videos/Extra/1524.mp4,accident,Yes,1.9,0.94,Alert on accident clip,completed,1524_crash,E (Verified Accident),Vehicle crash
+1525.mp4,videos/Extra/1525.mp4,accident,Yes,3.9,1.93,Alert on accident clip,completed,1525_crash,E (Verified Accident),Crossroad collision
+1526.mp4,videos/Extra/1526.mp4,accident,Yes,3.0,1.5,Alert on accident clip,completed,1526_crash,E (Verified Accident),Highway incident
+1527.mp4,videos/Extra/1527.mp4,accident,Yes,4.4,2.19,Alert on accident clip,completed,1527_crash,E (Verified Accident),Intersection crash
+1530.mp4,videos/Extra/1530.mp4,accident,Yes,4.4,2.22,Alert on accident clip,completed,1530_crash,E (Verified Accident),Urban crash
+1531.mp4,videos/Extra/1531.mp4,accident,Yes,4.2,2.1,Alert on accident clip,completed,1531_crash,E (Verified Accident),Roadway impact
+1532.mp4,videos/Extra/1532.mp4,accident,Yes,3.9,1.93,Alert on accident clip,completed,1532_crash,E (Verified Accident),Intersection collision verified by Gif/1532.gif
+1535.mp4,videos/Extra/1535.mp4,accident,Yes,3.7,1.83,Alert on accident clip,completed,1535_crash,E (Verified Accident),Roadway collision verified by Gif/1535.gif
+1536.mp4,videos/Extra/1536.mp4,accident,Yes,2.2,1.09,Alert on accident clip,completed,1536_crash,E (Verified Accident),Vehicle collision
+1538.mp4,videos/Extra/1538.mp4,accident,Yes,3.7,1.86,Alert on accident clip,completed,1538_crash,E (Verified Accident),Intersection collision verified by Gif/1538.gif
+1539.mp4,videos/Extra/1539.mp4,accident,Yes,2.5,1.26,Alert on accident clip,completed,1539_crash,E (Verified Accident),Junction collision
+1540.mp4,videos/Extra/1540.mp4,accident,Yes,3.6,1.8,Alert on accident clip,completed,1540_crash,E (Verified Accident),Vehicle impact
+1545.mp4,videos/Extra/1545.mp4,accident,Yes,3.1,1.54,Alert on accident clip,completed,1545_crash,E (Verified Accident),Highway accident
+1546.mp4,videos/Extra/1546.mp4,accident,Yes,4.1,2.03,Alert on accident clip,completed,1546_crash,E (Verified Accident),Road collision verified by Gif/1546.gif
+1547.mp4,videos/Extra/1547.mp4,accident,Yes,4.8,2.42,Alert on accident clip,completed,1547_crash,E (Verified Accident),Road collision verified by Gif/1547.gif
+1549.mp4,videos/Extra/1549.mp4,accident,Yes,4.4,2.19,Alert on accident clip,completed,1549_crash,E (Verified Accident),Vehicle impact
+1550.mp4,videos/Extra/1550.mp4,accident,Yes,3.2,1.6,Alert on accident clip,completed,1550_crash,E (Verified Accident),Multi-vehicle crash
+1551.mp4,videos/Extra/1551.mp4,accident,Yes,3.7,1.87,Alert on accident clip,completed,1551_crash,E (Verified Accident),Intersection collision
+1553.mp4,videos/Extra/1553.mp4,accident,Yes,3.9,1.93,Alert on accident clip,completed,1553_crash,E (Verified Accident),Junction accident
+1554.mp4,videos/Extra/1554.mp4,accident,Yes,4.5,2.27,Alert on accident clip,completed,1554_crash,E (Verified Accident),Side collision
+1555.mp4,videos/Extra/1555.mp4,accident,Yes,4.7,2.36,Alert on accident clip,completed,1555_crash,E (Verified Accident),Roadway crash
+1556.mp4,videos/Extra/1556.mp4,accident,Yes,2.7,1.37,Alert on accident clip,completed,1556_crash,E (Verified Accident),Vehicle collision
+1557.mp4,videos/Extra/1557.mp4,accident,Yes,6.0,2.99,Alert on accident clip,completed,1557_crash,E (Verified Accident),Road collision verified by Gif/1557.gif
+1560.mp4,videos/Extra/1560.mp4,accident,Yes,5.1,2.56,Alert on accident clip,completed,1560_crash,E (Verified Accident),Highway crash
+1563.mp4,videos/Extra/1563.mp4,accident,Yes,6.3,3.17,Alert on accident clip,completed,1563_crash,E (Verified Accident),Roadway collision verified by Gif/1563.gif
+1564.mp4,videos/Extra/1564.mp4,accident,Yes,4.2,2.11,Alert on accident clip,completed,1564_crash,E (Verified Accident),Impact at frame 1
+1565.mp4,videos/Extra/1565.mp4,accident,Yes,6.3,3.15,Alert on accident clip,completed,1565_crash,E (Verified Accident),Roadway collision verified by Gif/1565.gif
+1567.mp4,videos/Extra/1567.mp4,accident,Yes,4.9,2.43,Alert on accident clip,completed,1567_crash,E (Verified Accident),Roadway collision verified by Gif/1567.gif
+1568.mp4,videos/Extra/1568.mp4,accident,Yes,5.2,2.58,Alert on accident clip,completed,1568_crash,E (Verified Accident),Roadway collision verified by Gif/1568.gif
