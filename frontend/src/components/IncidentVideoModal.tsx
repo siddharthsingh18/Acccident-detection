@@ -15,6 +15,7 @@ import {
 import type { Incident } from '@/lib/api';
 import { api } from '@/lib/api';
 import { ReviewBadge } from '@/components/ReviewBadge';
+import { ModelScoreBreakdown } from '@/components/ModelScoreBreakdown';
 
 interface IncidentVideoModalProps {
   incident: Incident | null;
@@ -214,6 +215,9 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
                   </div>
                 </div>
               </div>
+
+              {/* Model Ensemble Confidence Breakdown */}
+              <ModelScoreBreakdown incident={currentIncident} />
 
               {/* Human Verification Triage Actions */}
               <div className="pt-3 border-t border-slate-800 space-y-2.5">

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { api, type Incident } from '@/lib/api';
 import { ReviewBadge } from '@/components/ReviewBadge';
+import { ModelScoreBreakdown } from '@/components/ModelScoreBreakdown';
 
 export function ReviewQueue() {
   const [queue, setQueue] = useState<Incident[]>([]);
@@ -367,6 +368,9 @@ export function ReviewQueue() {
                 </a>
               </div>
             </div>
+
+            {/* Model Breakdown */}
+            <ModelScoreBreakdown incident={currentItem} />
 
             {/* Operator Triage Actions Card */}
             <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 shadow-lg">

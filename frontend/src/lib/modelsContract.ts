@@ -7,6 +7,7 @@ export const ScorerResultSchema = z.object({
   calibrated: z.boolean().default(false),
   available: z.boolean().default(true),
   latency_ms: z.number().nullable().optional(),
+  reason_unavailable: z.string().nullable().optional(),
 });
 
 export const ModelScoresSchema = z.object({

@@ -8,6 +8,7 @@ class ScorerResult(BaseModel):
     calibrated: bool = Field(default=False, description="Whether score is calibrated probability")
     available: bool = Field(default=True, description="Whether scorer was active during inference")
     latency_ms: Optional[float] = Field(None, description="Inference latency in milliseconds")
+    reason_unavailable: Optional[str] = Field(None, description="Explanation when scorer is unavailable")
 
 class ModelScores(BaseModel):
     policy: Literal["any", "all", "majority", "weighted"] = Field(
