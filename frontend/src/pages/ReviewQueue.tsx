@@ -274,6 +274,7 @@ export function ReviewQueue() {
                 muted={false}
                 controls
                 playsInline
+                loop
                 preload="metadata"
               />
 

@@ -125,6 +125,7 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
               muted={false}
               controls
               playsInline
+              loop
               preload="metadata"
               onClose={handleClose}
             />

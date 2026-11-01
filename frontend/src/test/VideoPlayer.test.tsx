@@ -50,9 +50,46 @@ describe('VideoPlayer and mapMediaErrorCode', () => {
       expect(video.controls).toBe(true);
       expect(video.playsInline).toBe(true);
 
-      // Loading state is initially visible
-      expect(screen.getByTestId('video-loading-state')).toBeInTheDocument();
+      // Loading state is initially visible and has pointer-events-none to prevent blocking interactions
+      const loadingState = screen.getByTestId('video-loading-state');
+      expect(loadingState).toBeInTheDocument();
+      expect(loadingState).toHaveClass('pointer-events-none');
       expect(screen.getByText(/Preparing video stream/i)).toBeInTheDocument();
+    });
+
+    it('hides loading state when onLoadedMetadata or onCanPlay fires', () => {
+      const { rerender } = render(
+        <VideoPlayer
+          src="/api/incidents/1528_76/video"
+          testId="test-video-elem"
+        />
+      );
+
+      const video = screen.getByTestId('test-video-elem');
+      fireEvent.loadedMetadata(video);
+      expect(screen.queryByTestId('video-loading-state')).not.toBeInTheDocument();
+
+      rerender(
+        <VideoPlayer
+          src="/api/incidents/1500_1/video"
+          testId="test-video-elem"
+        />
+      );
+      const video2 = screen.getByTestId('test-video-elem');
+      fireEvent.canPlay(video2);
+      expect(screen.queryByTestId('video-loading-state')).not.toBeInTheDocument();
+    });
+
+    it('supports loop property on video element', () => {
+      render(
+        <VideoPlayer
+          src="/api/incidents/1528_76/video"
+          loop={true}
+          testId="test-loop-elem"
+        />
+      );
+      const video = screen.getByTestId('test-loop-elem') as HTMLVideoElement;
+      expect(video.loop).toBe(true);
     });
 
     it('hides loading state when onLoadedData fires', () => {
@@ -129,6 +166,21 @@ describe('VideoPlayer and mapMediaErrorCode', () => {
       // Press Escape to close modal
       fireEvent.keyDown(region, { key: 'Escape', code: 'Escape' });
       expect(handleClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('invokes onError callback when error occurs', () => {
+      const onError = vi.fn();
+      render(
+        <VideoPlayer
+          src="/api/samples/test-err.avi/video"
+          onError={onError}
+          testId="test-err-elem"
+        />
+      );
+
+      const video = screen.getByTestId('test-err-elem');
+      fireEvent.error(video);
+      expect(onError).toHaveBeenCalledTimes(1);
     });
 
     it('falls back cleanly if poster image triggers error', () => {

@@ -300,6 +300,23 @@ async def get_or_create_incident_mp4(identifier: str) -> Path:
     if avi_path.exists():
         return await transcode_to_web_mp4(avi_path, cached_mp4)
 
+    # Fallback 1: check if starting frame 1 exists for this camera in saved_frames_vid
+    fallback_first_frame = settings.SAVED_FRAMES_VID_DIR / f"({incident.camera_id}) 1.avi"
+    if fallback_first_frame.exists():
+        logger.info(f"Falling back to initial frame clip {fallback_first_frame.name} for incident {safe_id}")
+        return await transcode_to_web_mp4(fallback_first_frame, cached_mp4)
+
+    # Fallback 2: if incident has associated feed_id, transcode original feed video
+    if getattr(incident, "feed_id", None):
+        try:
+            from .feed_manager import feed_manager
+            feed_item = feed_manager.feeds.get(incident.feed_id)
+            if feed_item and feed_item.video_path and feed_item.video_path.exists():
+                logger.info(f"Falling back to source feed video {feed_item.video_path.name} for incident {safe_id}")
+                return await transcode_to_web_mp4(feed_item.video_path, cached_mp4)
+        except Exception as e:
+            logger.debug(f"Could not load fallback feed video for incident {safe_id}: {e}")
+
     raise FileNotFoundError(
         f"Stitched incident clip '{clip_filename}' could not be located on disk or retrieved from Argus Master"
     )

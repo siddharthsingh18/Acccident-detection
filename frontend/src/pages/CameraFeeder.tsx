@@ -1140,6 +1140,7 @@ export function CameraFeeder() {
                   safeDownloadName={`input_camera_${cameraId}.mp4`}
                   controls
                   playsInline
+                  loop
                   preload="metadata"
                 />
               ) : (
@@ -1439,8 +1440,14 @@ export function CameraFeeder() {
                     safeDownloadName={outputIncident ? `incident_${outputIncident.id}.mp4` : 'output_clip.mp4'}
                     controls
                     playsInline
+                    loop
                     autoPlay={false}
                     preload="metadata"
+                    onError={() => {
+                      if (inputVideoUrl && outputVideoUrl !== inputVideoUrl) {
+                        setOutputVideoUrl(inputVideoUrl);
+                      }
+                    }}
                   />
                 ) : (
                   <div className="text-center text-slate-500 text-xs p-6">
@@ -1906,6 +1913,7 @@ export function CameraFeeder() {
                 muted={false}
                 controls
                 playsInline
+                loop
                 preload="metadata"
                 onClose={() => setPreviewSample(null)}
               />

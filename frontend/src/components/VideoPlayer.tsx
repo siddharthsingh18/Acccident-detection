@@ -10,10 +10,12 @@ export interface VideoPlayerProps {
   controls?: boolean;
   playsInline?: boolean;
   preload?: 'auto' | 'metadata' | 'none';
+  loop?: boolean;
   className?: string;
   testId?: string;
   safeDownloadName?: string;
   onClose?: () => void;
+  onError?: () => void;
 }
 
 export function mapMediaErrorCode(code?: number, message?: string): string {
@@ -42,10 +44,12 @@ export function VideoPlayer({
   controls = true,
   playsInline = true,
   preload = 'metadata',
+  loop = false,
   className = '',
   testId = 'video-player',
   safeDownloadName,
   onClose,
+  onError,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -76,6 +80,13 @@ export function VideoPlayer({
     setReloadKey((prev) => prev + 1);
   }, [src]);
 
+  // If video metadata is already loaded or cached, clear loading state immediately
+  useEffect(() => {
+    if (videoRef.current && videoRef.current.readyState >= 1) {
+      setIsLoading(false);
+    }
+  }, [reloadKey]);
+
   const handleRetry = useCallback(() => {
     setIsLoading(true);
     setIsBuffering(false);
@@ -100,7 +111,10 @@ export function VideoPlayer({
     const friendlyMsg = mapMediaErrorCode(code, rawMsg);
     setErrorMessage(friendlyMsg);
     console.warn(`[Argus VideoPlayer] Playback error: code ${code} (${friendlyMsg}) on ${src}`);
-  }, [src]);
+    if (onError) {
+      onError();
+    }
+  }, [src, onError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -139,7 +153,7 @@ export function VideoPlayer({
       {isLoading && !hasError && (
         <div
           data-testid="video-loading-state"
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-xs text-white"
+          className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-xs text-white"
         >
           <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-3" />
           <span className="text-sm font-medium text-slate-200">Preparing video stream...</span>
@@ -205,10 +219,23 @@ export function VideoPlayer({
           poster={posterValid ? poster : undefined}
           controls={controls}
           autoPlay={shouldAutoplay}
+          loop={loop}
           muted={muted}
           playsInline={playsInline}
           preload={preload}
           className="w-full h-full object-contain"
+          onLoadedMetadata={() => {
+            setIsLoading(false);
+            setIsBuffering(false);
+          }}
+          onCanPlay={() => {
+            setIsLoading(false);
+            setIsBuffering(false);
+          }}
+          onCanPlayThrough={() => {
+            setIsLoading(false);
+            setIsBuffering(false);
+          }}
           onLoadedData={() => {
             setIsLoading(false);
             setIsBuffering(false);
@@ -218,6 +245,8 @@ export function VideoPlayer({
             setIsLoading(false);
             setIsBuffering(false);
           }}
+          onPause={() => setIsBuffering(false)}
+          onSeeked={() => setIsBuffering(false)}
           onError={handleError}
         >
           Your browser does not support HTML5 video playback.
