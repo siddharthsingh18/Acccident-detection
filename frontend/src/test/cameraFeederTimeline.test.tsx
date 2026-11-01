@@ -188,3 +188,4 @@ describe('CameraFeeder - Detected Event Timeline & Model Comparison', () => {
     expect(screen.getByTestId('trajectory-scores-notice')).toBeInTheDocument();
   });
 });
+

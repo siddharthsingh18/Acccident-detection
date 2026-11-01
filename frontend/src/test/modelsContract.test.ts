@@ -84,3 +84,4 @@ describe('modelsContract Zod Schemas', () => {
     expect(parsed.scorers[0].version).toBe('1.0.0');
   });
 });
+

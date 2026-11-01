@@ -68,3 +68,4 @@ async def get_models_status():
         scorers=scorers,
         degraded=degraded,
     )
+

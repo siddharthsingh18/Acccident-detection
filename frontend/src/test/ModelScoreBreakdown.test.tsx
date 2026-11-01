@@ -132,3 +132,4 @@ describe('ModelScoreBreakdown Component', () => {
     expect(notFlagged).toHaveTextContent('Not flagged');
   });
 });
+
