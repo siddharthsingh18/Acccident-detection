@@ -107,6 +107,15 @@ export function ModelScoreBreakdown({
                           <span className="font-medium text-slate-800 dark:text-slate-200">
                             {meta.label}
                           </span>
+                          {scorer.reason_unavailable?.includes("DEV") && (
+                            <span
+                              data-testid="dev-scorer-badge"
+                              className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                              title="DEV checkpoint: scores are synthetic/uncalibrated and not meaningful"
+                            >
+                              DEV
+                            </span>
+                          )}
                           {!scorer.calibrated && scorer.available && (
                             <span
                               className="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30"

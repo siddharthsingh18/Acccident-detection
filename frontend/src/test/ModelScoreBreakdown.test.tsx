@@ -131,5 +131,29 @@ describe('ModelScoreBreakdown Component', () => {
     const notFlagged = screen.getByTestId('verdict-not-flagged');
     expect(notFlagged).toHaveTextContent('Not flagged');
   });
+
+  it('renders DEV badge when scorer indicates DEV checkpoint in reason_unavailable', () => {
+    const devIncident: Incident = {
+      ...baseIncident,
+      model_scores: {
+        policy: 'any',
+        threshold: 0.5,
+        decision: true,
+        scorers: [
+          {
+            name: 'convae',
+            score: 0.82,
+            fired: true,
+            calibrated: false,
+            available: true,
+            reason_unavailable: 'DEV SMOKE TEST (synthetic checkpoint)',
+          },
+        ],
+      },
+    };
+
+    render(<ModelScoreBreakdown incident={devIncident} />);
+    expect(screen.getByTestId('dev-scorer-badge')).toBeInTheDocument();
+  });
 });
 

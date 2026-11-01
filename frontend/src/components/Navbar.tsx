@@ -227,9 +227,20 @@ export function Navbar() {
                         className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/80 space-y-1.5"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
-                            {meta.label}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
+                              {meta.label}
+                            </span>
+                            {s.trained_on?.startsWith("DEV SMOKE TEST") && (
+                              <span
+                                data-testid="dev-checkpoint-badge"
+                                className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                                title="Developer smoke test checkpoint: scores are not meaningful"
+                              >
+                                DEV
+                              </span>
+                            )}
+                          </div>
                           {s.available ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
                               <CheckCircle2 className="w-3 h-3" />
@@ -242,6 +253,12 @@ export function Navbar() {
                             </span>
                           )}
                         </div>
+
+                        {s.trained_on?.startsWith("DEV SMOKE TEST") && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-mono bg-amber-500/10 p-1.5 rounded border border-amber-500/20">
+                            ⚠️ DEV SMOKE TEST: Scores are synthetic/uncalibrated and not meaningful for production use.
+                          </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-x-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
                           <span>Version: <strong className="text-slate-700 dark:text-slate-300">{s.version}</strong></span>

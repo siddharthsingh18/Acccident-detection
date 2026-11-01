@@ -154,10 +154,11 @@ describe('IncidentSearch - Models Agree Column and Filter', () => {
     await user.click(searchBtn);
 
     await waitFor(() => {
+      expect(screen.getByTestId('models-agree-filter-note')).toBeInTheDocument();
       expect(screen.getByText('#inc_one_flagged')).toBeInTheDocument();
+      expect(screen.queryByText('#inc_all_flagged')).not.toBeInTheDocument();
     });
 
-    expect(screen.queryByText('#inc_all_flagged')).not.toBeInTheDocument();
     expect(screen.queryByText('#inc_null_scores')).not.toBeInTheDocument();
   });
 });

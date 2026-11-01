@@ -18,7 +18,7 @@ from System.Data.CONSTANTS import (
     CITY, DISTRICT, CRASH_TIME, CRASH_PIC
 )
 
-def send_alert(port=10010, camera_id=9876, frame_id=88, city="Cairo", district="District 1"):
+def send_alert(port=10010, camera_id=9876, frame_id=88, city="Cairo", district="District 1", include_model_scores=True):
     ctx = zmq.Context()
     sock = ctx.socket(zmq.REQ)
     sock.setsockopt(zmq.RCVTIMEO, 3000)
@@ -38,6 +38,18 @@ def send_alert(port=10010, camera_id=9876, frame_id=88, city="Cairo", district="
         CRASH_TIME: "2026-10-27 12:34:56",
         CRASH_PIC: pic,
     }
+
+    if include_model_scores:
+        msg["MODEL_SCORES"] = {
+            "policy": "majority",
+            "threshold": 0.5,
+            "decision": True,
+            "scorers": [
+                {"name": "vif_svm", "score": 0.92, "fired": True, "calibrated": True, "available": True, "latency_ms": 14.2},
+                {"name": "convae", "score": 0.81, "fired": True, "calibrated": True, "available": True, "latency_ms": 121.5},
+                {"name": "resnet_onnx", "score": 0.0, "fired": False, "calibrated": False, "available": False, "reason_unavailable": "Weights not mounted"},
+            ],
+        }
 
     # Ensure sample incident video is available in backend/media/videos
     video_dir = ROOT_DIR / "backend" / "media" / "videos"

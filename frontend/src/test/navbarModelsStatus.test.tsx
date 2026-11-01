@@ -180,4 +180,44 @@ describe('Navbar - Models Status Indicator and Popover', () => {
       expect(button).toHaveAttribute('aria-expanded', 'false');
     });
   });
+
+  it('renders DEV badge and warning when scorer uses a dev smoke test checkpoint', async () => {
+    const user = userEvent.setup();
+    mockUseModelsStatus.mockReturnValue({
+      modelsStatus: {
+        policy: 'majority',
+        degraded: false,
+        scorers: [
+          {
+            name: 'convae',
+            available: true,
+            version: '0.9.0-dev',
+            trained_on: 'DEV SMOKE TEST (not for real use)',
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      isDegraded: false,
+      scorers: [
+        {
+          name: 'convae',
+          available: true,
+          version: '0.9.0-dev',
+          trained_on: 'DEV SMOKE TEST (not for real use)',
+        },
+      ],
+      policy: 'majority',
+      refetch: vi.fn(),
+    });
+
+    renderNavbar();
+
+    const button = screen.getByTestId('models-status-button');
+    await user.click(button);
+
+    expect(screen.getByTestId('dev-checkpoint-badge')).toBeInTheDocument();
+    expect(screen.getByText(/DEV SMOKE TEST: Scores are synthetic/i)).toBeInTheDocument();
+  });
 });
