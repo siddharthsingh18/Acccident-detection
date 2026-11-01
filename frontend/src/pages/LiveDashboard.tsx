@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldAlert, AlertCircle, RefreshCw, Radio, Camera, MapPin, Clock, CheckCircle2, Sparkles, Video } from 'lucide-react';
+import { ShieldAlert, AlertCircle, RefreshCw, Radio, Camera, MapPin, Clock, CheckCircle2, Sparkles, Video, Cpu } from 'lucide-react';
 import { api, type Incident } from '@/lib/api';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
 import { useDemo } from '@/contexts/DemoContext';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
 import { ReviewBadge } from '@/components/ReviewBadge';
+import { ModelScoresSchema } from '@/lib/modelsContract';
+import { agreementSummary } from '@/lib/modelFormatters';
 
 type DisplayIncident = Incident & {
   isNewAlert?: boolean;
@@ -53,7 +55,11 @@ export function LiveDashboard() {
         setError(null);
         const data = await api.getRecentIncidents();
         if (isMounted) {
-          setIncidents(data);
+          setIncidents((prev) => {
+            const liveAlerts = prev.filter((item) => item.isNewAlert);
+            const liveIds = new Set(liveAlerts.map((a) => a.id));
+            return [...liveAlerts, ...data.filter((d) => !liveIds.has(d.id))];
+          });
           setIsLoading(false);
         }
       } catch (err: any) {
@@ -96,6 +102,17 @@ export function LiveDashboard() {
       });
     }, 6000);
 
+    // Parse model_scores safely
+    let parsedScores = null;
+    if (latestAlert.model_scores) {
+      const parsed = ModelScoresSchema.safeParse(latestAlert.model_scores);
+      if (parsed.success) {
+        parsedScores = parsed.data;
+      } else {
+        console.warn('Malformed model_scores in alert payload, ignoring ML scores:', parsed.error);
+      }
+    }
+
     // Convert AlertMessage to DisplayIncident and prepend
     const newIncident: DisplayIncident = {
       id: latestAlert.incident_id,
@@ -108,6 +125,7 @@ export function LiveDashboard() {
       thumbnail_url: latestAlert.thumbnail_url,
       video_url: latestAlert.video_url,
       review_status: null,
+      model_scores: parsedScores,
       isNewAlert: true,
       isDemo: false,
     };
@@ -141,6 +159,16 @@ export function LiveDashboard() {
       });
     }, 6000);
 
+    let parsedDemoScores = null;
+    if (demoAlert.model_scores) {
+      const parsed = ModelScoresSchema.safeParse(demoAlert.model_scores);
+      if (parsed.success) {
+        parsedDemoScores = parsed.data;
+      } else {
+        console.warn('Malformed demo model_scores, ignoring ML scores:', parsed.error);
+      }
+    }
+
     const demoIncident: DisplayIncident = {
       id: demoAlert.incident_id,
       rowid: 0,
@@ -152,6 +180,7 @@ export function LiveDashboard() {
       thumbnail_url: demoAlert.thumbnail_url,
       video_url: demoAlert.video_url,
       review_status: null,
+      model_scores: parsedDemoScores,
       isNewAlert: true,
       isDemo: true,
     };
@@ -165,18 +194,7 @@ export function LiveDashboard() {
   }, [demoAlert, playSiren]);
 
   const handleCardClick = (item: DisplayIncident) => {
-    setSelectedIncident({
-      id: item.id,
-      rowid: 0,
-      camera_id: item.camera_id,
-      starting_frame_id: item.starting_frame_id,
-      city: item.city,
-      district: item.district,
-      crash_time: item.crash_time,
-      from_no: 5,
-      thumbnail_url: item.thumbnail_url,
-      video_url: item.video_url,
-    });
+    setSelectedIncident(item);
   };
 
   return (
@@ -357,6 +375,20 @@ export function LiveDashboard() {
                     </div>
                     <div className="flex items-center gap-1.5 pointer-events-auto">
                       <ReviewBadge status={incident.review_status} size="sm" />
+                      {incident.model_scores && (
+                        <span
+                          data-testid="models-agree-badge"
+                          title={agreementSummary(incident.model_scores)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 backdrop-blur-sm"
+                          aria-label={agreementSummary(incident.model_scores)}
+                        >
+                          <Cpu className="w-3 h-3 text-cyan-400 shrink-0" aria-hidden="true" />
+                          <span>
+                            {incident.model_scores.scorers.filter((s) => s.available && s.fired).length}/
+                            {incident.model_scores.scorers.filter((s) => s.available).length}
+                          </span>
+                        </span>
+                      )}
                       {(incident.isNewAlert || isHighlighted || alerts.some((a) => a.incident_id === incident.id)) && (
                         <button
                           type="button"

@@ -16,11 +16,13 @@ import {
   ArrowUpDown,
   AlertCircle,
   FileQuestion,
-  Play
+  Play,
+  Cpu
 } from 'lucide-react';
 import { api, type Incident, type IncidentFilters } from '@/lib/api';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
 import { ReviewBadge } from '@/components/ReviewBadge';
+import { agreementSummary } from '@/lib/modelFormatters';
 
 const EGYPTIAN_CITIES = [
   'All Cities',
@@ -59,6 +61,7 @@ const searchFilterSchema = z
     city: z.string().optional(),
     district: z.string().optional(),
     review_status: z.string().optional(),
+    models_agree: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -107,6 +110,7 @@ export function IncidentSearch() {
       city: searchParams.get('city') || '',
       district: searchParams.get('district') || '',
       review_status: searchParams.get('review_status') || 'all',
+      models_agree: searchParams.get('models_agree') || 'any',
     },
   });
 
@@ -150,6 +154,7 @@ export function IncidentSearch() {
     if (data.city && data.city !== 'All Cities') params.set('city', data.city);
     if (data.district) params.set('district', data.district);
     if (data.review_status && data.review_status !== 'all') params.set('review_status', data.review_status);
+    if (data.models_agree && data.models_agree !== 'any') params.set('models_agree', data.models_agree);
     setSearchParams(params);
   };
 
@@ -162,6 +167,7 @@ export function IncidentSearch() {
       city: '',
       district: '',
       review_status: 'all',
+      models_agree: 'any',
     });
     setSearchParams(new URLSearchParams());
     try {
@@ -199,8 +205,28 @@ export function IncidentSearch() {
     }
   };
 
+  const modelsAgreeParam = searchParams.get('models_agree') || 'any';
+
+  const filteredIncidents = useMemo(() => {
+    if (modelsAgreeParam === 'any') return incidents;
+    return incidents.filter((item) => {
+      if (!item.model_scores || !item.model_scores.scorers) return false;
+      const available = item.model_scores.scorers.filter((s) => s.available);
+      if (available.length === 0) return false;
+      const fired = available.filter((s) => s.fired);
+
+      if (modelsAgreeParam === 'all_flagged') {
+        return fired.length === available.length;
+      }
+      if (modelsAgreeParam === 'one_flagged') {
+        return fired.length === 1;
+      }
+      return true;
+    });
+  }, [incidents, modelsAgreeParam]);
+
   const sortedIncidents = useMemo(() => {
-    return [...incidents].sort((a, b) => {
+    return [...filteredIncidents].sort((a, b) => {
       let comparison = 0;
       if (sortField === 'crash_time') {
         comparison = a.crash_time.localeCompare(b.crash_time);
@@ -213,7 +239,7 @@ export function IncidentSearch() {
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [incidents, sortField, sortOrder]);
+  }, [filteredIncidents, sortField, sortOrder]);
 
   return (
     <div className="space-y-6">
@@ -250,7 +276,7 @@ export function IncidentSearch() {
       {/* Filter Form Panel */}
       <div className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 shadow-lg">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Start Date */}
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
@@ -356,7 +382,34 @@ export function IncidentSearch() {
                 <option value="false_alarm">False Alarm</option>
               </select>
             </div>
+
+            {/* Models Agree Filter */}
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                Models Agree
+              </label>
+              <select
+                {...register('models_agree')}
+                data-testid="models-agree-select"
+                className="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-cyan-500 transition"
+              >
+                <option value="any">Any (all records)</option>
+                <option value="all_flagged">All available models flagged</option>
+                <option value="one_flagged">Only one model flagged</option>
+              </select>
+            </div>
           </div>
+
+          {modelsAgreeParam !== 'any' && (
+            <div
+              data-testid="models-agree-filter-note"
+              className="flex items-center gap-2 text-xs text-cyan-300 bg-cyan-950/40 border border-cyan-800/50 px-3.5 py-2 rounded-lg"
+            >
+              <Cpu className="w-4 h-4 shrink-0 text-cyan-400" />
+              <span>Client-side filter applied to loaded search records</span>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -447,6 +500,7 @@ export function IncidentSearch() {
                     </div>
                   </th>
                   <th className="px-4 py-3.5">Review Status</th>
+                  <th className="px-4 py-3.5">Models Agree</th>
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -508,6 +562,26 @@ export function IncidentSearch() {
                     {/* Review Status */}
                     <td className="px-4 py-3">
                       <ReviewBadge status={item.review_status} size="sm" />
+                    </td>
+
+                    {/* Models Agree */}
+                    <td className="px-4 py-3">
+                      {item.model_scores ? (
+                        <span
+                          data-testid="models-agree-badge"
+                          title={agreementSummary(item.model_scores)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 backdrop-blur-sm"
+                          aria-label={agreementSummary(item.model_scores)}
+                        >
+                          <Cpu className="w-3 h-3 text-cyan-400 shrink-0" aria-hidden="true" />
+                          <span>
+                            {item.model_scores.scorers.filter((s) => s.available && s.fired).length}/
+                            {item.model_scores.scorers.filter((s) => s.available).length}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-600 font-mono text-xs" aria-label="No model data recorded">—</span>
+                      )}
                     </td>
 
                     {/* Actions */}

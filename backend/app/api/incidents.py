@@ -104,9 +104,40 @@ async def export_incidents_csv(
         "Video URL",
         "Review Status",
         "Review Note",
-        "Reviewed At"
+        "Reviewed At",
+        "Ensemble Policy",
+        "Ensemble Decision",
+        "VIF_SVM Score",
+        "VIF_SVM Fired",
+        "ConvAE Score",
+        "ConvAE Fired",
+        "ResNet_ONNX Score",
+        "ResNet_ONNX Fired",
     ])
     for item in items:
+        vif_score = ""
+        vif_fired = ""
+        convae_score = ""
+        convae_fired = ""
+        onnx_score = ""
+        onnx_fired = ""
+        policy = ""
+        decision = ""
+
+        if item.model_scores:
+            policy = item.model_scores.policy
+            decision = "Flagged" if item.model_scores.decision else "Not flagged"
+            for s in item.model_scores.scorers:
+                if s.name == "vif_svm":
+                    vif_score = f"{s.score:.2f}"
+                    vif_fired = "Yes" if s.fired else "No"
+                elif s.name == "convae":
+                    convae_score = f"{s.score:.2f}"
+                    convae_fired = "Yes" if s.fired else "No"
+                elif s.name == "resnet_onnx":
+                    onnx_score = f"{s.score:.2f}"
+                    onnx_fired = "Yes" if s.fired else "No"
+
         writer.writerow([
             item.id,
             item.camera_id,
@@ -119,7 +150,15 @@ async def export_incidents_csv(
             item.video_url,
             item.review_status or "unreviewed",
             item.review_note or "",
-            item.reviewed_at or ""
+            item.reviewed_at or "",
+            policy,
+            decision,
+            vif_score,
+            vif_fired,
+            convae_score,
+            convae_fired,
+            onnx_score,
+            onnx_fired,
         ])
 
     return Response(

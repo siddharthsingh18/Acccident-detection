@@ -126,3 +126,14 @@ def test_feed_response_degraded_and_active_scorers():
     )
     assert feed.degraded is False
     assert feed.active_scorers == ["vif_svm"]
+
+
+def test_csv_export_includes_model_scores(client):
+    """Verify CSV export includes per-scorer score columns."""
+    res = client.get("/api/incidents/export")
+    assert res.status_code == 200
+    assert "Ensemble Policy" in res.text
+    assert "VIF_SVM Score" in res.text
+    assert "ConvAE Score" in res.text
+    assert "ResNet_ONNX Score" in res.text
+
