@@ -100,8 +100,9 @@ class JsonDecoder(threading.Thread):
             crash_dimentions = msg[CRASH_DIMENTIONS]
             city =msg[CITY]
             district_no = msg[DISTRICT]
+            model_scores = msg.get(MODEL_SCORES)
 
-            self.result(camera_id,starting_frame_id,crash_dimentions,city,district_no)
+            self.result(camera_id,starting_frame_id,crash_dimentions,city,district_no, model_scores=model_scores)
 
         elif func == SEARCH:
             start_date = msg[START_DATE]
@@ -156,13 +157,14 @@ class JsonDecoder(threading.Thread):
         start_crash_time = time()
         crashing = Crashing(self.vif)
         crash_dimentions = crashing.crash(frames, trackers)
+        model_scores = getattr(crashing, "last_model_scores", None)
         self.printLog("Crash",camera_id,start_crash_time,starting_frame_id+len(frames))
 
-        self.sender_encode.result(camera_id, starting_frame_id, crash_dimentions, start_detect_time, end_detect_time,start_track_time, end_track_time, start_crash_time,city,district_no)
+        self.sender_encode.result(camera_id, starting_frame_id, crash_dimentions, start_detect_time, end_detect_time,start_track_time, end_track_time, start_crash_time,city,district_no, model_scores=model_scores)
 
-    def result(self, camera_id, starting_frame_id, crash_dimentions,city,district_no):
+    def result(self, camera_id, starting_frame_id, crash_dimentions,city,district_no, model_scores=None):
         master = Master()
-        master.checkResult(camera_id, starting_frame_id, crash_dimentions,city,district_no)
+        master.checkResult(camera_id, starting_frame_id, crash_dimentions,city,district_no, model_scores=model_scores)
 
 
     def query(self,start_date,end_date,start_time,end_time,city,district):

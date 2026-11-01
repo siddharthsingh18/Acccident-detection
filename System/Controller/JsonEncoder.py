@@ -82,7 +82,7 @@ class JsonEncoder:
         self.send(CRASHIP, CRASHPORT, sendingMsg)
 
 
-    def result(self,camera_id,starting_frame_id,crash_dimentions,start_detect_time,end_detect_time,start_track_time,end_track_time,start_crash_time,city,district_no):
+    def result(self,camera_id,starting_frame_id,crash_dimentions,start_detect_time,end_detect_time,start_track_time,end_track_time,start_crash_time,city,district_no, model_scores=None):
         func = RESULT
         end_crash_time = time()
         sendingMsg = {FUNCTION: func,
@@ -96,7 +96,8 @@ class JsonEncoder:
                       START_TRACK_TIME:start_track_time,
                       END_TRACK_TIME:end_track_time,
                       START_CRASH_TIME:start_crash_time,
-                      END_CRASH_TIME:end_crash_time}
+                      END_CRASH_TIME:end_crash_time,
+                      MODEL_SCORES: model_scores}
 
         # print("Detection time:"+str(end_detect_time - start_detect_time))
         # print("Tracking time: "+str(end_track_time - start_track_time))
@@ -154,7 +155,7 @@ class JsonEncoder:
         self.send(GUIIP,GUIPORT,sendingMsg)
 
 
-    def sendNotification(self,camera_id,frame_id,city,district,crash_time,crash_pic):
+    def sendNotification(self,camera_id,frame_id,city,district,crash_time,crash_pic, model_scores=None):
         func = NOTIFICATION
         sendingMsg = {FUNCTION:func,
             CAMERA_ID: camera_id,
@@ -162,7 +163,8 @@ class JsonEncoder:
             CITY: city,
             DISTRICT: district,
             CRASH_TIME: crash_time,
-            CRASH_PIC: crash_pic
+            CRASH_PIC: crash_pic,
+            MODEL_SCORES: model_scores
         }
         self.send(GUIIP, GUIPORT, sendingMsg) #change the address later
 

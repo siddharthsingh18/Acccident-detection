@@ -41,8 +41,17 @@ class FeedItem:
         self.reader_thread: Optional[threading.Thread] = None
 
     def to_response(self) -> FeedResponse:
-        is_degraded = self.detection_mode in ("motion", "fallback", "degraded")
-        active = ["vif_svm"] if not is_degraded else ["vif_svm_fallback"]
+        enable_ensemble = os.environ.get("ARGUS_ENABLE_ENSEMBLE", "false").lower() in ("true", "1", "yes")
+        is_motion_fallback = self.detection_mode in ("motion", "fallback", "degraded")
+
+        if enable_ensemble:
+            scorers_cfg = [s.strip() for s in os.environ.get("CRASH_SCORERS", "vif_svm,convae,resnet_onnx").split(",") if s.strip()]
+            active = ["vif_svm"]
+            is_degraded = is_motion_fallback or (len(active) < len(scorers_cfg))
+        else:
+            active = ["vif_svm"] if not is_motion_fallback else ["vif_svm_fallback"]
+            is_degraded = is_motion_fallback
+
         return FeedResponse(
             id=self.feed_id,
             camera_id=self.camera_id,

@@ -1,3 +1,4 @@
+import json
 import os
 
 import cv2
@@ -109,22 +110,31 @@ class Master:
         self.write(camera_id, new_frames, starting_frame_id, frame_width, frame_height, True)
         return no_of_frames
 
-    def checkResult(self,camera_id,starting_frame_id,crash_dimentions,city,district_no):
+    def checkResult(self,camera_id,starting_frame_id,crash_dimentions,city,district_no, model_scores=None):
         #print(city,district_no)
         if len(crash_dimentions) == 0:
             return
         print("Sending Crash Has occured...")
         no_of_from_no = self.recordCrash(camera_id,starting_frame_id,crash_dimentions)
-        self.database.insertCrashFramesVid(camera_id,starting_frame_id,PRE_FRAMES_NO+1,city,district_no)
-        self.sendNotification(camera_id,starting_frame_id,city,district_no)
+        model_scores_str = None
+        if model_scores:
+            if isinstance(model_scores, str):
+                model_scores_str = model_scores
+            elif isinstance(model_scores, dict):
+                model_scores_str = json.dumps(model_scores)
+            elif hasattr(model_scores, "model_dump_json"):
+                model_scores_str = model_scores.model_dump_json()
 
-    def sendNotification(self,camera_id,starting_frame_id,city,district_no):
+        self.database.insertCrashFramesVid(camera_id,starting_frame_id,PRE_FRAMES_NO+1,city,district_no, model_scores=model_scores_str)
+        self.sendNotification(camera_id,starting_frame_id,city,district_no, model_scores=model_scores)
+
+    def sendNotification(self,camera_id,starting_frame_id,city,district_no, model_scores=None):
         jsonEncoder = JsonEncoder()
         time =  str(datetime.utcnow().time()).split(".")[0]
         date = str(datetime.utcnow().date())
         date = date+ " "+ time
         crash_pic = self.getCrashPhoto(camera_id,starting_frame_id)
-        jsonEncoder.sendNotification(camera_id,starting_frame_id,city,district_no,date, crash_pic)
+        jsonEncoder.sendNotification(camera_id,starting_frame_id,city,district_no,date, crash_pic, model_scores=model_scores)
 
     def executeQuery(self, start_date, end_date, start_time, end_time, city, district):
         dic_of_query = {}

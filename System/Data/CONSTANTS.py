@@ -69,6 +69,7 @@ TOTAL_FRAMES_NO = PRE_FRAMES_NO + NEXT_FRAMES_NO + 1
 
 REQ_VIDEO = "REQ_VIDEO"
 RECENT_CRASHES = "RECENT_CRASHES"
+MODEL_SCORES = "MODEL_SCORES"
 
 Work_Detect_Files = True # use files instead of yolo
 Work_Tracker_Type_Mosse = True # use Mosse tracker instead of Dlib tracker

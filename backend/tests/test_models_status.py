@@ -2,6 +2,14 @@ import json
 import sqlite3
 import pytest
 from app.models.schemas import ModelScores, ScorerResult, Incident, Alert, FeedResponse
+from app.api.models import reset_models_cache
+
+
+@pytest.fixture(autouse=True)
+def clear_models_cache():
+    reset_models_cache()
+    yield
+    reset_models_cache()
 
 
 def test_get_models_status(client):
@@ -46,7 +54,13 @@ def test_models_status_with_dev_checkpoint(client, monkeypatch, tmp_path):
     ckpt_dir = tmp_path / "artifacts" / "checkpoints" / "convae"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     smoke_dest = ckpt_dir / "smoke_checkpoint.pth"
-    smoke_dest.write_text("dummy checkpoint")
+
+    # Save a valid state_dict for ConvLSTMED
+    from types import SimpleNamespace
+    import torch
+    from ConvAE import ConvLSTMED
+    dummy_model = ConvLSTMED(SimpleNamespace(mode="gray"))
+    torch.save(dummy_model.state_dict(), smoke_dest)
 
     monkeypatch.setenv("CONVAE_CHECKPOINT_DIR", str(ckpt_dir))
     monkeypatch.setenv("ARGUS_ALLOW_DEV_CHECKPOINT", "true")

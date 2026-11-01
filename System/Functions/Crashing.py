@@ -1,3 +1,4 @@
+import os
 import cv2
 
 from Mosse_Tracker.TrackerManager import TrackerType
@@ -6,8 +7,9 @@ from System.Data.CONSTANTS import Work_Crash_Estimation_Only
 
 class Crashing:
 
-    def __init__(self,vif):
+    def __init__(self, vif):
         self.vif = vif
+        self.last_model_scores = None
 
 
     def crash(self,frames,trackers):
@@ -94,6 +96,22 @@ class Crashing:
         no_crash = 0
         crash = 0
 
+        enable_ensemble = os.environ.get("ARGUS_ENABLE_ENSEMBLE", "false").lower() in ("true", "1", "yes")
+        ensemble = None
+        if enable_ensemble:
+            try:
+                from argus_ml.scoring.ensemble import CrashEnsemble
+                from argus_ml.scoring.vif_svm import VifSvmScorer
+                from argus_ml.scoring.convae import ConvAEScorer
+                from argus_ml.scoring.onnx_classifier import OnnxClassifierScorer
+
+                policy = os.environ.get("CRASH_POLICY", os.environ.get("ARGUS_ENSEMBLE_POLICY", "majority"))
+                ensemble = CrashEnsemble(
+                    scorers=[VifSvmScorer(), ConvAEScorer(), OnnxClassifierScorer()],
+                    policy=policy,
+                )
+            except Exception:
+                enable_ensemble = False
 
         crash_dimentions = []
         for tracker in trackers:
@@ -111,15 +129,24 @@ class Crashing:
             if (ymax - ymin) / (xmax - xmin) < 0.35:  # 0.35
                 continue
 
-            feature_vec = self.vif.process(tracker_frames)
-            result = self.vif.clf.predict(feature_vec.reshape(1, 304))
-            if result[0] == 0.0:
-                no_crash += 1
+            if enable_ensemble and ensemble is not None:
+                from argus_ml.scoring.base import ClipInput
+                clip = ClipInput(frames=tracker_frames)
+                scores_payload, decision, _ = ensemble.evaluate(clip)
+                self.last_model_scores = scores_payload.model_dump()
+                if not decision:
+                    no_crash += 1
+                else:
+                    crash += 1
+                    tracker.saveTracking(frames_RGB)
             else:
-                crash += 1
-                tracker.saveTracking(frames_RGB)
-
-
+                feature_vec = self.vif.process(tracker_frames)
+                result = self.vif.clf.predict(feature_vec.reshape(1, 304))
+                if result[0] == 0.0:
+                    no_crash += 1
+                else:
+                    crash += 1
+                    tracker.saveTracking(frames_RGB)
 
         if crash == 0:
             crash_dimentions = []

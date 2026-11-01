@@ -68,17 +68,28 @@ class DatabaseConnection:
         starting_frame_id: int,
         from_no: int,
         city: str,
-        district_no: str
+        district_no: str,
+        model_scores: Optional[str] = None
     ):
         """Insert crash incident record with parameterized SQL preventing SQL injection."""
-        query = """
-            INSERT INTO CrashFrames (camera_id, frame_id, from_no, city, district, crash_time)
-            VALUES (?, ?, ?, ?, ?, datetime('now'))
-        """
-        self.execute(
-            query,
-            (int(camera_id), int(starting_frame_id), int(from_no), str(city), str(district_no))
-        )
+        if model_scores:
+            query = """
+                INSERT INTO CrashFrames (camera_id, frame_id, from_no, city, district, crash_time, model_scores)
+                VALUES (?, ?, ?, ?, ?, datetime('now'), ?)
+            """
+            self.execute(
+                query,
+                (int(camera_id), int(starting_frame_id), int(from_no), str(city), str(district_no), str(model_scores))
+            )
+        else:
+            query = """
+                INSERT INTO CrashFrames (camera_id, frame_id, from_no, city, district, crash_time)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            """
+            self.execute(
+                query,
+                (int(camera_id), int(starting_frame_id), int(from_no), str(city), str(district_no))
+            )
 
     def updateCrashFramesVid(self, camera_id: int, starting_frame_id: int, from_no: int):
         """Update incident chunk number with parameterized SQL."""

@@ -16,6 +16,12 @@ class VIF:
         self.cols = 134
         self.hs = HornSchunck()
         self.clf = pickle.load(open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "model-svm1.sav"), 'rb'))
+        # Patch backward compatibility for scikit-learn >= 1.4
+        if hasattr(self.clf, "__dict__"):
+            if "probA_" in self.clf.__dict__ and not hasattr(self.clf, "_probA"):
+                self.clf._probA = self.clf.__dict__["probA_"]
+            if "probB_" in self.clf.__dict__ and not hasattr(self.clf, "_probB"):
+                self.clf._probB = self.clf.__dict__["probB_"]
         self.no_crash = 0
         self.crash = 0
 
