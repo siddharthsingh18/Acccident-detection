@@ -29,12 +29,14 @@ async def list_incidents(
     city: Optional[str] = Query(None, description="Filter by city name"),
     district: Optional[str] = Query(None, description="Filter by district designation"),
     review_status: Optional[str] = Query(None, description="Filter by review status (unreviewed, confirmed, false_alarm)"),
+    feed_id: Optional[str] = Query(None, description="Filter by feed execution ID"),
+    include_test: bool = Query(False, description="Whether to include test run incidents (hidden by default)"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     cursor: Optional[int] = Query(None, description="Pagination cursor (rowid < cursor)"),
 ):
     """
     Search and filter historical crash records from SQLite database with cursor pagination.
-    Replaces RunGui.py search filter.
+    Replaces RunGui.py search filter. Hides test runs by default unless include_test=true.
     """
     items, next_cursor, has_more = query_incidents(
         camera_id=camera_id,
@@ -45,6 +47,8 @@ async def list_incidents(
         city=city,
         district=district,
         review_status=review_status,
+        feed_id=feed_id,
+        include_test=include_test,
         limit=limit,
         cursor=cursor,
     )
@@ -56,16 +60,17 @@ async def list_incidents(
     )
 
 @router.get("/recent", response_model=List[Incident], summary="Retrieve 10 most recent incidents")
-async def get_recent():
+async def get_recent(include_test: bool = Query(False, description="Whether to include test run incidents")):
     """
     Returns the 10 newest detected road crashes.
     Direct replacement for RunGui.py 'Recent' button.
     """
-    return query_recent_incidents(limit=10)
+    return query_recent_incidents(limit=10, include_test=include_test)
 
 @router.get("/export", summary="Export incident search results as CSV")
 @router.get("/export/csv", summary="Export incident search results as CSV")
 async def export_incidents_csv(
+    camera_id: Optional[int] = Query(None, description="Filter by camera ID"),
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD or DD/MM/YYYY)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD or DD/MM/YYYY)"),
     start_time: Optional[str] = Query(None, description="Start time (HH:MM or HH:MM:SS)"),
@@ -73,12 +78,14 @@ async def export_incidents_csv(
     city: Optional[str] = Query(None, description="Filter by city name"),
     district: Optional[str] = Query(None, description="Filter by district designation"),
     review_status: Optional[str] = Query(None, description="Filter by review status (unreviewed, confirmed, false_alarm)"),
+    include_test: bool = Query(False, description="Whether to include test run incidents"),
 ):
     """Generate and download a CSV file of incidents matching the current search filters."""
     import csv
     import io
 
     items, _, _ = query_incidents(
+        camera_id=camera_id,
         start_date=start_date,
         end_date=end_date,
         start_time=start_time,
@@ -86,6 +93,7 @@ async def export_incidents_csv(
         city=city,
         district=district,
         review_status=review_status,
+        include_test=include_test,
         limit=10000,
         cursor=None,
     )

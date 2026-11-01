@@ -98,7 +98,7 @@ def detect_motion_boxes(frames, frame_width: int, frame_height: int):
             boxes.append(["car", float(x), float(x + w), float(y), float(y + h), 0.85])
     return boxes[:8]
 
-def run_headless_camera(video_path: str, camera_id: int, city: str, district: str, master_ip: str = "127.0.0.1", master_port: int = 10000):
+def run_headless_camera(video_path: str, camera_id: int, city: str, district: str, master_ip: str = "127.0.0.1", master_port: int = 10000, feed_id: str = "", is_test: bool = False):
     global running
     video_file = Path(video_path)
     if not video_file.exists():
@@ -185,7 +185,9 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
                 READ_FILE: True,
                 BOXES: boxes,
                 CITY: city,
-                DISTRICT: district
+                DISTRICT: district,
+                "FEED_ID": feed_id,
+                "TEST": is_test,
             }
 
             # Dispatch over ZeroMQ to Master node
@@ -203,6 +205,43 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
 
     cap.release()
 
+    # If the video ended and no batch was ever sent (e.g. short clips < 30 frames),
+    # pad the buffer to 30 frames with the last frame so detection and crash analysis run.
+    if running and no_of_frames > 0 and len(frames) > 0 and no_of_frames < 30:
+        last_frame = frames[-1]
+        while len(frames) < 30:
+            frames.append(last_frame.copy())
+
+        box_index = 0
+        ref_idx = min(5, len(frames) - 1)
+        boxes = detector.detect(
+            frames[0],
+            ref_frame=frames[ref_idx],
+            video_name=video_file.stem,
+            camera_id=camera_id,
+            frame_index=box_index,
+            boxes_file=file_boxes if has_boxes else None,
+            frame_width=frame_width,
+            frame_height=frame_height
+        )
+
+        msg = {
+            FUNCTION: FEED,
+            CAMERA_ID: camera_id,
+            STARTING_FRAME_ID: 1,
+            FRAMES: frames,
+            FRAME_WIDTH: frame_width,
+            FRAME_HEIGHT: frame_height,
+            READ_FILE: True,
+            BOXES: boxes,
+            CITY: city,
+            DISTRICT: district,
+            "FEED_ID": feed_id,
+            "TEST": is_test,
+        }
+        send_feed_to_master(master_ip, master_port, msg)
+        print(f"PROGRESS:{total_frames}:{total_frames}", flush=True)
+
     if running:
         print(f"PROGRESS:{total_frames}:{total_frames}", flush=True)
         print("STATUS:DONE", flush=True)
@@ -215,6 +254,8 @@ if __name__ == "__main__":
     parser.add_argument("--district", default="District 1", help="District name")
     parser.add_argument("--master-ip", default="127.0.0.1", help="Master node IP")
     parser.add_argument("--master-port", type=int, default=10000, help="Master node port")
+    parser.add_argument("--feed-id", default="", help="Active feed identifier")
+    parser.add_argument("--test", action="store_true", default=False, help="Tag feed as test run")
 
     args = parser.parse_args()
     run_headless_camera(
@@ -223,5 +264,7 @@ if __name__ == "__main__":
         city=args.city,
         district=args.district,
         master_ip=args.master_ip,
-        master_port=args.master_port
+        master_port=args.master_port,
+        feed_id=args.feed_id,
+        is_test=args.test
     )

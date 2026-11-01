@@ -308,7 +308,8 @@ async def start_sample_feed(
         file_path=video_path,
         camera_id=cam_id,
         city=city,
-        district=district
+        district=district,
+        is_test=True
     )
 
 @router.post(
@@ -352,7 +353,8 @@ async def create_feed_from_sample(payload: StartFeedFromSampleRequest):
         file_path=video_path,
         camera_id=cam_id,
         city=city,
-        district=district
+        district=district,
+        is_test=payload.is_test
     )
 
 @router.post(

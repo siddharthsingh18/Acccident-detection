@@ -50,10 +50,16 @@ def apply_migrations(db_path: Optional[str] = None) -> None:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN reviewed_at TEXT DEFAULT NULL;")
         if "model_scores" not in existing_cols:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN model_scores TEXT DEFAULT NULL;")
+        if "feed_id" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN feed_id TEXT DEFAULT NULL;")
+        if "test" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN test INTEGER DEFAULT 0;")
 
         # Indexes & View
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_review_status ON CrashFrames(review_status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_time ON CrashFrames(crash_time);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_feed_id ON CrashFrames(feed_id);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_test ON CrashFrames(test);")
         cursor.execute("DROP VIEW IF EXISTS incidents;")
         cursor.execute("CREATE VIEW incidents AS SELECT rowid, * FROM CrashFrames;")
 
@@ -115,16 +121,20 @@ def row_to_incident(row: sqlite3.Row) -> Incident:
         review_note=row["review_note"] if "review_note" in keys else None,
         reviewed_at=row["reviewed_at"] if "reviewed_at" in keys else None,
         model_scores=model_scores,
+        feed_id=row["feed_id"] if "feed_id" in keys else None,
+        test=bool(row["test"]) if ("test" in keys and row["test"] is not None) else False,
     )
 
-def query_recent_incidents(limit: int = 10) -> List[Incident]:
-    """Retrieve the newest incidents (matching RunGui.py recent button)."""
+def query_recent_incidents(limit: int = 10, include_test: bool = False) -> List[Incident]:
+    """Retrieve the newest incidents (matching RunGui.py recent button). Hides test runs by default."""
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        query = """
+        where_test = "" if include_test else "WHERE (test IS NULL OR test = 0)"
+        query = f"""
             SELECT rowid, *
             FROM CrashFrames
+            {where_test}
             ORDER BY crash_time DESC, rowid DESC
             LIMIT ?
         """
@@ -142,15 +152,27 @@ def query_incidents(
     city: Optional[str] = None,
     district: Optional[str] = None,
     review_status: Optional[str] = None,
+    feed_id: Optional[str] = None,
+    include_test: bool = False,
     limit: int = 20,
     cursor: Optional[int] = None,
 ) -> Tuple[List[Incident], Optional[int], bool]:
     """
     Search incidents with camera_id, date, time, city, district, review_status filters and cursor pagination.
     Cursor pagination uses `rowid < cursor` on reverse chronological order.
+    Hides test runs by default unless include_test=True.
     """
     conditions: List[str] = []
     params: List[Any] = []
+
+    # Hide test runs by default
+    if not include_test:
+        conditions.append("(test IS NULL OR test = 0)")
+
+    # Feed ID filter
+    if feed_id:
+        conditions.append("feed_id = ?")
+        params.append(feed_id)
 
     # Camera ID filter
     if camera_id is not None:
@@ -406,5 +428,20 @@ def update_system_settings(req: UpdateSettingsRequest) -> SystemSettings:
             min_alert_confidence=req.min_alert_confidence,
             updated_at=now_iso,
         )
+    finally:
+        conn.close()
+
+def tag_incident_test(camera_id: int, frame_id: int, feed_id: str, is_test: bool = True) -> bool:
+    """Safely tag an incident with feed_id and test flag using parameterized SQL."""
+    conn = get_write_connection()
+    try:
+        cursor = conn.cursor()
+        test_val = 1 if is_test else 0
+        cursor.execute(
+            "UPDATE CrashFrames SET feed_id = ?, test = ? WHERE camera_id = ? AND frame_id = ?",
+            (feed_id, test_val, int(camera_id), int(frame_id))
+        )
+        conn.commit()
+        return cursor.rowcount > 0
     finally:
         conn.close()

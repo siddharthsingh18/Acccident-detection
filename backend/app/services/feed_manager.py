@@ -23,7 +23,7 @@ from ..models.schemas import FeedResponse, FeedProgress, FeedCancelResponse
 logger = logging.getLogger("argus.feeds")
 
 class FeedItem:
-    def __init__(self, feed_id: str, camera_id: int, city: str, district: str, video_path: Path, thumbnail_path: Path):
+    def __init__(self, feed_id: str, camera_id: int, city: str, district: str, video_path: Path, thumbnail_path: Path, is_test: bool = False):
         self.feed_id = feed_id
         self.camera_id = camera_id
         self.city = city
@@ -39,6 +39,9 @@ class FeedItem:
         self.created_at = datetime.now(timezone.utc).isoformat()
         self.process: Optional[subprocess.Popen] = None
         self.reader_thread: Optional[threading.Thread] = None
+        self.detected_incidents: list[str] = []
+        self.anomalies_detected: int = 0
+        self.is_test: bool = is_test
 
     def to_response(self) -> FeedResponse:
         enable_ensemble = os.environ.get("ARGUS_ENABLE_ENSEMBLE", "false").lower() in ("true", "1", "yes")
@@ -68,7 +71,9 @@ class FeedItem:
             ),
             thumbnail_url=f"/api/feeds/{self.feed_id}/thumbnail",
             error=self.error,
-            created_at=self.created_at
+            created_at=self.created_at,
+            detected_incidents=list(self.detected_incidents),
+            anomalies_detected=self.anomalies_detected
         )
 
 
@@ -178,7 +183,15 @@ class FeedManager:
         cv2.imwrite(str(output_path), final_thumb)
         return output_path
 
-    async def start_feed(self, file_path: Path, camera_id: int, city: str, district: str) -> FeedResponse:
+    def record_incident(self, feed_id: str, incident_id: str):
+        """Record an incident detected for a specific feed run."""
+        item = self.feeds.get(feed_id)
+        if item:
+            if incident_id not in item.detected_incidents:
+                item.detected_incidents.append(incident_id)
+                item.anomalies_detected += 1
+
+    async def start_feed(self, file_path: Path, camera_id: int, city: str, district: str, is_test: bool = False) -> FeedResponse:
         # Check if an active feed is currently running
         if self.active_feed_id:
             active_item = self.feeds.get(self.active_feed_id)
@@ -202,7 +215,8 @@ class FeedManager:
             city=city,
             district=district,
             video_path=file_path,
-            thumbnail_path=thumbnail_path
+            thumbnail_path=thumbnail_path,
+            is_test=is_test
         )
         self.feeds[feed_id] = feed_item
         self.active_feed_id = feed_id
@@ -217,10 +231,13 @@ class FeedManager:
             "--city", city,
             "--district", district,
             "--master-ip", settings.ZMQ_MASTER_HOST,
-            "--master-port", str(settings.ZMQ_MASTER_PORT)
+            "--master-port", str(settings.ZMQ_MASTER_PORT),
+            "--feed-id", feed_id,
         ]
+        if is_test:
+            cmd.append("--test")
 
-        logger.info(f"Starting camera worker subprocess for feed {feed_id}")
+        logger.info(f"Starting camera worker subprocess for feed {feed_id} (test={is_test})")
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -269,6 +286,9 @@ class FeedManager:
                 feed_item.detection_mode = mode
                 if mode == "low-quality detection mode":
                     feed_item.status = "low-quality detection mode"
+            elif line.startswith("ALERT:"):
+                inc_id = line[6:].strip()
+                self.record_incident(feed_item.feed_id, inc_id)
             elif line.startswith("ERROR:"):
                 feed_item.error = line[6:].strip()
                 feed_item.status = "failed"

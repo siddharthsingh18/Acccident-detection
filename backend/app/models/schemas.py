@@ -78,6 +78,8 @@ class Incident(BaseModel):
     review_note: Optional[str] = Field(None, description="Operator review comments (max 500 chars)")
     reviewed_at: Optional[str] = Field(None, description="ISO timestamp when review occurred")
     model_scores: Optional[ModelScores] = Field(None, description="Ensemble and model score breakdown, or null for legacy incidents")
+    feed_id: Optional[str] = Field(None, description="Optional feed ID associated with this incident")
+    test: bool = Field(default=False, description="Whether incident was recorded during test execution")
 
 class ReviewIncidentRequest(BaseModel):
     status: str = Field(..., description="'confirmed' or 'false_alarm'")
@@ -114,6 +116,8 @@ class FeedResponse(BaseModel):
     thumbnail_url: str
     error: Optional[str] = None
     created_at: str
+    detected_incidents: List[str] = Field(default_factory=list, description="List of incident IDs detected during this feed")
+    anomalies_detected: int = Field(default=0, description="Count of anomalies/crashes detected during this feed")
 
 class FeedCancelResponse(BaseModel):
     id: str
@@ -160,3 +164,4 @@ class StartFeedFromSampleRequest(BaseModel):
     camera_id: Optional[int] = Field(None, description="Optional override camera ID")
     city: Optional[str] = Field(None, description="Optional override city")
     district: Optional[str] = Field(None, description="Optional override district")
+    is_test: bool = Field(default=True, description="Whether this feed is a test run (tagged test=true in database)")

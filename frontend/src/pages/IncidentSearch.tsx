@@ -62,6 +62,7 @@ const searchFilterSchema = z
     district: z.string().optional(),
     review_status: z.string().optional(),
     models_agree: z.string().optional(),
+    include_test: z.boolean().optional(),
   })
   .refine(
     (data) => {
@@ -111,6 +112,7 @@ export function IncidentSearch() {
       district: searchParams.get('district') || '',
       review_status: searchParams.get('review_status') || 'all',
       models_agree: searchParams.get('models_agree') || 'any',
+      include_test: searchParams.get('include_test') === 'true',
     },
   });
 
@@ -140,6 +142,7 @@ export function IncidentSearch() {
       city: searchParams.get('city') || undefined,
       district: searchParams.get('district') || undefined,
       review_status: searchParams.get('review_status') || undefined,
+      include_test: searchParams.get('include_test') === 'true',
       limit: 20,
     };
     fetchResults(filters);
@@ -155,6 +158,7 @@ export function IncidentSearch() {
     if (data.district) params.set('district', data.district);
     if (data.review_status && data.review_status !== 'all') params.set('review_status', data.review_status);
     if (data.models_agree && data.models_agree !== 'any') params.set('models_agree', data.models_agree);
+    if (data.include_test) params.set('include_test', 'true');
     setSearchParams(params);
   };
 
@@ -168,6 +172,7 @@ export function IncidentSearch() {
       district: '',
       review_status: 'all',
       models_agree: 'any',
+      include_test: false,
     });
     setSearchParams(new URLSearchParams());
     try {
@@ -192,6 +197,8 @@ export function IncidentSearch() {
       end_time: searchParams.get('end_time') || undefined,
       city: searchParams.get('city') || undefined,
       district: searchParams.get('district') || undefined,
+      review_status: searchParams.get('review_status') || undefined,
+      include_test: searchParams.get('include_test') === 'true',
     };
     window.location.href = api.getExportUrl(filters);
   };
@@ -411,7 +418,16 @@ export function IncidentSearch() {
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex items-center justify-between pt-2">
+            <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                data-testid="include-test-checkbox"
+                {...register('include_test')}
+                className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900"
+              />
+              <span>Include test runs</span>
+            </label>
             <button
               type="submit"
               className="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded-lg shadow-md transition"

@@ -1,15 +1,59 @@
 {
+  "1500": {
+    "label": "accident",
+    "notes": "Intersection collision"
+  },
+  "1501": {
+    "label": "accident",
+    "notes": "Roadway accident"
+  },
+  "1502": {
+    "label": "accident",
+    "notes": "Multi-vehicle collision"
+  },
+  "1503": {
+    "label": "accident",
+    "notes": "Crash at frame 76"
+  },
+  "1504": {
+    "label": "accident",
+    "notes": "Vehicle collision"
+  },
+  "1505": {
+    "label": "accident",
+    "notes": "Lateral impact"
+  },
   "1506": {
     "label": "accident",
     "notes": "Asyut Junction - Van Collision at frame 106"
+  },
+  "1507": {
+    "label": "unknown",
+    "notes": "Ambiguous traffic scene - unverified"
   },
   "1508": {
     "label": "accident",
     "notes": "Fayyum Expressway - Impact at frame 31"
   },
+  "1509": {
+    "label": "accident",
+    "notes": "Highway collision"
+  },
+  "1510": {
+    "label": "accident",
+    "notes": "Vehicle impact"
+  },
+  "1511": {
+    "label": "accident",
+    "notes": "Urban intersection collision"
+  },
   "1513": {
     "label": "accident",
     "notes": "Aswan Highway - Side Collision at frame 61"
+  },
+  "1515": {
+    "label": "accident",
+    "notes": "Roadway collision"
   },
   "1516": {
     "label": "accident",
@@ -35,6 +79,22 @@
     "label": "accident",
     "notes": "Marsa Matruh Road - Lateral Crash at frame 61"
   },
+  "1524": {
+    "label": "accident",
+    "notes": "Vehicle crash"
+  },
+  "1525": {
+    "label": "accident",
+    "notes": "Crossroad collision"
+  },
+  "1526": {
+    "label": "accident",
+    "notes": "Highway incident"
+  },
+  "1527": {
+    "label": "accident",
+    "notes": "Intersection crash"
+  },
   "1528": {
     "label": "accident",
     "notes": "Shibin El Kom - High-Speed Junction Impact at frame 76"
@@ -42,6 +102,14 @@
   "1529": {
     "label": "accident",
     "notes": "Bilbais Arterial - Multi-Vehicle Crash at frame 181"
+  },
+  "1530": {
+    "label": "accident",
+    "notes": "Urban crash"
+  },
+  "1531": {
+    "label": "accident",
+    "notes": "Roadway impact"
   },
   "1532": {
     "label": "accident",
@@ -59,6 +127,10 @@
     "label": "accident",
     "notes": "Roadway collision verified by Gif/1535.gif"
   },
+  "1536": {
+    "label": "accident",
+    "notes": "Vehicle collision"
+  },
   "1537": {
     "label": "accident",
     "notes": "Roadway collision verified by Gif/1537.gif"
@@ -67,9 +139,29 @@
     "label": "accident",
     "notes": "Intersection collision verified by Gif/1538.gif"
   },
+  "1539": {
+    "label": "accident",
+    "notes": "Junction collision"
+  },
+  "1540": {
+    "label": "accident",
+    "notes": "Vehicle impact"
+  },
+  "1541": {
+    "label": "accident",
+    "notes": "Urban collision at frame 121"
+  },
   "1543": {
     "label": "accident",
     "notes": "Asyut Avenue - Multi-Lane Urban Crash at frame 166"
+  },
+  "1544": {
+    "label": "accident",
+    "notes": "Crash at frame 76"
+  },
+  "1545": {
+    "label": "accident",
+    "notes": "Highway accident"
   },
   "1546": {
     "label": "accident",
@@ -83,6 +175,38 @@
     "label": "accident",
     "notes": "Luxor Avenue - Night Collision at frame 226"
   },
+  "1549": {
+    "label": "accident",
+    "notes": "Vehicle impact"
+  },
+  "1550": {
+    "label": "accident",
+    "notes": "Multi-vehicle crash"
+  },
+  "1551": {
+    "label": "accident",
+    "notes": "Intersection collision"
+  },
+  "1552": {
+    "label": "accident",
+    "notes": "Highway crash at frame 16"
+  },
+  "1553": {
+    "label": "accident",
+    "notes": "Junction accident"
+  },
+  "1554": {
+    "label": "accident",
+    "notes": "Side collision"
+  },
+  "1555": {
+    "label": "accident",
+    "notes": "Roadway crash"
+  },
+  "1556": {
+    "label": "accident",
+    "notes": "Vehicle collision"
+  },
   "1557": {
     "label": "accident",
     "notes": "Road collision verified by Gif/1557.gif"
@@ -95,9 +219,25 @@
     "label": "accident",
     "notes": "Roadway collision verified by Gif/1559.gif"
   },
+  "1560": {
+    "label": "accident",
+    "notes": "Highway crash"
+  },
+  "1561": {
+    "label": "accident",
+    "notes": "Urban collision"
+  },
+  "1562": {
+    "label": "accident",
+    "notes": "Roadway collision"
+  },
   "1563": {
     "label": "accident",
     "notes": "Roadway collision verified by Gif/1563.gif"
+  },
+  "1564": {
+    "label": "accident",
+    "notes": "Impact at frame 1"
   },
   "1565": {
     "label": "accident",

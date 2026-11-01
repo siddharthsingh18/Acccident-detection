@@ -27,6 +27,8 @@ export type HealthResponse = paths['/api/health']['get']['responses']['200']['co
 export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['content']['application/json'] & {
   degraded?: boolean;
   active_scorers?: string[];
+  detected_incidents?: string[];
+  anomalies_detected?: number;
 };
 export type FeedCancelResponse = paths['/api/feeds/{id}/cancel']['post']['responses']['200']['content']['application/json'];
 
@@ -39,6 +41,8 @@ export interface IncidentFilters {
   city?: string;
   district?: string;
   review_status?: string;
+  feed_id?: string;
+  include_test?: boolean;
   limit?: number;
   cursor?: number;
 }
@@ -142,6 +146,8 @@ export const api = {
     if (filters.review_status && filters.review_status !== 'all') {
       params.append('review_status', filters.review_status);
     }
+    if (filters.feed_id) params.append('feed_id', filters.feed_id);
+    if (filters.include_test) params.append('include_test', 'true');
     if (filters.limit) params.append('limit', String(filters.limit));
     if (filters.cursor !== undefined && filters.cursor !== null) params.append('cursor', String(filters.cursor));
 
@@ -198,7 +204,7 @@ export const api = {
     return handleResponse<SampleItem[]>(res);
   },
 
-  async startFeedFromSample(sampleId: string, cameraId?: number, city?: string, district?: string): Promise<FeedResponse> {
+  async startFeedFromSample(sampleId: string, cameraId?: number, city?: string, district?: string, isTest: boolean = true): Promise<FeedResponse> {
     const res = await fetch('/api/feeds/from-sample', {
       method: 'POST',
       headers: {
@@ -209,6 +215,7 @@ export const api = {
         camera_id: cameraId,
         city,
         district,
+        is_test: isTest,
       }),
     });
     return handleResponse<FeedResponse>(res);
@@ -228,6 +235,9 @@ export const api = {
 
   getExportUrl(filters: IncidentFilters = {}): string {
     const params = new URLSearchParams();
+    if (filters.camera_id !== undefined && filters.camera_id !== null) {
+      params.append('camera_id', String(filters.camera_id));
+    }
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.start_time) params.append('start_time', filters.start_time);
@@ -237,6 +247,8 @@ export const api = {
     if (filters.review_status && filters.review_status !== 'all') {
       params.append('review_status', filters.review_status);
     }
+    if (filters.feed_id) params.append('feed_id', filters.feed_id);
+    if (filters.include_test) params.append('include_test', 'true');
     return `/api/incidents/export?${params.toString()}`;
   },
 

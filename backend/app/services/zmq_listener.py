@@ -11,6 +11,8 @@ import zmq
 from ..config import settings
 from ..models.schemas import Alert, ModelScores
 from .broadcaster import get_alert_queue
+from .feed_manager import feed_manager
+from .database import tag_incident_test
 
 from System.Connections.protocol import deserialize_message, serialize_reply
 
@@ -126,6 +128,21 @@ class ZmqAlertListener(threading.Thread):
             crash_pic = message.get("CRASH_PIC")
 
             incident_id = f"{camera_id}_{frame_id}"
+
+            # Link with active feed and tag test status in database
+            feed_id = message.get("FEED_ID")
+            if not feed_id and feed_manager.active_feed_id:
+                active_item = feed_manager.feeds.get(feed_manager.active_feed_id)
+                if active_item and active_item.camera_id == camera_id:
+                    feed_id = feed_manager.active_feed_id
+
+            if feed_id:
+                feed_manager.record_incident(feed_id, incident_id)
+                is_test = feed_manager.feeds[feed_id].is_test if feed_id in feed_manager.feeds else False
+                try:
+                    tag_incident_test(camera_id, frame_id, feed_id, is_test)
+                except Exception as te:
+                    logger.warning(f"Failed to tag incident {incident_id} with test flag: {te}")
 
             # Parse date and time components
             if " " in crash_time:

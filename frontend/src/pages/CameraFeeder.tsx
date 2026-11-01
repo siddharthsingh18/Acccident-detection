@@ -330,16 +330,35 @@ export function CameraFeeder() {
         setBatchResults([...results]);
       } else {
         // Status is 'done'
+        let incId: string | null = null;
         let detectedIncident: Incident | null = null;
-        try {
-          const incRes = await api.getIncidents({ camera_id: sample.camera_id || 1528, limit: 1 });
-          detectedIncident = incRes.items[0] || null;
-        } catch {
-          // ignore
-        }
+        let alertRaised = false;
 
-        const isExpectedAccident = sample.expected_label === 'accident';
-        const alertRaised = !!detectedIncident || (isExpectedAccident && (terminalFeed as any).anomalies_detected > 0);
+        if (Array.isArray(terminalFeed.detected_incidents)) {
+          if (terminalFeed.detected_incidents.length > 0) {
+            incId = terminalFeed.detected_incidents[0];
+            alertRaised = true;
+            try {
+              detectedIncident = await api.getIncident(incId);
+            } catch {
+              // ignore
+            }
+          } else if ((terminalFeed.anomalies_detected ?? 0) > 0) {
+            alertRaised = true;
+          }
+        } else {
+          // Fallback when detected_incidents array is not provided by mock or legacy endpoint
+          try {
+            const incRes = await api.getIncidents({ camera_id: sample.camera_id || 1528, limit: 1 });
+            detectedIncident = incRes.items[0] || null;
+            if (detectedIncident) {
+              incId = detectedIncident.id;
+            }
+          } catch {
+            // ignore
+          }
+          alertRaised = !!detectedIncident || ((terminalFeed as any).anomalies_detected > 0);
+        }
 
         let alertTime: number | null = null;
         if (detectedIncident?.starting_frame_id != null) {
@@ -358,7 +377,7 @@ export function CameraFeeder() {
           processing_time_s: procTime,
           status: 'completed',
           outcome,
-          incident_id: detectedIncident?.id,
+          incident_id: detectedIncident?.id || incId || undefined,
           video_url: detectedIncident?.video_url || sample.video_url,
         });
         setBatchResults([...results]);
@@ -610,39 +629,44 @@ export function CameraFeeder() {
           }
 
           if (updated.status === 'done') {
-            // Determine outcome: check database for cameraId incident and sample preset metadata
+            // Determine outcome from feed detection results
             let detectedIncident: Incident | null = null;
-            try {
-              const res = await api.getIncidents({ camera_id: cameraId, limit: 1 });
-              detectedIncident = res.items[0] || null;
-            } catch (err) {
-              console.debug('No recent incident found for camera:', err);
+            let hasDetectedIncidents = false;
+
+            if (Array.isArray(updated.detected_incidents)) {
+              if (updated.detected_incidents.length > 0) {
+                hasDetectedIncidents = true;
+                const incId = updated.detected_incidents[0];
+                try {
+                  detectedIncident = await api.getIncident(incId);
+                } catch (err) {
+                  console.debug('Failed to fetch detected incident details:', err);
+                }
+              }
+            } else {
+              // Fallback when detected_incidents array is not provided by mock or legacy endpoint
+              try {
+                const res = await api.getIncidents({ camera_id: cameraId, limit: 1 });
+                detectedIncident = res.items[0] || null;
+                hasDetectedIncidents = !!detectedIncident;
+              } catch (err) {
+                console.debug('No recent incident found for camera:', err);
+              }
             }
 
-            const isExpectedAccident = selectedSample && (
-              (selectedSample as any).has_accident || selectedSample.expected_label === 'accident'
-            );
-
-            if (detectedIncident || isExpectedAccident) {
+            if (detectedIncident || hasDetectedIncidents) {
               playSiren();
               setDetectionOutcome('accident');
-              const inc: Incident = detectedIncident || {
-                id: (selectedSample as any)?.incident_id || `${cameraId}_106`,
-                rowid: 1,
-                camera_id: cameraId,
-                starting_frame_id: 106,
-                crash_time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-                city: selectedSample?.city || city,
-                district: selectedSample?.district || district,
-                from_no: 5,
-                thumbnail_url: (selectedSample as any)?.incident_id ? `/media/thumbnails/${(selectedSample as any).incident_id}.jpg` : `/media/thumbnails/${cameraId}_106.jpg`,
-                video_url: (selectedSample as any)?.output_video_url || `/api/incidents/${cameraId}_106/video`,
-                model_scores: detectedIncident?.model_scores || null,
-              };
-              setOutputIncident(inc);
-              setOutputVideoUrl(inc.video_url || (selectedSample as any)?.output_video_url || `/api/incidents/${inc.id}/video`);
+              if (detectedIncident) {
+                setOutputIncident(detectedIncident);
+                setOutputVideoUrl(detectedIncident.video_url || `/api/incidents/${detectedIncident.id}/video`);
+              } else if (Array.isArray(updated.detected_incidents) && updated.detected_incidents[0]) {
+                setOutputIncident(null);
+                setOutputVideoUrl(`/api/incidents/${updated.detected_incidents[0]}/video`);
+              }
             } else {
               setDetectionOutcome('normal');
+              setOutputIncident(null);
               setOutputVideoUrl(inputVideoUrl);
             }
           } else if (updated.status === 'failed') {
