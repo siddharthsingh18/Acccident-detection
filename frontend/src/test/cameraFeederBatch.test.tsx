@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { CameraFeeder } from '@/pages/CameraFeeder';
-import { api, type SampleItem, type FeedResponse } from '@/lib/api';
+import { api, type SampleItem } from '@/lib/api';
 import { classifyBatchOutcome, generateBatchResultsCsv } from '@/lib/batchRunner';
 
 vi.mock('@/lib/api', () => ({
@@ -307,10 +307,8 @@ describe('CameraFeeder - Batch Test Runner UI & Execution (Phase 3)', () => {
 
   it('continues batch queue when a single clip fails without aborting subsequent clips', async () => {
     const user = userEvent.setup();
-    let callCount = 0;
 
     (api.startFeedFromSample as any).mockImplementation((sampleId: string) => {
-      callCount++;
       if (sampleId === 'videos--1528.mp4') {
         return Promise.reject(new Error('Corrupted video header'));
       }
