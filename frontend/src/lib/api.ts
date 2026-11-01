@@ -86,6 +86,23 @@ export interface SampleFeed {
   output_video_url: string | null;
 }
 
+export interface SampleItem {
+  id: string;
+  name: string;
+  relative_path: string;
+  size_bytes: number;
+  duration_s: number | null;
+  resolution: string | null;
+  fps: number | null;
+  thumbnail_url: string;
+  video_url: string;
+  expected_label: 'accident' | 'normal' | 'unknown';
+  camera_id?: number | null;
+  city?: string | null;
+  district?: string | null;
+  notes?: string | null;
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let errorDetail = 'An unexpected error occurred';
@@ -174,6 +191,27 @@ export const api = {
   async getSampleFeeds(): Promise<SampleFeed[]> {
     const res = await fetch('/api/feeds/samples');
     return handleResponse<SampleFeed[]>(res);
+  },
+
+  async getSamples(): Promise<SampleItem[]> {
+    const res = await fetch('/api/samples');
+    return handleResponse<SampleItem[]>(res);
+  },
+
+  async startFeedFromSample(sampleId: string, cameraId?: number, city?: string, district?: string): Promise<FeedResponse> {
+    const res = await fetch('/api/feeds/from-sample', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sample_id: sampleId,
+        camera_id: cameraId,
+        city,
+        district,
+      }),
+    });
+    return handleResponse<FeedResponse>(res);
   },
 
   async startSampleFeed(sampleId: string, city: string, district: string): Promise<FeedResponse> {

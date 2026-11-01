@@ -18,11 +18,15 @@ import {
   Search,
   CheckCircle2,
   ChevronRight,
+  ChevronLeft,
   Radio,
   Info,
-  Columns
+  Columns,
+  Eye,
+  HelpCircle,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { api, type FeedResponse, type Incident, type SampleFeed } from '@/lib/api';
+import { api, type FeedResponse, type Incident, type SampleItem } from '@/lib/api';
 import { useAlertSocket } from '@/hooks/useAlertSocket';
 import { useSound } from '@/contexts/SoundContext';
 import { IncidentVideoModal } from '@/components/IncidentVideoModal';
@@ -59,36 +63,93 @@ const EGYPTIAN_CITIES = [
 const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200 MB
 const ALLOWED_EXTENSIONS = ['.mp4', '.avi', '.mkv', '.mov'];
 
+function formatDuration(seconds: number | null | undefined): string {
+  if (seconds == null || isNaN(seconds)) return '--';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  if (m === 0) return `${s}s`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatBytes(bytes: number | null | undefined): string {
+  if (!bytes || isNaN(bytes)) return '--';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function CameraFeeder() {
   // Input State
-  const [samples, setSamples] = useState<SampleFeed[]>([]);
-  const [selectedSample, setSelectedSample] = useState<SampleFeed | null>(null);
+  const [samples, setSamples] = useState<SampleItem[]>([]);
+  const [selectedSample, setSelectedSample] = useState<SampleItem | null>(null);
+  const [previewSample, setPreviewSample] = useState<SampleItem | null>(null);
+  const [isLoadingSamples, setIsLoadingSamples] = useState<boolean>(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [inputVideoUrl, setInputVideoUrl] = useState<string | null>(null);
   const [cameraId, setCameraId] = useState<number>(1528);
   const [city, setCity] = useState<string>('Shibin El Kom');
   const [district, setDistrict] = useState<string>('District 13');
-  const [sampleFilter, setSampleFilter] = useState<'all' | 'accident' | 'normal'>('all');
+  const [sampleFilter, setSampleFilter] = useState<'all' | 'accident' | 'normal' | 'unknown'>('all');
   const [sampleSearch, setSampleSearch] = useState<string>('');
+  const [sampleSort, setSampleSort] = useState<'name-asc' | 'name-desc' | 'duration-desc' | 'duration-asc' | 'size-desc'>('name-asc');
+  const [page, setPage] = useState<number>(1);
+  const PAGE_SIZE = 12;
 
-  const accidentCount = useMemo(() => samples.filter((s) => s.has_accident).length, [samples]);
-  const normalCount = useMemo(() => samples.filter((s) => !s.has_accident).length, [samples]);
+  const accidentCount = useMemo(() => samples.filter((s) => s.expected_label === 'accident').length, [samples]);
+  const normalCount = useMemo(() => samples.filter((s) => s.expected_label === 'normal').length, [samples]);
+  const unknownCount = useMemo(() => samples.filter((s) => s.expected_label === 'unknown').length, [samples]);
 
-  const filteredSamples = useMemo(() => {
-    return samples.filter((s) => {
-      if (sampleFilter === 'accident' && !s.has_accident) return false;
-      if (sampleFilter === 'normal' && s.has_accident) return false;
+  const filteredAndSortedSamples = useMemo(() => {
+    let result = samples.filter((s) => {
+      if (sampleFilter !== 'all' && s.expected_label !== sampleFilter) return false;
       if (sampleSearch.trim()) {
         const q = sampleSearch.toLowerCase();
-        const matchCam = String(s.camera_id).includes(q);
-        const matchCity = s.city.toLowerCase().includes(q);
-        const matchDistrict = s.district.toLowerCase().includes(q);
-        const matchLabel = s.label.toLowerCase().includes(q);
-        return matchCam || matchCity || matchDistrict || matchLabel;
+        const matchName = s.name.toLowerCase().includes(q);
+        const matchPath = s.relative_path.toLowerCase().includes(q);
+        const matchCam = s.camera_id != null && String(s.camera_id).includes(q);
+        const matchCity = s.city ? s.city.toLowerCase().includes(q) : false;
+        const matchDistrict = s.district ? s.district.toLowerCase().includes(q) : false;
+        const matchNotes = s.notes ? s.notes.toLowerCase().includes(q) : false;
+        return matchName || matchPath || matchCam || matchCity || matchDistrict || matchNotes;
       }
       return true;
     });
-  }, [samples, sampleFilter, sampleSearch]);
+
+    result.sort((a, b) => {
+      switch (sampleSort) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        case 'name-desc':
+          return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+        case 'duration-desc':
+          return (b.duration_s ?? 0) - (a.duration_s ?? 0);
+        case 'duration-asc':
+          return (a.duration_s ?? 0) - (b.duration_s ?? 0);
+        case 'size-desc':
+          return b.size_bytes - a.size_bytes;
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [samples, sampleFilter, sampleSearch, sampleSort]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedSamples.length / PAGE_SIZE));
+  const paginatedSamples = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredAndSortedSamples.slice(start, start + PAGE_SIZE);
+  }, [filteredAndSortedSamples, page]);
+
+  // Close preview modal on Escape
+  useEffect(() => {
+    if (!previewSample) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewSample(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewSample]);
 
   // Processing & Output State
   const [activeFeed, setActiveFeed] = useState<FeedResponse | null>(null);
@@ -116,20 +177,56 @@ export function CameraFeeder() {
   useEffect(() => {
     let isMounted = true;
     const fetchSamples = async () => {
+      setIsLoadingSamples(true);
       try {
-        const data = await api.getSampleFeeds();
-        if (isMounted && data.length > 0) {
-          setSamples(data);
-          // Default to the first sample (1528 - confirmed accident)
-          const defaultSample = data[0];
+        let items: SampleItem[] = [];
+        if (typeof api.getSamples === 'function') {
+          try {
+            items = await api.getSamples();
+          } catch (e) {
+            console.warn('api.getSamples failed, falling back to getSampleFeeds', e);
+          }
+        }
+
+        if (!items || items.length === 0) {
+          if (typeof api.getSampleFeeds === 'function') {
+            const legacy = await api.getSampleFeeds();
+            items = legacy.map((s) => ({
+              id: s.id,
+              name: s.label || s.filename,
+              relative_path: s.filename,
+              size_bytes: 0,
+              duration_s: null,
+              resolution: null,
+              fps: null,
+              thumbnail_url: s.output_video_url || s.video_url,
+              video_url: s.video_url,
+              expected_label: s.has_accident ? 'accident' : 'normal',
+              camera_id: s.camera_id,
+              city: s.city,
+              district: s.district,
+              notes: s.description,
+              has_accident: s.has_accident,
+              incident_id: s.incident_id,
+              output_video_url: s.output_video_url,
+            })) as any;
+          }
+        }
+
+        if (isMounted && items && items.length > 0) {
+          setSamples(items);
+          // Default to the first sample or 1528
+          const defaultSample = items.find((s) => s.id.includes('1528') || s.name.includes('1528')) || items[0];
           setSelectedSample(defaultSample);
           setInputVideoUrl(defaultSample.video_url);
-          setCameraId(defaultSample.camera_id);
-          setCity(defaultSample.city);
-          setDistrict(defaultSample.district);
+          if (defaultSample.camera_id) setCameraId(defaultSample.camera_id);
+          if (defaultSample.city) setCity(defaultSample.city);
+          if (defaultSample.district) setDistrict(defaultSample.district);
         }
       } catch (err) {
         console.warn('Could not load sample feeds from backend:', err);
+      } finally {
+        if (isMounted) setIsLoadingSamples(false);
       }
     };
     fetchSamples();
@@ -165,16 +262,24 @@ export function CameraFeeder() {
   }, [latestAlert, cameraId, detectionOutcome, city, district, playSiren]);
 
   // Handle preset sample selection
-  const handleSelectSample = (sample: SampleFeed) => {
+  const handleSelectSample = (sample: SampleItem) => {
     if (activeFeed && (activeFeed.status === 'processing' || activeFeed.status === 'queued')) return;
     setErrorMessage(null);
     setIs409Conflict(false);
     setSelectedSample(sample);
     setSelectedFile(null);
     setInputVideoUrl(sample.video_url);
-    setCameraId(sample.camera_id);
-    setCity(sample.city);
-    setDistrict(sample.district);
+    if (sample.camera_id) {
+      setCameraId(sample.camera_id);
+    } else {
+      const match = sample.name.match(/\d+/);
+      if (match) {
+        const parsed = parseInt(match[0], 10);
+        if (!isNaN(parsed) && parsed > 0) setCameraId(parsed);
+      }
+    }
+    if (sample.city) setCity(sample.city);
+    if (sample.district) setDistrict(sample.district);
     setDetectionOutcome('idle');
     setOutputIncident(null);
     setOutputVideoUrl(null);
@@ -241,7 +346,11 @@ export function CameraFeeder() {
     try {
       let feed: FeedResponse;
       if (selectedSample && !selectedFile) {
-        feed = await api.startSampleFeed(selectedSample.id, city, district);
+        if (typeof api.startFeedFromSample === 'function') {
+          feed = await api.startFeedFromSample(selectedSample.id, cameraId, city, district);
+        } else {
+          feed = await api.startSampleFeed(selectedSample.id, city, district);
+        }
       } else if (selectedFile) {
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -261,7 +370,7 @@ export function CameraFeeder() {
       setDetectionOutcome('idle');
       const msg = err.message || 'Failed to submit camera feed.';
       setErrorMessage(msg);
-      if (msg.includes('currently running') || msg.includes('409')) {
+      if (msg.includes('currently running') || msg.includes('409') || msg.includes('busy')) {
         setIs409Conflict(true);
       }
     }
@@ -293,11 +402,15 @@ export function CameraFeeder() {
               console.debug('No recent incident found for camera:', err);
             }
 
-            if (detectedIncident || (selectedSample && selectedSample.has_accident)) {
+            const isExpectedAccident = selectedSample && (
+              (selectedSample as any).has_accident || selectedSample.expected_label === 'accident'
+            );
+
+            if (detectedIncident || isExpectedAccident) {
               playSiren();
               setDetectionOutcome('accident');
               const inc: Incident = detectedIncident || {
-                id: selectedSample?.incident_id || `${cameraId}_106`,
+                id: (selectedSample as any)?.incident_id || `${cameraId}_106`,
                 rowid: 1,
                 camera_id: cameraId,
                 starting_frame_id: 106,
@@ -305,12 +418,12 @@ export function CameraFeeder() {
                 city: selectedSample?.city || city,
                 district: selectedSample?.district || district,
                 from_no: 5,
-                thumbnail_url: selectedSample?.incident_id ? `/media/thumbnails/${selectedSample.incident_id}.jpg` : `/media/thumbnails/${cameraId}_106.jpg`,
-                video_url: selectedSample?.output_video_url || `/api/incidents/${cameraId}_106/video`,
+                thumbnail_url: (selectedSample as any)?.incident_id ? `/media/thumbnails/${(selectedSample as any).incident_id}.jpg` : `/media/thumbnails/${cameraId}_106.jpg`,
+                video_url: (selectedSample as any)?.output_video_url || `/api/incidents/${cameraId}_106/video`,
                 model_scores: detectedIncident?.model_scores || null,
               };
               setOutputIncident(inc);
-              setOutputVideoUrl(inc.video_url || selectedSample?.output_video_url || `/api/incidents/${inc.id}/video`);
+              setOutputVideoUrl(inc.video_url || (selectedSample as any)?.output_video_url || `/api/incidents/${inc.id}/video`);
             } else {
               setDetectionOutcome('normal');
               setOutputVideoUrl(inputVideoUrl);
@@ -432,16 +545,21 @@ export function CameraFeeder() {
             </span>
           </div>
 
-          {/* Quick Presets Carousel / Badges */}
-          <div className="space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          {/* Sample Footage Gallery */}
+          <div className="space-y-3">
+            {/* Header with Title and Filter Chips */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
-                Dataset Footage Library ({samples.length} Samples)
+                Sample Footage Catalog ({samples.length} Clips)
               </label>
-              <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono self-start sm:self-auto">
+              <div className="flex flex-wrap items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono">
                 <button
                   type="button"
-                  onClick={() => setSampleFilter('all')}
+                  data-testid="sample-filter-all"
+                  onClick={() => {
+                    setSampleFilter('all');
+                    setPage(1);
+                  }}
                   className={`px-2 py-0.5 rounded transition ${
                     sampleFilter === 'all'
                       ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30'
@@ -452,7 +570,11 @@ export function CameraFeeder() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSampleFilter('accident')}
+                  data-testid="sample-filter-accident"
+                  onClick={() => {
+                    setSampleFilter('accident');
+                    setPage(1);
+                  }}
                   className={`px-2 py-0.5 rounded transition ${
                     sampleFilter === 'accident'
                       ? 'bg-red-500/20 text-red-300 font-bold border border-red-500/30'
@@ -463,7 +585,11 @@ export function CameraFeeder() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSampleFilter('normal')}
+                  data-testid="sample-filter-normal"
+                  onClick={() => {
+                    setSampleFilter('normal');
+                    setPage(1);
+                  }}
                   className={`px-2 py-0.5 rounded transition ${
                     sampleFilter === 'normal'
                       ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30'
@@ -472,70 +598,228 @@ export function CameraFeeder() {
                 >
                   Normal ({normalCount})
                 </button>
+                <button
+                  type="button"
+                  data-testid="sample-filter-unknown"
+                  onClick={() => {
+                    setSampleFilter('unknown');
+                    setPage(1);
+                  }}
+                  className={`px-2 py-0.5 rounded transition ${
+                    sampleFilter === 'unknown'
+                      ? 'bg-slate-700/50 text-slate-200 font-bold border border-slate-600'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Unlabeled ({unknownCount})
+                </button>
               </div>
             </div>
 
-            {/* Quick Filter Search */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Filter by Camera ID, city or district..."
-                value={sampleSearch}
-                onChange={(e) => setSampleSearch(e.target.value)}
-                className="w-full pl-8 pr-12 py-1.5 text-xs font-mono rounded-lg bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition"
-              />
-              {sampleSearch && (
-                <button
-                  type="button"
-                  onClick={() => setSampleSearch('')}
-                  className="absolute right-2.5 top-1.5 text-[11px] text-slate-500 hover:text-slate-300 font-mono px-1 py-0.5"
+            {/* Search and Sort Toolbar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5 pointer-events-none" />
+                <input
+                  type="text"
+                  data-testid="sample-search-input"
+                  placeholder="Search by name, path, camera, location..."
+                  value={sampleSearch}
+                  onChange={(e) => {
+                    setSampleSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full pl-8 pr-12 py-1.5 text-xs font-mono rounded-lg bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 transition"
+                />
+                {sampleSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSampleSearch('');
+                      setPage(1);
+                    }}
+                    className="absolute right-2.5 top-1.5 text-[11px] text-slate-500 hover:text-slate-300 font-mono px-1 py-0.5"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
+                <SlidersHorizontal className="w-3 h-3 text-slate-400" />
+                <span className="text-[10px] font-mono text-slate-400">Sort:</span>
+                <select
+                  data-testid="sample-sort-select"
+                  value={sampleSort}
+                  onChange={(e) => {
+                    setSampleSort(e.target.value as any);
+                    setPage(1);
+                  }}
+                  className="bg-transparent text-xs font-mono text-slate-200 focus:outline-none cursor-pointer"
                 >
-                  Clear
-                </button>
-              )}
+                  <option value="name-asc" className="bg-slate-900 text-slate-200">Name (A → Z)</option>
+                  <option value="name-desc" className="bg-slate-900 text-slate-200">Name (Z → A)</option>
+                  <option value="duration-desc" className="bg-slate-900 text-slate-200">Duration (Longest)</option>
+                  <option value="duration-asc" className="bg-slate-900 text-slate-200">Duration (Shortest)</option>
+                  <option value="size-desc" className="bg-slate-900 text-slate-200">Size (Largest)</option>
+                </select>
+              </div>
             </div>
 
-            {/* Presets Grid */}
-            <div className="max-h-56 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {filteredSamples.length === 0 ? (
-                <div className="col-span-2 sm:col-span-3 text-center py-6 text-xs text-slate-500 font-mono">
+            {/* Gallery Grid */}
+            <div className="max-h-80 overflow-y-auto pr-1">
+              {isLoadingSamples ? (
+                <div data-testid="samples-loading" className="py-12 text-center text-xs text-slate-400 font-mono space-y-2">
+                  <RefreshCw className="w-5 h-5 mx-auto animate-spin text-cyan-400" />
+                  <p>Loading video sample catalog...</p>
+                </div>
+              ) : filteredAndSortedSamples.length === 0 ? (
+                <div className="py-10 text-center text-xs text-slate-500 font-mono border border-dashed border-slate-800 rounded-xl">
                   No sample videos match "{sampleSearch}"
                 </div>
               ) : (
-                filteredSamples.map((s) => {
-                  const isSelected = selectedSample?.id === s.id && !selectedFile;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => handleSelectSample(s)}
-                      disabled={isProcessing}
-                      title={s.description}
-                      className={`p-2 text-left rounded-xl border transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.25)]'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                      } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-mono text-xs font-bold text-cyan-400">Cam {s.camera_id}</span>
-                        {s.has_accident ? (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
-                            Crash
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
-                            Normal
-                          </span>
-                        )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                  {paginatedSamples.map((s) => {
+                    const isSelected = selectedSample?.id === s.id && !selectedFile;
+                    return (
+                      <div
+                        key={s.id}
+                        data-testid={`sample-card-${s.id}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-selected={isSelected}
+                        aria-label={`Select sample ${s.name}`}
+                        onClick={() => handleSelectSample(s)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSelectSample(s);
+                          }
+                        }}
+                        className={`group relative rounded-xl border p-2 transition-all cursor-pointer flex flex-col justify-between motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
+                          isSelected
+                            ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.25)] ring-1 ring-cyan-400/50'
+                            : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 text-slate-300 hover:bg-slate-900/60'
+                        } ${isProcessing ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        {/* Thumbnail & Badges */}
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-black border border-slate-800/80 mb-1.5 flex items-center justify-center">
+                          <img
+                            src={s.thumbnail_url}
+                            alt={s.name}
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 motion-reduce:transform-none"
+                          />
+
+                          {/* Preview Button */}
+                          <button
+                            type="button"
+                            data-testid={`sample-preview-btn-${s.id}`}
+                            aria-label={`Preview ${s.name}`}
+                            title="Preview raw video stream"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewSample(s);
+                            }}
+                            className="absolute top-1.5 left-1.5 p-1 rounded bg-black/80 hover:bg-cyan-500 hover:text-slate-950 text-slate-300 border border-slate-700/80 transition opacity-85 group-hover:opacity-100 z-10"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Expected Label Badge */}
+                          <div className="absolute top-1.5 right-1.5 z-10">
+                            {s.expected_label === 'accident' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-red-950/90 text-red-300 border border-red-500/50 shadow-sm">
+                                <Flame className="w-2.5 h-2.5 text-red-400 fill-red-400" />
+                                <span>Accident</span>
+                              </span>
+                            )}
+                            {s.expected_label === 'normal' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 shadow-sm">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                                <span>Normal</span>
+                              </span>
+                            )}
+                            {s.expected_label === 'unknown' && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-slate-900/90 text-slate-300 border border-slate-700 shadow-sm">
+                                <HelpCircle className="w-2.5 h-2.5 text-slate-400" />
+                                <span>Unlabeled</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Duration & Resolution Overlay */}
+                          <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-slate-300 flex items-center gap-1 border border-slate-800">
+                            {s.duration_s != null && <span>{formatDuration(s.duration_s)}</span>}
+                            {s.resolution && (
+                              <>
+                                <span className="text-slate-600">•</span>
+                                <span>{s.resolution}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Meta */}
+                        <div className="space-y-0.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <h3 className="text-xs font-semibold text-white truncate" title={s.name}>
+                              {s.name}
+                            </h3>
+                            {s.camera_id != null && (
+                              <span className="text-[10px] font-mono text-cyan-400 font-bold shrink-0">
+                                Cam {s.camera_id}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                            <span className="truncate max-w-[120px]" title={s.relative_path}>
+                              {s.relative_path.split('/')[0]}
+                            </span>
+                            <span>{formatBytes(s.size_bytes)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[11px] truncate mt-1 text-slate-300 font-medium">{s.city}</p>
-                      <p className="text-[9px] truncate text-slate-500">{s.district}</p>
-                    </button>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-1 text-xs font-mono text-slate-400 border-t border-slate-800/80">
+                <span className="text-[11px]">
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredAndSortedSamples.length)} of {filteredAndSortedSamples.length} clips
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="p-1 rounded bg-slate-950 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Previous Page"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-[11px] px-1 font-semibold text-slate-300">
+                    {page} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="p-1 rounded bg-slate-950 border border-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Next Page"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Custom Upload Dropzone */}
@@ -663,42 +947,57 @@ export function CameraFeeder() {
           </div>
 
           {/* Primary Action Button */}
-          <div className="pt-2 flex items-center gap-3">
-            <button
-              onClick={handleStartAnalysis}
-              disabled={isProcessing || (!selectedFile && !selectedSample)}
-              className={`flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition ${
-                isProcessing || (!selectedFile && !selectedSample)
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  : 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-500/25 active:scale-[0.98]'
-              }`}
-            >
-              {isUploading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Uploading Video...
-                </>
-              ) : isProcessing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
-                  Analyzing Video Streams...
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 fill-slate-950" />
-                  Start Accident Detection Pipeline
-                </>
-              )}
-            </button>
-
-            {isProcessing && (
+          <div className="pt-2 space-y-2">
+            <div className="flex items-center gap-3">
               <button
-                onClick={handleCancel}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold bg-red-950/40 text-red-400 border border-red-500/30 hover:bg-red-900/50 transition"
+                data-testid="start-pipeline-btn"
+                onClick={handleStartAnalysis}
+                disabled={isProcessing || (!selectedFile && !selectedSample)}
+                className={`flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition ${
+                  isProcessing || (!selectedFile && !selectedSample)
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-500/25 active:scale-[0.98]'
+                }`}
               >
-                <XCircle className="w-4 h-4" />
-                Cancel
+                {isUploading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Uploading Video...
+                  </>
+                ) : isProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                    Analyzing Video Streams...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-slate-950" />
+                    Start Accident Detection Pipeline
+                  </>
+                )}
               </button>
+
+              {isProcessing && (
+                <button
+                  onClick={handleCancel}
+                  className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold bg-red-950/40 text-red-400 border border-red-500/30 hover:bg-red-900/50 transition"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Cancel
+                </button>
+              )}
+            </div>
+
+            {/* Ingest Node Busy Explanation */}
+            {isProcessing && (
+              <div
+                data-testid="pipeline-busy-warning"
+                role="status"
+                className="p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Pipeline Ingest Node Busy &mdash; another video feed is currently running. New submissions are disabled.</span>
+              </div>
             )}
           </div>
         </section>
@@ -1078,6 +1377,121 @@ export function CameraFeeder() {
         incident={modalIncident}
         onClose={() => setModalIncident(null)}
       />
+
+      {/* Raw Sample Preview Modal */}
+      {previewSample && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="preview-modal-title"
+          data-testid="sample-preview-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+          onClick={() => setPreviewSample(null)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-5 space-y-4 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-cyan-950/60 text-cyan-300 border border-cyan-500/30">
+                    Sample Stream Preview
+                  </span>
+                  <span className="text-xs font-mono text-slate-400 truncate max-w-xs sm:max-w-md">
+                    {previewSample.relative_path}
+                  </span>
+                </div>
+                <h2 id="preview-modal-title" className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  {previewSample.name}
+                </h2>
+              </div>
+              <button
+                type="button"
+                data-testid="sample-preview-close"
+                onClick={() => setPreviewSample(null)}
+                aria-label="Close preview modal"
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Video Player */}
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner">
+              <video
+                data-testid="sample-preview-video"
+                src={previewSample.video_url}
+                controls
+                autoPlay
+                playsInline
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Metadata Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+              <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">Ground Truth</span>
+                <div className="font-semibold">
+                  {previewSample.expected_label === 'accident' && <span className="text-red-400">Accident</span>}
+                  {previewSample.expected_label === 'normal' && <span className="text-emerald-400">Normal</span>}
+                  {previewSample.expected_label === 'unknown' && <span className="text-slate-400">Unlabeled</span>}
+                </div>
+              </div>
+
+              <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">Duration</span>
+                <div className="font-semibold text-slate-200">{formatDuration(previewSample.duration_s)}</div>
+              </div>
+
+              <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">Format</span>
+                <div className="font-semibold text-slate-200 truncate">
+                  {previewSample.resolution || '--'} {previewSample.fps ? `(${previewSample.fps} fps)` : ''}
+                </div>
+              </div>
+
+              <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 space-y-0.5">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">File Size</span>
+                <div className="font-semibold text-slate-200">{formatBytes(previewSample.size_bytes)}</div>
+              </div>
+            </div>
+
+            {previewSample.notes && (
+              <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 text-xs text-slate-400 font-mono">
+                <span className="text-slate-500 font-semibold uppercase text-[10px] block">Manifest Notes:</span>
+                {previewSample.notes}
+              </div>
+            )}
+
+            {/* Footer Controls */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPreviewSample(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                data-testid="sample-preview-select"
+                onClick={() => {
+                  handleSelectSample(previewSample);
+                  setPreviewSample(null);
+                }}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-cyan-400 hover:bg-cyan-300 text-slate-950 transition disabled:opacity-50"
+              >
+                <Play className="w-3.5 h-3.5 fill-slate-950" />
+                Select This Clip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

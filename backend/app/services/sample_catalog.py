@@ -357,6 +357,7 @@ def list_samples() -> List[SampleItemResponse]:
                 resolution=meta.get("resolution"),
                 fps=meta.get("fps"),
                 thumbnail_url=f"/api/samples/{stable_id}/thumbnail",
+                video_url=f"/api/samples/{stable_id}/video",
                 expected_label=label,  # type: ignore[arg-type]
                 camera_id=suggested_cam_id,
                 city=suggested_city,
@@ -368,3 +369,4 @@ def list_samples() -> List[SampleItemResponse]:
     # Sort stably by relative_path
     samples.sort(key=lambda s: s.relative_path)
     return samples
+

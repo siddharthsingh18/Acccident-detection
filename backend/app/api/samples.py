@@ -40,3 +40,24 @@ async def get_sample_thumbnail(sample_id: str):
         raise HTTPException(status_code=404, detail="Thumbnail not available.")
 
     return FileResponse(thumb_path, media_type="image/jpeg")
+
+@router.api_route("/{sample_id:path}/video", methods=["GET", "HEAD"], summary="Stream sample dataset video")
+async def stream_sample_video(sample_id: str):
+    """
+    Stream sample video with HTTP Range request support for HTML5 playback.
+    """
+    video_path = resolve_sample_path(sample_id)
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail=f"Sample video '{sample_id}' not found.")
+
+    ext = video_path.suffix.lower()
+    media_types = {
+        ".mp4": "video/mp4",
+        ".avi": "video/x-msvideo",
+        ".mkv": "video/x-matroska",
+        ".mov": "video/quicktime",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+    return FileResponse(video_path, media_type=media_type, headers={"Accept-Ranges": "bytes"})
+
+

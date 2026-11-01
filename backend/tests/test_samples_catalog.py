@@ -70,6 +70,12 @@ def test_sample_thumbnail_endpoint():
     assert thumb_res.headers["content-type"] == "image/jpeg"
     assert len(thumb_res.content) > 0
 
+    # Also verify video stream endpoint
+    video_res = client.get(f"/api/samples/{s1528['id']}/video")
+    assert video_res.status_code == 200
+    assert "video" in video_res.headers["content-type"]
+    assert video_res.headers.get("accept-ranges") == "bytes"
+
 def test_corrupt_file_skipped_without_crashing(tmp_path, monkeypatch):
     """Corrupt or non-video files must return None metadata with warning, never 500 error."""
     corrupt_file = tmp_path / "corrupt.mp4"

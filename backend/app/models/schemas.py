@@ -146,6 +146,7 @@ class SampleItemResponse(BaseModel):
     resolution: Optional[str] = Field(None, description="Video resolution, e.g. 640x360")
     fps: Optional[float] = Field(None, description="Frames per second")
     thumbnail_url: str = Field(..., description="URL endpoint to fetch sample video thumbnail")
+    video_url: str = Field(..., description="URL endpoint to stream sample video")
     expected_label: Literal["accident", "normal", "unknown"] = Field(
         ..., description="Expected crash label derived from manifest or directory"
     )
