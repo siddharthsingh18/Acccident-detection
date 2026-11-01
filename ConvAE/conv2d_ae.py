@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import pdb
+
 class TemporalRegularityDetector(nn.Module):
 	def __init__(self, input_shape):
 		super(TemporalRegularityDetector,self).__init__()
@@ -36,7 +36,6 @@ class TemporalRegularityDetector(nn.Module):
 		self.fin = nn.ConvTranspose2d(512, input_shape, 11,stride=4)
 
 	def forward(self,img):
-		pdb.set_trace()
 		img = self.relu_c1(self.bn_c1(self.conv_c1(img)))
 		img = self.pool_c1(img)
 		img = self.relu_c2(self.bn_c2(self.conv_c2(img)))

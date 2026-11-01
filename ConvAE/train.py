@@ -1,48 +1,76 @@
 import os
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-os.environ["CUDA_VISIBLE_DEVICES"]='0'
 import sys
-sys.path.append('/home/brianyao/Documents/stad-cvpr2020')
+from pathlib import Path
 import torch
 from torch import nn
 import torch.optim as optim
 import numpy as np
 
-from a3d import make_dataloader
-from conv2d_ae import TemporalRegularityDetector, OrigConvAE
-from convlstm_ae import ConvLSTMED
+try:
+    from ConvAE.a3d import make_dataloader
+    from ConvAE.conv2d_ae import TemporalRegularityDetector, OrigConvAE
+    from ConvAE.convlstm_ae import ConvLSTMED
+    from ConvAE.stauc import get_tarr, ST_AUC
+    from ConvAE.utils.flow_utils import flow_to_image
+except ImportError:
+    from a3d import make_dataloader
+    from conv2d_ae import TemporalRegularityDetector, OrigConvAE
+    from convlstm_ae import ConvLSTMED
+    from stauc import get_tarr, ST_AUC
+    from utils.flow_utils import flow_to_image
+
 from tqdm import tqdm
 import time
 import datetime
 import json
 import glob
 from collections import defaultdict
-
 import argparse
 
-from detection.utils.logger import Logger
-from detection.utils.metric_logger import MetricLogger
+# Optional distributed / apex dependencies with graceful fallbacks
+try:
+    from detection.utils.logger import Logger
+    from detection.utils.metric_logger import MetricLogger
+except ImportError:
+    Logger = None
+    MetricLogger = None
 
-from mpi4py import MPI
-import apex
-from apex.parallel import DistributedDataParallel as DDP
-from detection.utils.comm import get_world_size
-from detection.utils.comm import is_main_process, all_gather, synchronize
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+
+try:
+    import apex
+    from apex.parallel import DistributedDataParallel as DDP
+except ImportError:
+    apex = None
+    DDP = None
+
+try:
+    from detection.utils.comm import get_world_size, is_main_process, all_gather, synchronize
+except ImportError:
+    def get_world_size():
+        return 1
+    def is_main_process():
+        return True
+    def all_gather(data):
+        return [data]
+    def synchronize():
+        pass
+
 from sklearn import metrics
-
 import matplotlib.pyplot as plt
-from utils.flow_utils import flow_to_image
-import pdb
 import logging
-from stauc import get_tarr, ST_AUC
 
-root = '/mnt/workspace/datasets/A3D_2.0/' #'/home/data/vision7/A3D_2.0/' #'/home/data/vision7/A3D_2.0/'
+ROOT_DEFAULT = os.environ.get("DOTA_DATA_DIR", str(Path(__file__).resolve().parent.parent / "data" / "DoTA"))
+root = ROOT_DEFAULT
 train_split = os.path.join(root, 'A3D_2.0_train.json')
 val_split = os.path.join(root, 'A3D_2.0_val.json')
 save_dir = 'checkpoints/'
-device = 'cuda'
-num_workers = 24
-batch_per_gpu = 24
+device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+num_workers = min(4, os.cpu_count() or 1)
+batch_per_gpu = 4
 lr = 0.01
 max_iters = 20000
 shuffle = True
@@ -263,11 +291,11 @@ def main(args):
     optimizer = optim.Adagrad(model.parameters(),lr=lr,weight_decay=0.0005)
 
     # train
-    logger.info("Start training")
-    meters = MetricLogger(delimiter="  ")
+    if logger:
+        logger.info("Start training")
+    meters = MetricLogger(delimiter="  ") if MetricLogger else None
 
     end = time.time()
-    pdb.set_trace()
     for iters, ret in enumerate(tqdm(train_dataloader)):
         iters += 1
 
@@ -277,7 +305,6 @@ def main(args):
         outputs = model(inputs)
         if args.mode == 'gray':
             outputs = outputs.clamp(min=0, max=1)
-        pdb.set_trace()
         loss = rec_loss(outputs, inputs)
         loss = 0.5 * loss.sum(dim=(1,2,3)).mean()
         

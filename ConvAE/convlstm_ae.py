@@ -8,8 +8,6 @@ except ImportError:
     from encoder_decoders import ConvEncoder, ConvDecoder, ConvLSTMEncoder, ConvLSTMDecoder
     from convlstm import ConvLSTM, ConvLSTMCell
 
-import pdb
-
 class ConvLSTMED(nn.Module):
     '''
     Implementation of a online ConvLSTMAE, 

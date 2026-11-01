@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.append('/home/brianyao/Documents/stad-cvpr2020')
+from pathlib import Path
 import torch
 from torchvision.transforms import functional as F
 from torch.utils.data import DataLoader
@@ -8,12 +8,16 @@ from torch.utils.data import DataLoader
 from PIL import Image
 import cv2
 import glob
-from utils.flow_utils import read_flow
-from utils.build_samplers import make_data_sampler, make_batch_data_sampler
+
+try:
+    from ConvAE.utils.flow_utils import read_flow
+    from ConvAE.utils.build_samplers import make_data_sampler, make_batch_data_sampler
+except ImportError:
+    from utils.flow_utils import read_flow
+    from utils.build_samplers import make_data_sampler, make_batch_data_sampler
 
 import json
 from tqdm import tqdm
-import pdb
 
 class A3DDataset(torch.utils.data.Dataset):
     def __init__(self, 
@@ -23,11 +27,12 @@ class A3DDataset(torch.utils.data.Dataset):
                  transforms=None, 
                  horizontal_flip=None, 
                  save_dir='', 
-                 seq_len=10):
+                 seq_len=10,
+                 flow_root=None):
         self.W = 227
         self.H = 227
         img_root = os.path.join(root, 'frames/')
-        flo_root = os.path.join('/mnt/workspace/datasets/A3D_2.0','flownet2/')
+        flo_root = flow_root or os.environ.get("DOTA_FLOW_DIR", os.path.join(root, 'flownet2/'))
         self.mode = mode
         self.samples = []
         self.labels = []

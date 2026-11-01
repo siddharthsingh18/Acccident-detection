@@ -31,3 +31,10 @@ clean:
 
 cleanup:
 	.venv/bin/python scripts/cleanup_clips.py $(ARGS)
+
+seed:
+	.venv/bin/python scripts/seed_demo_db.py
+
+download-dota:
+	.venv/bin/python scripts/data/download_dota.py
+

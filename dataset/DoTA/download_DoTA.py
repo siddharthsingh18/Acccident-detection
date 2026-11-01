@@ -9,7 +9,6 @@ import json
 from tqdm import tqdm
 from multiprocessing import Pool
 import time
-import pdb
 
 def download_videos(args):
     DOWNLOAD_DIR = args.download_dir
@@ -50,7 +49,6 @@ def download_videos(args):
 #     print("Number of frames: ", length)
 #     print("FPS: ", fps)
 #     i, j, k = 0, 0, 0
-#     pdb.set_trace()
 #     while True:
 #         # Capture frame-by-frame
 #         ret, image = cap.read()

@@ -11,13 +11,22 @@ venv/
 node_modules/
 
 # Database files
+*.db
 /Argus_DB.db
+/System/Database/Argus_DB.db
+/System/Database/*.db
 *.db-wal
 *.db-shm
 *.db-journal
 *.sqlite
 *.sqlite3
 *.bak
+
+# Large Data & Downloads (Gitignored)
+/data/
+/dataset/DoTA/*.zip
+/dataset/DoTA/annotations/
+/artifacts/
 
 # IDE and OS files
 .idea/

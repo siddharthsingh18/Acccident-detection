@@ -6,7 +6,6 @@ import json
 from multiprocessing import Pool
 import shutil
 import time
-import pdb
 
 
 def videos_to_frames(args, video_dir):

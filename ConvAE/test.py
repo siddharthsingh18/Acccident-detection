@@ -1,27 +1,39 @@
 import os
+import sys
+from pathlib import Path
 import torch
 import numpy as np
 from collections import defaultdict
-from a3d import make_dataloader
-from conv2d_ae import TemporalRegularityDetector
+
+try:
+    from ConvAE.a3d import make_dataloader
+    from ConvAE.conv2d_ae import TemporalRegularityDetector
+    from ConvAE.train import do_val
+except ImportError:
+    from a3d import make_dataloader
+    from conv2d_ae import TemporalRegularityDetector
+    from train import do_val
+
 from sklearn import metrics
 import argparse
-from train import do_val
 from tqdm import tqdm
-import pdb
 
-
-root = '/mnt/workspace/datasets/A3D_2.0/' #'/home/data/vision7/A3D_2.0/'
+ROOT_DEFAULT = os.environ.get("DOTA_DATA_DIR", str(Path(__file__).resolve().parent.parent / "data" / "DoTA"))
+root = ROOT_DEFAULT
 train_split = os.path.join(root, 'A3D_2.0_train.json')
 val_split = os.path.join(root, 'A3D_2.0_val.json')
-with open(os.path.join(root, 'val_split_with_obj.txt'),'r') as f:
-    evaluated_videos = f.read().splitlines()
+val_split_txt = os.path.join(root, 'val_split_with_obj.txt')
+if os.path.exists(val_split_txt):
+    with open(val_split_txt, 'r') as f:
+        evaluated_videos = f.read().splitlines()
+else:
+    evaluated_videos = []
 
 mode = 'flow'
-best_model = 'checkpoints/model_050000.pth'
-device = 'cuda'
-num_workers = 24
-batch_per_gpu = 24
+best_model = os.environ.get("CONVAE_CHECKPOINT", 'checkpoints/model_050000.pth')
+device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+num_workers = min(4, os.cpu_count() or 1)
+batch_per_gpu = 4
 seq_len = 10
 
 
@@ -124,7 +136,6 @@ if __name__ == '__main__':
     #     all_labels[vid] = torch.cat(all_labels[vid])
     # # Compute ROC and AUC
     # assert len(all_anomaly_scores) == len(all_labels)
-    # pdb.set_trace()
     # auc, fpr, tpr = compute_AUC(all_anomaly_scores, all_labels, evaluated_videos=evaluated_videos)
 
     # print("AUC:", auc)

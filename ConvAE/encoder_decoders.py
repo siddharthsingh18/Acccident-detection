@@ -6,7 +6,6 @@ try:
     from ConvAE.convlstm import ConvLSTM, ConvLSTMCell
 except ImportError:
     from convlstm import ConvLSTM, ConvLSTMCell
-import pdb
 
 class ConvEncoder(nn.Module):
     '''A 1x1 conv2d encoder to predict image from hidden states'''
