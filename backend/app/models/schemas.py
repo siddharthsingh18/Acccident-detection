@@ -1,5 +1,34 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field, field_validator
+
+class ScorerResult(BaseModel):
+    name: str = Field(..., description="Scorer identifier, e.g. vif_svm, convae, resnet_onnx")
+    score: float = Field(..., ge=0.0, le=1.0, description="Model score between 0.0 and 1.0")
+    fired: bool = Field(..., description="Whether model threshold was exceeded")
+    calibrated: bool = Field(default=False, description="Whether score is calibrated probability")
+    available: bool = Field(default=True, description="Whether scorer was active during inference")
+    latency_ms: Optional[float] = Field(None, description="Inference latency in milliseconds")
+
+class ModelScores(BaseModel):
+    policy: Literal["any", "all", "majority", "weighted"] = Field(
+        default="majority", description="Ensemble combination policy"
+    )
+    threshold: float = Field(default=0.60, ge=0.0, le=1.0, description="Decision threshold")
+    decision: bool = Field(..., description="Ensemble crash verdict")
+    scorers: List[ScorerResult] = Field(default_factory=list, description="List of individual scorer outcomes")
+
+class ScorerStatus(BaseModel):
+    name: str
+    available: bool
+    version: str
+    trained_on: str
+    calibration_date: Optional[str] = None
+    reason_unavailable: Optional[str] = None
+
+class ModelsStatusResponse(BaseModel):
+    policy: Literal["any", "all", "majority", "weighted"] = "majority"
+    scorers: List[ScorerStatus]
+    degraded: bool = False
 
 class ErrorResponse(BaseModel):
     code: str = Field(..., description="Machine-readable error code")
@@ -31,6 +60,7 @@ class Alert(BaseModel):
     district: Optional[str] = None
     thumbnail_url: str
     video_url: str
+    model_scores: Optional[ModelScores] = Field(None, description="Ensemble and model score breakdown, or null")
 
 class Incident(BaseModel):
     id: str = Field(..., description="Canonical string ID, e.g. '1528_76' or rowid")
@@ -46,6 +76,7 @@ class Incident(BaseModel):
     review_status: Optional[str] = Field(None, description="NULL, 'confirmed', or 'false_alarm'")
     review_note: Optional[str] = Field(None, description="Operator review comments (max 500 chars)")
     reviewed_at: Optional[str] = Field(None, description="ISO timestamp when review occurred")
+    model_scores: Optional[ModelScores] = Field(None, description="Ensemble and model score breakdown, or null for legacy incidents")
 
 class ReviewIncidentRequest(BaseModel):
     status: str = Field(..., description="'confirmed' or 'false_alarm'")
@@ -76,6 +107,8 @@ class FeedResponse(BaseModel):
     district: str
     status: str = Field(..., description="queued, processing, done, failed, cancelled, low-quality detection mode")
     detection_mode: Optional[str] = Field("standard", description="standard, yolo, or low-quality detection mode")
+    degraded: bool = Field(default=False, description="Whether feed is running in degraded mode with fewer scorers")
+    active_scorers: List[str] = Field(default_factory=lambda: ["vif_svm"], description="List of active scorers for feed")
     progress: FeedProgress
     thumbnail_url: str
     error: Optional[str] = None

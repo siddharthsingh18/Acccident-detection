@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import settings
-from .api import health_router, incidents_router, media_router, websockets_router, feeds_router, settings_router
+from .api import health_router, incidents_router, media_router, websockets_router, feeds_router, settings_router, models_router
 from .services import alert_broadcast_worker, reset_alert_queue, ZmqAlertListener
 
 # Setup logging
@@ -129,3 +129,4 @@ app.include_router(media_router)
 app.include_router(websockets_router)
 app.include_router(feeds_router)
 app.include_router(settings_router)
+app.include_router(models_router)

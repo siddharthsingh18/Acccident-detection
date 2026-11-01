@@ -41,6 +41,8 @@ class FeedItem:
         self.reader_thread: Optional[threading.Thread] = None
 
     def to_response(self) -> FeedResponse:
+        is_degraded = self.detection_mode in ("motion", "fallback", "degraded")
+        active = ["vif_svm"] if not is_degraded else ["vif_svm_fallback"]
         return FeedResponse(
             id=self.feed_id,
             camera_id=self.camera_id,
@@ -48,6 +50,8 @@ class FeedItem:
             district=self.district,
             status=self.status,
             detection_mode=self.detection_mode,
+            degraded=is_degraded,
+            active_scorers=active,
             progress=FeedProgress(
                 frames_sent=self.frames_sent,
                 total_frames=self.total_frames,

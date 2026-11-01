@@ -4,6 +4,7 @@ from .media import router as media_router
 from .websockets import router as websockets_router
 from .feeds import router as feeds_router
 from .settings import router as settings_router
+from .models import router as models_router
 
 __all__ = [
     "health_router",
@@ -12,4 +13,5 @@ __all__ = [
     "websockets_router",
     "feeds_router",
     "settings_router",
+    "models_router",
 ]

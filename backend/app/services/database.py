@@ -1,9 +1,13 @@
 from datetime import datetime, timezone
+import json
+import logging
 from pathlib import Path
 import sqlite3
 from typing import Optional, List, Tuple, Dict, Any
 from ..config import settings
-from ..models.schemas import Incident, SystemSettings, UpdateSettingsRequest
+from ..models.schemas import Incident, ModelScores, SystemSettings, UpdateSettingsRequest
+
+logger = logging.getLogger("argus.database")
 
 def get_db_connection() -> sqlite3.Connection:
     """Get read-only SQLite connection with row factory and busy timeout."""
@@ -44,11 +48,14 @@ def apply_migrations(db_path: Optional[str] = None) -> None:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN review_note TEXT DEFAULT NULL;")
         if "reviewed_at" not in existing_cols:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN reviewed_at TEXT DEFAULT NULL;")
+        if "model_scores" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN model_scores TEXT DEFAULT NULL;")
 
         # Indexes & View
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_review_status ON CrashFrames(review_status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_time ON CrashFrames(crash_time);")
-        cursor.execute("CREATE VIEW IF NOT EXISTS incidents AS SELECT rowid, * FROM CrashFrames;")
+        cursor.execute("DROP VIEW IF EXISTS incidents;")
+        cursor.execute("CREATE VIEW incidents AS SELECT rowid, * FROM CrashFrames;")
 
         # Settings table migration (Phase 2)
         cursor.execute("""
@@ -80,6 +87,19 @@ def row_to_incident(row: sqlite3.Row) -> Incident:
     frame_id = int(row["frame_id"])
     canonical_id = f"{camera_id}_{frame_id}"
     keys = row.keys()
+
+    model_scores = None
+    if "model_scores" in keys and row["model_scores"]:
+        try:
+            raw = row["model_scores"]
+            if isinstance(raw, str):
+                model_scores = ModelScores.model_validate(json.loads(raw))
+            elif isinstance(raw, dict):
+                model_scores = ModelScores.model_validate(raw)
+        except Exception as e:
+            logger.warning(f"Could not parse model_scores for incident {canonical_id}: {e}")
+            model_scores = None
+
     return Incident(
         id=canonical_id,
         rowid=int(row["rowid"]),
@@ -94,6 +114,7 @@ def row_to_incident(row: sqlite3.Row) -> Incident:
         review_status=row["review_status"] if "review_status" in keys else None,
         review_note=row["review_note"] if "review_note" in keys else None,
         reviewed_at=row["reviewed_at"] if "reviewed_at" in keys else None,
+        model_scores=model_scores,
     )
 
 def query_recent_incidents(limit: int = 10) -> List[Incident]:
@@ -102,8 +123,7 @@ def query_recent_incidents(limit: int = 10) -> List[Incident]:
     try:
         cursor = conn.cursor()
         query = """
-            SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
-                   review_status, review_note, reviewed_at
+            SELECT rowid, *
             FROM CrashFrames
             ORDER BY crash_time DESC, rowid DESC
             LIMIT ?
@@ -203,8 +223,7 @@ def query_incidents(
 
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     query = f"""
-        SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
-               review_status, review_note, reviewed_at
+        SELECT rowid, *
         FROM CrashFrames
         {where_clause}
         ORDER BY crash_time DESC, rowid DESC
@@ -229,8 +248,7 @@ def query_incident_by_id(identifier: str) -> Optional[Incident]:
     try:
         cursor = conn.cursor()
         select_cols = """
-            SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
-                   review_status, review_note, reviewed_at
+            SELECT rowid, *
             FROM CrashFrames
         """
         # Case 1: Composite key e.g. 1528_76
@@ -332,8 +350,7 @@ def update_incident_review(
         # Fetch and return updated incident
         updated_row = cursor.execute(
             """
-            SELECT rowid, camera_id, frame_id, from_no, city, district, crash_time,
-                   review_status, review_note, reviewed_at
+            SELECT rowid, *
             FROM CrashFrames
             WHERE rowid = ?
             """,
