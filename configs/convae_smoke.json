@@ -1,0 +1,15 @@
+{
+  "name": "convae_smoke",
+  "description": "Fast CPU/MPS smoke training configuration for ConvAE anomaly model",
+  "epochs": 2,
+  "batch_size": 4,
+  "learning_rate": 0.001,
+  "weight_decay": 1e-5,
+  "window_size": 30,
+  "stride": 15,
+  "patience": 2,
+  "max_train_samples": 8,
+  "max_val_samples": 4,
+  "seed": 42
+}
+

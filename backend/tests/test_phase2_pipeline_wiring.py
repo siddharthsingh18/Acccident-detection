@@ -46,13 +46,14 @@ def test_flag_off_legacy_byte_for_byte_regression(monkeypatch):
     assert crashing.last_model_scores is None
 
 
-def test_flag_on_with_only_legacy_available(monkeypatch):
+def test_flag_on_with_only_legacy_available(tmp_path, monkeypatch):
     """
     With ARGUS_ENABLE_ENSEMBLE=true and no additional checkpoints installed,
     ensemble runs in degraded mode (legacy vif_svm only), populating last_model_scores.
     """
     monkeypatch.setenv("ARGUS_ENABLE_ENSEMBLE", "true")
     monkeypatch.setenv("ARGUS_ALLOW_DEV_CHECKPOINT", "false")
+    monkeypatch.setenv("CONVAE_CHECKPOINT_DIR", str(tmp_path / "empty_checkpoints"))
     vif = VIF()
     crashing = Crashing(vif)
 

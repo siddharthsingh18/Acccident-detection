@@ -58,9 +58,18 @@ class ConvAEScorer:
         smoke_ckpt = ckpt_dir / "smoke_checkpoint.pth"
 
         resolved_ckpt = None
-        if checkpoint_path and Path(checkpoint_path).exists():
-            resolved_ckpt = Path(checkpoint_path)
+        if checkpoint_path is not None:
+            p = Path(checkpoint_path)
+            if not p.exists():
+                self.available = False
+                self.reason_unavailable = f"Checkpoint file not found: {checkpoint_path}"
+                return
+            resolved_ckpt = p
             if "smoke" in resolved_ckpt.name.lower() or "dev" in resolved_ckpt.name.lower():
+                if not self.allow_dev:
+                    self.available = False
+                    self.reason_unavailable = f"Dev checkpoint not allowed when ARGUS_ALLOW_DEV_CHECKPOINT is false: {resolved_ckpt}"
+                    return
                 self.trained_on = "DEV SMOKE TEST (not for real use)"
                 logger.warning("ConvAEScorer running with DEV SMOKE TEST checkpoint!")
         elif best_ckpt.exists():

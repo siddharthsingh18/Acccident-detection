@@ -1,0 +1,15 @@
+{
+  "name": "convae_full",
+  "description": "Full CCTV training configuration for ConvAE anomaly model",
+  "epochs": 20,
+  "batch_size": 8,
+  "learning_rate": 0.0001,
+  "weight_decay": 1e-5,
+  "window_size": 30,
+  "stride": 15,
+  "patience": 5,
+  "max_train_samples": null,
+  "max_val_samples": null,
+  "seed": 42
+}
+

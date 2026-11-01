@@ -112,11 +112,11 @@ def test_dev_smoke_checkpoint_metadata_and_availability(monkeypatch):
 
     # Flag off -> available is False
     monkeypatch.setenv("ARGUS_ALLOW_DEV_CHECKPOINT", "false")
-    scorer_off = ConvAEScorer(allow_dev=False)
+    scorer_off = ConvAEScorer(checkpoint_path=ckpt_file, allow_dev=False)
     assert scorer_off.available is False
 
     # Flag on -> available is True, tagged DEV SMOKE TEST
     monkeypatch.setenv("ARGUS_ALLOW_DEV_CHECKPOINT", "true")
-    scorer_on = ConvAEScorer(allow_dev=True)
+    scorer_on = ConvAEScorer(checkpoint_path=ckpt_file, allow_dev=True)
     assert scorer_on.available is True
     assert "DEV SMOKE TEST" in scorer_on.trained_on

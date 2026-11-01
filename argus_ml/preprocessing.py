@@ -50,12 +50,18 @@ def create_sliding_windows(
     frames: List[np.ndarray],
     window_size: int = DEFAULT_WINDOW_SIZE,
     stride: int = DEFAULT_WINDOW_STRIDE,
+    pad_to_window: bool = False,
 ) -> List[List[np.ndarray]]:
     """
     Slice a continuous frame sequence into overlapping temporal windows.
     Default: 30-frame window with 15-frame stride (50% temporal overlap).
+    If pad_to_window is True and len(frames) < window_size (but >= 10),
+    pads by repeating the final frame so the sequence reaches window_size.
     """
     if len(frames) < window_size:
+        if pad_to_window and len(frames) >= 10:
+            padded = list(frames) + [frames[-1]] * (window_size - len(frames))
+            return [padded]
         return [frames] if frames else []
 
     windows = []

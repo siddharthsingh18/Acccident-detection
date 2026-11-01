@@ -1,8 +1,11 @@
 import json
+from pathlib import Path
 import sqlite3
 import pytest
 from app.models.schemas import ModelScores, ScorerResult, Incident, Alert, FeedResponse
 from app.api.models import reset_models_cache
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 @pytest.fixture(autouse=True)
@@ -12,8 +15,9 @@ def clear_models_cache():
     reset_models_cache()
 
 
-def test_get_models_status(client):
-    """Verify GET /api/models/status returns valid schema and active scorers."""
+def test_get_models_status(client, tmp_path, monkeypatch):
+    """Verify GET /api/models/status returns valid schema and degraded mode when uncheckpointed."""
+    monkeypatch.setenv("CONVAE_CHECKPOINT_DIR", str(tmp_path / "empty_checkpoints"))
     response = client.get("/api/models/status")
     assert response.status_code == 200
     data = response.json()
@@ -39,6 +43,24 @@ def test_get_models_status(client):
     assert convae_scorer["available"] is False
     assert "checkpoint not found" in (convae_scorer["reason_unavailable"] or "").lower()
     assert data["degraded"] is True
+
+
+def test_models_status_with_trained_checkpoint(client):
+    """Verify GET /api/models/status detects trained checkpoint when present in artifacts."""
+    ckpt_file = PROJECT_ROOT / "artifacts" / "checkpoints" / "convae" / "best_model.pth"
+    if not ckpt_file.exists():
+        pytest.skip("best_model.pth not yet trained")
+
+    response = client.get("/api/models/status")
+    assert response.status_code == 200
+    data = response.json()
+
+    convae = next(s for s in data["scorers"] if s["name"] == "convae")
+    assert convae["available"] is True
+    # resnet_onnx is not mounted, so 2/3 scorers available means degraded is True
+    assert data["degraded"] is True
+    active_count = sum(1 for s in data["scorers"] if s["available"])
+    assert active_count == 2
 
 
 def test_models_status_honors_crash_policy_env(client, monkeypatch):
