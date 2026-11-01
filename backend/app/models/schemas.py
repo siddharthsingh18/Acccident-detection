@@ -136,3 +136,26 @@ class UpdateSettingsRequest(BaseModel):
     siren_volume: int = Field(..., ge=0, le=100, description="Control room siren volume (0-100)")
     clip_retention_days: int = Field(..., ge=1, le=365, description="Video clip retention period in days (1-365)")
     min_alert_confidence: float = Field(..., ge=0.0, le=1.0, description="Minimum incident confidence threshold (0.0-1.0)")
+
+class SampleItemResponse(BaseModel):
+    id: str = Field(..., description="Stable URL-safe sample ID derived from relative path")
+    name: str = Field(..., description="Sample filename, e.g. 1528.mp4")
+    relative_path: str = Field(..., description="Relative path within project root, e.g. videos/1528.mp4")
+    size_bytes: int = Field(..., description="File size in bytes")
+    duration_s: Optional[float] = Field(None, description="Video duration in seconds")
+    resolution: Optional[str] = Field(None, description="Video resolution, e.g. 640x360")
+    fps: Optional[float] = Field(None, description="Frames per second")
+    thumbnail_url: str = Field(..., description="URL endpoint to fetch sample video thumbnail")
+    expected_label: Literal["accident", "normal", "unknown"] = Field(
+        ..., description="Expected crash label derived from manifest or directory"
+    )
+    camera_id: Optional[int] = Field(None, description="Suggested camera identifier if known")
+    city: Optional[str] = Field(None, description="Suggested city name if known")
+    district: Optional[str] = Field(None, description="Suggested district if known")
+    notes: Optional[str] = Field(None, description="Optional annotations or notes from manifest")
+
+class StartFeedFromSampleRequest(BaseModel):
+    sample_id: str = Field(..., description="Stable ID or relative path of the sample video")
+    camera_id: Optional[int] = Field(None, description="Optional override camera ID")
+    city: Optional[str] = Field(None, description="Optional override city")
+    district: Optional[str] = Field(None, description="Optional override district")

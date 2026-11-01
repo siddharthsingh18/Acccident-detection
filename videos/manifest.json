@@ -1,0 +1,134 @@
+{
+  "1506": {
+    "label": "accident",
+    "notes": "Asyut Junction - Van Collision at frame 106"
+  },
+  "1508": {
+    "label": "accident",
+    "notes": "Fayyum Expressway - Impact at frame 31"
+  },
+  "1513": {
+    "label": "accident",
+    "notes": "Aswan Highway - Side Collision at frame 61"
+  },
+  "1516": {
+    "label": "accident",
+    "notes": "Shubra Corridor - Junction Crash at frame 61"
+  },
+  "1517": {
+    "label": "accident",
+    "notes": "Highway collision verified by Gif/1517.gif"
+  },
+  "1518": {
+    "label": "accident",
+    "notes": "Shubra Boulevard - Side Impact at frame 1"
+  },
+  "1519": {
+    "label": "accident",
+    "notes": "Qalyub Highway Entry - Ramp Merging Collision at frame 16"
+  },
+  "1521": {
+    "label": "accident",
+    "notes": "Qena Avenue - Crossroad Impact at frame 121"
+  },
+  "1522": {
+    "label": "accident",
+    "notes": "Marsa Matruh Road - Lateral Crash at frame 61"
+  },
+  "1528": {
+    "label": "accident",
+    "notes": "Shibin El Kom - High-Speed Junction Impact at frame 76"
+  },
+  "1529": {
+    "label": "accident",
+    "notes": "Bilbais Arterial - Multi-Vehicle Crash at frame 181"
+  },
+  "1532": {
+    "label": "accident",
+    "notes": "Intersection collision verified by Gif/1532.gif"
+  },
+  "1533": {
+    "label": "accident",
+    "notes": "Cairo Boulevard - T-Bone Collision at frame 91"
+  },
+  "1534": {
+    "label": "accident",
+    "notes": "Ismailia Junction - Vehicle Crash at frame 91"
+  },
+  "1535": {
+    "label": "accident",
+    "notes": "Roadway collision verified by Gif/1535.gif"
+  },
+  "1537": {
+    "label": "accident",
+    "notes": "Roadway collision verified by Gif/1537.gif"
+  },
+  "1538": {
+    "label": "accident",
+    "notes": "Intersection collision verified by Gif/1538.gif"
+  },
+  "1543": {
+    "label": "accident",
+    "notes": "Asyut Avenue - Multi-Lane Urban Crash at frame 166"
+  },
+  "1546": {
+    "label": "accident",
+    "notes": "Road collision verified by Gif/1546.gif"
+  },
+  "1547": {
+    "label": "accident",
+    "notes": "Road collision verified by Gif/1547.gif"
+  },
+  "1548": {
+    "label": "accident",
+    "notes": "Luxor Avenue - Night Collision at frame 226"
+  },
+  "1557": {
+    "label": "accident",
+    "notes": "Road collision verified by Gif/1557.gif"
+  },
+  "1558": {
+    "label": "accident",
+    "notes": "Intersection collision verified by Gif/1558.gif"
+  },
+  "1559": {
+    "label": "accident",
+    "notes": "Roadway collision verified by Gif/1559.gif"
+  },
+  "1563": {
+    "label": "accident",
+    "notes": "Roadway collision verified by Gif/1563.gif"
+  },
+  "1565": {
+    "label": "accident",
+    "notes": "Roadway collision verified by Gif/1565.gif"
+  },
+  "1566": {
+    "label": "accident",
+    "notes": "Hurghada Coastal - Road Impact at frame 136"
+  },
+  "1567": {
+    "label": "accident",
+    "notes": "Roadway collision verified by Gif/1567.gif"
+  },
+  "1568": {
+    "label": "accident",
+    "notes": "Roadway collision verified by Gif/1568.gif"
+  },
+  "1600": {
+    "label": "normal",
+    "notes": "Bridge Expressway - Full Steady Traffic"
+  },
+  "1601": {
+    "label": "normal",
+    "notes": "Bridge Expressway - Morning Commute"
+  },
+  "1602": {
+    "label": "normal",
+    "notes": "Bridge Expressway - Commercial Transit"
+  },
+  "1701": {
+    "label": "normal",
+    "notes": "Downtown Signal Junction - Urban Queue"
+  }
+}

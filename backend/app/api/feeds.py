@@ -7,9 +7,10 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from ..config import settings, PROJECT_ROOT
-from ..models.schemas import FeedResponse, FeedCancelResponse, ErrorResponse
+from ..models.schemas import FeedResponse, FeedCancelResponse, ErrorResponse, StartFeedFromSampleRequest
 from ..services.feed_manager import feed_manager
 from ..services.media import sanitize_id
+from ..services.sample_catalog import resolve_sample_path
 
 
 logger = logging.getLogger("argus.api.feeds")
@@ -302,6 +303,50 @@ async def start_sample_feed(
         cam_id = int(Path(sample_id).stem)
     except ValueError:
         cam_id = 9999
+
+    return await feed_manager.start_feed(
+        file_path=video_path,
+        camera_id=cam_id,
+        city=city,
+        district=district
+    )
+
+@router.post(
+    "/from-sample",
+    response_model=FeedResponse,
+    status_code=201,
+    responses={
+        400: {"model": ErrorResponse, "description": "Validation or format error"},
+        404: {"model": ErrorResponse, "description": "Sample video not found"},
+        409: {"model": ErrorResponse, "description": "Another feed is actively processing"}
+    },
+    summary="Start processing a test feed directly from the sample catalog without copying"
+)
+async def create_feed_from_sample(payload: StartFeedFromSampleRequest):
+    """
+    Launch feed processing using an existing sample catalog video in-place without disk copying.
+    Enforces path traversal safety and single-active-feed constraint.
+    """
+    video_path = resolve_sample_path(payload.sample_id)
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail=f"Sample video '{payload.sample_id}' not found.")
+
+    # Validate video container
+    feed_manager.validate_video_file(video_path)
+
+    # Derive camera ID if not explicitly provided
+    if payload.camera_id is not None:
+        cam_id = payload.camera_id
+    elif video_path.stem.isdigit():
+        try:
+            cam_id = int(video_path.stem)
+        except ValueError:
+            cam_id = 9999
+    else:
+        cam_id = 9999
+
+    city = payload.city or "Cairo"
+    district = payload.district or "District 1"
 
     return await feed_manager.start_feed(
         file_path=video_path,

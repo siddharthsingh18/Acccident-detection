@@ -53,6 +53,19 @@ class Settings(BaseSettings):
     ARGUS_ALLOW_DEV_CHECKPOINT: bool = Field(default_factory=lambda: os.getenv("ARGUS_ALLOW_DEV_CHECKPOINT", "false").lower() in ("true", "1", "yes"))
     ARTIFACTS_DIR: Path = Field(default_factory=lambda: PROJECT_ROOT / "artifacts")
 
+    # Sample catalog settings
+    SAMPLE_DIRS: List[str] = Field(
+        default_factory=lambda: [
+            d.strip() for d in os.getenv(
+                "ARGUS_SAMPLE_DIRS",
+                "videos,dataset/Accidents,dataset/No_Accidents,Joiner/vids"
+            ).split(",") if d.strip()
+        ]
+    )
+    SAMPLE_CACHE_DIR: Path = Field(default_factory=lambda: PROJECT_ROOT / "artifacts" / "cache" / "samples")
+    SAMPLE_THUMBNAILS_DIR: Path = Field(default_factory=lambda: PROJECT_ROOT / "artifacts" / "cache" / "thumbnails")
+    SAMPLE_MANIFEST_PATH: Path = Field(default_factory=lambda: PROJECT_ROOT / "videos" / "manifest.json")
+
     @field_validator("DATABASE_PATH", "SAVED_CRASH_VID_DIR", "SAVED_FRAMES_VID_DIR", "FALLBACK_IMAGE_PATH", "PLAY_BUTTON_PATH", "MEDIA_DIR", "THUMBNAILS_DIR", "VIDEO_CACHE_DIR", "UPLOADS_DIR", "FEEDS_DIR", mode="before")
     @classmethod
     def resolve_paths(cls, v: Union[str, Path]) -> Path:
@@ -73,6 +86,8 @@ class Settings(BaseSettings):
         self.VIDEO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         self.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         self.FEEDS_DIR.mkdir(parents=True, exist_ok=True)
+        self.SAMPLE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        self.SAMPLE_THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
 
 settings = Settings()
 settings.init_directories()
