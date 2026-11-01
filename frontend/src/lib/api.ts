@@ -1,4 +1,9 @@
 import type { paths } from '@/types/api';
+import {
+  type ModelScores,
+  type ModelsStatusResponse,
+  ModelsStatusResponseSchema,
+} from './modelsContract';
 
 export type ReviewStatus = 'confirmed' | 'false_alarm' | 'unreviewed' | null;
 
@@ -8,6 +13,7 @@ export interface Incident extends Omit<RawIncident, 'review_status'> {
   review_status?: ReviewStatus;
   review_note?: string | null;
   reviewed_at?: string | null;
+  model_scores?: ModelScores | null;
 }
 
 export interface IncidentsResponse {
@@ -18,7 +24,10 @@ export interface IncidentsResponse {
 }
 
 export type HealthResponse = paths['/api/health']['get']['responses']['200']['content']['application/json'];
-export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['content']['application/json'];
+export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['content']['application/json'] & {
+  degraded?: boolean;
+  active_scorers?: string[];
+};
 export type FeedCancelResponse = paths['/api/feeds/{id}/cancel']['post']['responses']['200']['content']['application/json'];
 
 export interface IncidentFilters {
@@ -44,6 +53,7 @@ export interface AlertMessage {
   district?: string;
   thumbnail_url: string;
   video_url: string;
+  model_scores?: ModelScores | null;
 }
 
 export interface SystemSettings {
@@ -206,5 +216,11 @@ export const api = {
       body: JSON.stringify(body),
     });
     return handleResponse<SystemSettings>(res);
+  },
+
+  async getModelsStatus(): Promise<ModelsStatusResponse> {
+    const res = await fetch('/api/models/status');
+    const json = await handleResponse<unknown>(res);
+    return ModelsStatusResponseSchema.parse(json);
   }
 };
