@@ -121,7 +121,26 @@ flowchart TB
 > ### Critical Operational Notice & Limitations
 > 1. **Detection Accuracy Scope**: The 93% accuracy figure reported in the original research paper (*"Road Traffic Accidents Detection Based On Crash Estimation", IEEE ICENCO 2021*) was obtained by the authors on their specific recorded dataset. **This detection accuracy has not been independently verified on external traffic camera networks or varied public benchmarks.** Environmental factors such as severe weather, night glare, lens distortion, heavy congestion, or vehicle occlusion can significantly affect detection outcomes.
 > 2. **Decision Support Tool Only**: Argus is engineered strictly as an **assisted decision support platform** for human traffic operators and first-response monitoring centers. It does **not** make autonomous legal accident determinations or automated emergency response decisions.
-> 3. **Mandatory Human Verification**: **A qualified human operator must review and confirm every alert and associated video footage before initiating emergency dispatch, dispatching roadside assistance, or issuing traffic management actions.** The software must never operate unattended without human-in-the-loop oversight.
+> 3. **Model Estimates, Not Confirmed Facts**: Model scores, agreement levels, and confidence values are algorithmic estimates, never confirmed facts. Under no circumstances should scores be interpreted as a literal probability of accident occurrence.
+> 4. **Mandatory Human Verification**: **A qualified human operator must review and confirm every alert and associated video footage before initiating emergency dispatch, dispatching roadside assistance, or issuing traffic management actions.** The software must never operate unattended without human-in-the-loop oversight.
+
+---
+
+## Multi-Model Crash Scoring Ensemble & Operator UI
+
+Argus features a unified multi-model crash scoring ensemble accessible via the frontend control room:
+
+- **Ensemble Scorers**:
+  - `vif_svm`: Spatio-temporal kinetic flow variance via Horn-Schunck optical flow + SVM.
+  - `convae`: Unsupervised spatio-temporal Convolutional Autoencoder irregularity reconstruction error.
+  - `resnet_onnx`: Deep convolutional visual feature classifier (ONNX).
+- **Ensemble Policies**: `majority` (default), `any`, `all`, and `weighted`.
+- **Degraded Mode**: If optional dependencies (e.g. PyTorch) or trained weights are unavailable, Argus falls back cleanly to the baseline VIF+SVM detector without crashing. To resolve degraded mode, run `pip install -e ".[torch]"` and download weights.
+- **Operator Visualization**:
+  - Navbar **Models Status Indicator** and accessible popover detailing active policies, scorer availability, and calibration records.
+  - Live alert strip and historical search records with **Model Agreement Badges** (e.g. `2/3 agree`).
+  - Search filter dropdown for agreement levels (`Any`, `All models flagged`, `Only one model flagged`).
+  - Detection Studio **Event Timeline**, **Model Score Breakdown**, and side-by-side **Model Comparison**.
 
 ---
 
