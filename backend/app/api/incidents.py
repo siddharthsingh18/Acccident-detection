@@ -14,7 +14,7 @@ from ..services.database import (
 from ..services.media import sanitize_id
 from ..services.video import (
     get_or_create_incident_mp4,
-    parse_range_header,
+    stream_video_response,
 )
 
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
@@ -233,6 +233,8 @@ async def stream_incident_video(id: str, request: Request):
 
     try:
         mp4_path = await get_or_create_incident_mp4(safe_id)
+    except HTTPException:
+        raise
     except FileNotFoundError as fnf:
         raise HTTPException(
             status_code=404,
@@ -249,47 +251,4 @@ async def stream_incident_video(id: str, request: Request):
             detail={"code": "INTERNAL_ERROR", "message": str(ex)},
         )
 
-    file_size = mp4_path.stat().st_size
-
-    if request.method == "HEAD":
-        return Response(
-            status_code=200,
-            headers={
-                "Accept-Ranges": "bytes",
-                "Content-Length": str(file_size),
-                "Content-Type": "video/mp4",
-            }
-        )
-
-    range_header = request.headers.get("range")
-
-    if range_header:
-        start, end = parse_range_header(range_header, file_size)
-        content_length = (end - start) + 1
-
-        def iterfile():
-            with open(mp4_path, "rb") as f:
-                f.seek(start)
-                bytes_left = content_length
-                chunk_size = 64 * 1024
-                while bytes_left > 0:
-                    read_len = min(chunk_size, bytes_left)
-                    data = f.read(read_len)
-                    if not data:
-                        break
-                    bytes_left -= len(data)
-                    yield data
-
-        headers = {
-            "Content-Range": f"bytes {start}-{end}/{file_size}",
-            "Accept-Ranges": "bytes",
-            "Content-Length": str(content_length),
-            "Content-Type": "video/mp4",
-        }
-        return StreamingResponse(iterfile(), status_code=206, headers=headers)
-
-    return FileResponse(
-        mp4_path,
-        media_type="video/mp4",
-        headers={"Accept-Ranges": "bytes"},
-    )
+    return stream_video_response(mp4_path, request)

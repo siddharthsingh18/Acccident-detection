@@ -6,13 +6,24 @@ from ..config import settings
 from .database import query_incident_by_id
 
 SAFE_ID_REGEX = re.compile(r"^[a-zA-Z0-9_\-]+$")
+PAREN_ID_REGEX = re.compile(r"^\((\d+)\)\s*(\d+)$")
 
 def sanitize_id(identifier: str) -> str:
-    """Validate and sanitize ID to prevent path traversal."""
-    identifier = identifier.strip()
-    if not SAFE_ID_REGEX.match(identifier):
+    """
+    Validate and sanitize ID to prevent path traversal while safely normalizing
+    raw clip names like '(1566) 151.avi' or '(1566) 151' to canonical '1566_151'.
+    """
+    raw = identifier.strip()
+    if raw.endswith(".avi") or raw.endswith(".mp4"):
+        raw = raw[:-4].strip()
+    
+    paren_match = PAREN_ID_REGEX.match(raw)
+    if paren_match:
+        raw = f"{paren_match.group(1)}_{paren_match.group(2)}"
+
+    if not SAFE_ID_REGEX.match(raw):
         raise ValueError("Invalid identifier format: must contain only alphanumeric, underscores, or dashes")
-    return identifier
+    return raw
 
 def extract_thumbnail_from_video(video_path: Path, output_path: Path) -> bool:
     """Extract frame 89 (or latest available frame) from an AVI video and save as JPG."""

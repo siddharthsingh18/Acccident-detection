@@ -370,3 +370,27 @@ def list_samples() -> List[SampleItemResponse]:
     samples.sort(key=lambda s: s.relative_path)
     return samples
 
+async def get_or_create_sample_mp4(sample_id: str) -> Path:
+    """
+    Retrieve or transcode H.264 MP4 for a requested sample.
+    If the source video is already a valid H.264 MP4 with faststart, returns it directly.
+    Otherwise, transcodes to artifacts/cache/samples/transcoded/<safe_id>.mp4.
+    """
+    from .video import transcode_to_web_mp4, is_valid_h264_mp4
+    video_path = resolve_sample_path(sample_id)
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail=f"Sample video '{sample_id}' not found.")
+
+    # If source is already valid web-compatible H.264 MP4, serve directly
+    if video_path.suffix.lower() == ".mp4" and is_valid_h264_mp4(video_path):
+        return video_path
+
+    transcode_dir = settings.SAMPLE_CACHE_DIR / "transcoded"
+    transcode_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = sample_id.replace("/", "--").replace("..", "").replace(" ", "_")
+    if not safe_name.lower().endswith(".mp4"):
+        safe_name = f"{safe_name}.mp4"
+    target_mp4 = transcode_dir / safe_name
+
+    return await transcode_to_web_mp4(video_path, target_mp4)
+

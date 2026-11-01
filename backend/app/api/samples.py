@@ -1,6 +1,6 @@
 import logging
 from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from ..models.schemas import SampleItemResponse
@@ -8,7 +8,9 @@ from ..services.sample_catalog import (
     list_samples,
     resolve_sample_path,
     get_or_create_thumbnail,
+    get_or_create_sample_mp4,
 )
+from ..services.video import stream_video_response
 
 logger = logging.getLogger("argus.api.samples")
 router = APIRouter(prefix="/api/samples", tags=["Samples"])
@@ -42,22 +44,22 @@ async def get_sample_thumbnail(sample_id: str):
     return FileResponse(thumb_path, media_type="image/jpeg")
 
 @router.api_route("/{sample_id:path}/video", methods=["GET", "HEAD"], summary="Stream sample dataset video")
-async def stream_sample_video(sample_id: str):
+async def stream_sample_video(sample_id: str, request: Request):
     """
-    Stream sample video with HTTP Range request support for HTML5 playback.
+    Stream sample video transcoded to web-compatible H.264 MP4 with HTTP Range request support.
     """
-    video_path = resolve_sample_path(sample_id)
-    if not video_path.exists():
-        raise HTTPException(status_code=404, detail=f"Sample video '{sample_id}' not found.")
+    try:
+        mp4_path = await get_or_create_sample_mp4(sample_id)
+    except HTTPException:
+        raise
+    except FileNotFoundError as fnf:
+        raise HTTPException(status_code=404, detail={"code": "VIDEO_NOT_FOUND", "message": str(fnf)})
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail={"code": "INVALID_ID", "message": str(ve)})
+    except Exception as ex:
+        logger.error(f"Failed to transcode/stream sample video '{sample_id}': {ex}")
+        raise HTTPException(status_code=500, detail={"code": "INTERNAL_ERROR", "message": str(ex)})
 
-    ext = video_path.suffix.lower()
-    media_types = {
-        ".mp4": "video/mp4",
-        ".avi": "video/x-msvideo",
-        ".mkv": "video/x-matroska",
-        ".mov": "video/quicktime",
-    }
-    media_type = media_types.get(ext, "application/octet-stream")
-    return FileResponse(video_path, media_type=media_type, headers={"Accept-Ranges": "bytes"})
+    return stream_video_response(mp4_path, request)
 
 

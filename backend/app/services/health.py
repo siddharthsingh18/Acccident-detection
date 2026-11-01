@@ -51,16 +51,28 @@ def check_database() -> Dict[str, Any]:
         }
 
 def check_ffmpeg() -> Dict[str, Any]:
-    """Check whether ffmpeg executable is installed and get version."""
-    path = shutil.which("ffmpeg")
-    if not path:
-        return {"available": False, "version": None}
+    """Check whether ffmpeg and ffprobe executables are installed and get version."""
+    ffmpeg_path = shutil.which("ffmpeg")
+    ffprobe_path = shutil.which("ffprobe")
+    if not ffmpeg_path or not ffprobe_path:
+        return {
+            "available": False,
+            "version": None,
+            "ffmpeg_path": ffmpeg_path,
+            "ffprobe_path": ffprobe_path,
+            "error": "ffmpeg or ffprobe binary missing from PATH"
+        }
     try:
-        res = subprocess.run([path, "-version"], capture_output=True, text=True, timeout=1.0)
+        res = subprocess.run([ffmpeg_path, "-version"], capture_output=True, text=True, timeout=1.0)
         first_line = res.stdout.splitlines()[0] if res.stdout else "unknown"
-        return {"available": True, "path": path, "version": first_line}
+        return {
+            "available": True,
+            "path": ffmpeg_path,
+            "ffprobe_path": ffprobe_path,
+            "version": first_line,
+        }
     except Exception as e:
-        return {"available": True, "path": path, "error": str(e)}
+        return {"available": True, "path": ffmpeg_path, "ffprobe_path": ffprobe_path, "error": str(e)}
 
 async def get_system_health(request: Any = None) -> HealthResponse:
     """Check health across all 4 Argus microservices, database, ffmpeg, and ZeroMQ listener."""
@@ -104,7 +116,10 @@ async def get_system_health(request: Any = None) -> HealthResponse:
             }
 
     if reachable_count == len(services_to_check) and db_health["accessible"]:
-        status = "ok"
+        if not ffmpeg_health.get("available", False):
+            status = "degraded"
+        else:
+            status = "ok"
     elif reachable_count > 0 or db_health["accessible"]:
         status = "degraded"
     else:
