@@ -435,6 +435,45 @@ The video shows a compilation of road crashes which is the output of the system
       </a>
   </p>
 
+## Troubleshooting: Video Does Not Play
+
+If video clips do not stream or play in the web UI (Incident Video Modal, Review Queue, Sample Preview, or Input / Output Feeder), follow these diagnosis checks in order:
+
+1. **Verify FFmpeg and FFprobe Binaries**:
+   Ensure `ffmpeg` and `ffprobe` are installed on your system `PATH`:
+   ```bash
+   ffmpeg -version
+   ffprobe -version
+   python scripts/check_env.py
+   ```
+   If either binary is missing, install via your package manager (`brew install ffmpeg` on macOS, `sudo apt install ffmpeg` on Ubuntu). Check `/api/health` to confirm the backend reports `ffmpeg.available: true`.
+
+2. **Run Video Asset & Cache Diagnostics**:
+   Scan all incident clips and sample videos to identify unreadable, corrupt, or missing files:
+   ```bash
+   python scripts/check_videos.py
+   ```
+   - Raw source clips are converted on-the-fly into web-compatible H.264 MP4 (`yuv420p`, even dimensions, `-movflags +faststart`).
+   - Cached files live in `backend/media/videos/` and `artifacts/cache/samples/transcoded/`. Corrupt or 0-byte cached files are automatically regenerated upon request.
+
+3. **Check Browser Console & Error Codes**:
+   Open browser Developer Tools (Console / Network) and inspect the failing element or `VideoPlayer` banner:
+   - **Code 1 (`MEDIA_ERR_ABORTED`)**: Playback aborted by browser or user navigation.
+   - **Code 2 (`MEDIA_ERR_NETWORK`)**: Network disconnection while downloading the video stream.
+   - **Code 3 (`MEDIA_ERR_DECODE`)**: Decoder corruption. Check source video integrity using `ffprobe`.
+   - **Code 4 (`MEDIA_ERR_SRC_NOT_SUPPORTED`)**: Codec or container not supported by your browser (e.g. raw Motion-JPEG AVI or DivX/MPEG-4 Part 2 served without transcoding).
+
+4. **Verify HTTP 206 Byte-Range Seeking**:
+   HTML5 video playback and seeking (especially on Safari / WebKit and iOS) requires HTTP 206 Partial Content:
+   ```bash
+   curl -s -D - -o /dev/null -H "Range: bytes=0-1023" http://127.0.0.1:8000/api/incidents/<incident_id>/video
+   ```
+   Confirm the server returns status `206 Partial Content` with `Content-Range: bytes 0-1023/<total_size>`, `Accept-Ranges: bytes`, and `Content-Type: video/mp4`.
+
+5. **Reverse Proxy & Authentication**:
+   - The Vite dev server proxies `/api` and `/media` to FastAPI on port 8000 without buffering range chunks.
+   - Standard HTML5 `<video src="...">` tags cannot transmit custom `Authorization: Bearer <token>` headers. Video streaming endpoints authenticate through HTTP-only session cookies or URL parameters if authentication is enabled.
+
 
 
 

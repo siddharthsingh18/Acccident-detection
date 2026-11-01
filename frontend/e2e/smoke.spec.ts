@@ -46,8 +46,7 @@ test.describe('Argus Live Dashboard Smoke Test', () => {
     await expect(video).toBeVisible({ timeout: 5000 });
 
     // Assert that video source points to the video API route
-    const source = video.locator('source');
-    await expect(source).toHaveAttribute('src', /\/api\/incidents\/.*\/video/);
+    await expect(video).toHaveAttribute('src', /\/api\/incidents\/.*\/video/);
 
     // 7. Test closing with Esc
     await page.keyboard.press('Escape');
