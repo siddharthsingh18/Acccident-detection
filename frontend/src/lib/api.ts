@@ -101,6 +101,7 @@ export interface SampleItem {
   thumbnail_url: string;
   video_url: string;
   expected_label: 'accident' | 'normal' | 'unknown';
+  label_source?: 'verified_by_frames' | 'folder' | 'unknown';
   camera_id?: number | null;
   city?: string | null;
   district?: string | null;

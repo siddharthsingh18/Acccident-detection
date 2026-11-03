@@ -143,3 +143,4 @@ def summarize_run_trace(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         "alert_count": alert_count,
         "primary_cause": primary_cause,
     }
+

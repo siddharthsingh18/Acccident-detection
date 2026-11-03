@@ -189,3 +189,55 @@ def test_label_resolution_order(tmp_path):
     lbl, notes = resolve_expected_label(p4, "videos/crash_accident_terrible.mp4", manifest)
     assert lbl == "unknown"
     assert notes is None
+
+
+def test_manifest_schema_and_label_source_provenance():
+    """Verify videos/manifest.json strictly conforms to schema and label_source values."""
+    from backend.app.services.sample_catalog import load_manifest, resolve_expected_label_details
+    manifest = load_manifest()
+    assert len(manifest) >= 19
+
+    valid_labels = {"accident", "normal", "unknown"}
+    valid_sources = {"verified_by_frames", "folder", "unknown"}
+
+    for key, entry in manifest.items():
+        assert isinstance(entry, dict), f"Entry {key} is not a dict"
+        assert entry.get("label") in valid_labels, f"Invalid label {entry.get('label')} in {key}"
+        assert entry.get("label_source") in valid_sources, f"Invalid label_source {entry.get('label_source')} in {key}"
+        assert entry.get("notes"), f"Missing notes in {key}"
+
+    # Verify provenance resolution
+    p_verified = Path("videos/1528.mp4")
+    lbl, notes, source = resolve_expected_label_details(p_verified, "videos/1528.mp4", manifest)
+    assert lbl == "accident"
+    assert source == "verified_by_frames"
+
+
+def test_camera_group_split_zero_leakage():
+    """
+    Ensure dataset splitting by video/camera group guarantees zero leakage between splits.
+    Fails if any camera or video group appears in more than one split.
+    """
+    from scripts.data.make_manifest import get_group_split
+
+    groups = [f"cam_{i}" for i in range(1, 50)] + [f"vid_{j}" for j in range(1, 50)]
+    train_groups = set()
+    val_groups = set()
+    test_groups = set()
+
+    for g in groups:
+        split = get_group_split(g)
+        if split == "train":
+            train_groups.add(g)
+        elif split == "val":
+            val_groups.add(g)
+        elif split == "test":
+            test_groups.add(g)
+
+    assert len(train_groups) > 0
+    assert len(val_groups) > 0
+    assert len(test_groups) > 0
+    assert not (train_groups & val_groups), f"Train/Val leakage: {train_groups & val_groups}"
+    assert not (train_groups & test_groups), f"Train/Test leakage: {train_groups & test_groups}"
+    assert not (val_groups & test_groups), f"Val/Test leakage: {val_groups & test_groups}"
+

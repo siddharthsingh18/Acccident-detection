@@ -119,3 +119,4 @@ def test_summarize_run_trace():
     assert summary["max_classifier_score"] == 0.49
     assert summary["alert_count"] == 0
     assert summary["primary_cause"] == "CLASSIFIER_LOW_SCORE"
+

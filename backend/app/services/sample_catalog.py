@@ -55,13 +55,15 @@ def parse_stable_id(sample_id: str) -> str:
         return sample_id.replace("--", "/")
     return sample_id
 
-def resolve_expected_label(file_path: Path, rel_path_str: str, manifest: Dict[str, dict]) -> Tuple[str, Optional[str]]:
+def resolve_expected_label_details(
+    file_path: Path, rel_path_str: str, manifest: Dict[str, dict]
+) -> Tuple[str, Optional[str], str]:
     """
-    Resolve expected label with strict precedence:
+    Resolve expected label and its provenance source with strict precedence:
     1. Explicit manifest entry (keyed by rel_path, filename, or stem).
-    2. Inferred from dataset/Accidents directory -> 'accident'.
-    3. Inferred from dataset/No_Accidents directory -> 'normal'.
-    4. Otherwise -> 'unknown'.
+    2. Inferred from dataset/Accidents directory -> 'accident', source 'folder'.
+    3. Inferred from dataset/No_Accidents directory -> 'normal', source 'folder'.
+    4. Otherwise -> 'unknown', source 'unknown'.
     """
     # 1. Manifest lookup
     keys_to_check = [rel_path_str, file_path.name, file_path.stem]
@@ -70,18 +72,29 @@ def resolve_expected_label(file_path: Path, rel_path_str: str, manifest: Dict[st
             entry = manifest[k]
             if isinstance(entry, dict):
                 lbl = entry.get("label", "unknown").lower()
+                source = entry.get("label_source", "unknown").lower()
                 notes = entry.get("notes")
                 if lbl in ("accident", "normal", "unknown"):
-                    return lbl, notes
+                    if source not in ("verified_by_frames", "folder", "unknown"):
+                        source = "unknown"
+                    return lbl, notes, source
 
     # 2. Inferred from directory
     parts = set(file_path.parts)
     if "dataset" in parts and "Accidents" in parts and "No_Accidents" not in parts:
-        return "accident", "Inferred from dataset/Accidents directory"
+        return "accident", "Inferred from dataset/Accidents directory", "folder"
     if "dataset" in parts and "No_Accidents" in parts:
-        return "normal", "Inferred from dataset/No_Accidents directory"
+        return "normal", "Inferred from dataset/No_Accidents directory", "folder"
 
-    return "unknown", None
+    return "unknown", None, "unknown"
+
+
+def resolve_expected_label(
+    file_path: Path, rel_path_str: str, manifest: Dict[str, dict]
+) -> Tuple[str, Optional[str]]:
+    """Preserve 2-tuple return for backwards compatibility."""
+    lbl, notes, _ = resolve_expected_label_details(file_path, rel_path_str, manifest)
+    return lbl, notes
 
 def _load_metadata_cache():
     global _METADATA_CACHE
@@ -329,7 +342,7 @@ def list_samples() -> List[SampleItemResponse]:
             rel_path_str = rel_path.as_posix()
             stable_id = make_stable_id(rel_path)
             meta = get_video_metadata(resolved_path, rel_path_str)
-            label, notes = resolve_expected_label(resolved_path, rel_path_str, manifest)
+            label, notes, label_source = resolve_expected_label_details(resolved_path, rel_path_str, manifest)
 
             # Derive default suggested camera ID if numeric
             suggested_cam_id: Optional[int] = None
@@ -359,6 +372,7 @@ def list_samples() -> List[SampleItemResponse]:
                 thumbnail_url=f"/api/samples/{stable_id}/thumbnail",
                 video_url=f"/api/samples/{stable_id}/video",
                 expected_label=label,  # type: ignore[arg-type]
+                label_source=label_source,  # type: ignore[arg-type]
                 camera_id=suggested_cam_id,
                 city=suggested_city,
                 district=suggested_district,

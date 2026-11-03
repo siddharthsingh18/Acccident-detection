@@ -154,6 +154,9 @@ class SampleItemResponse(BaseModel):
     expected_label: Literal["accident", "normal", "unknown"] = Field(
         ..., description="Expected crash label derived from manifest or directory"
     )
+    label_source: Literal["verified_by_frames", "folder", "unknown"] = Field(
+        default="unknown", description="Provenance of expected label (verified_by_frames, folder, unknown)"
+    )
     camera_id: Optional[int] = Field(None, description="Suggested camera identifier if known")
     city: Optional[str] = Field(None, description="Suggested city name if known")
     district: Optional[str] = Field(None, description="Suggested district if known")
