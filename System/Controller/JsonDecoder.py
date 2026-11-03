@@ -156,7 +156,11 @@ class JsonDecoder(threading.Thread):
 
         start_crash_time = time()
         crashing = Crashing(self.vif)
-        crash_dimentions = crashing.crash(frames, trackers)
+        crash_dimentions = crashing.crash(
+            frames, trackers,
+            camera_id=camera_id,
+            starting_frame_id=starting_frame_id
+        )
         model_scores = getattr(crashing, "last_model_scores", None)
         self.printLog("Crash",camera_id,start_crash_time,starting_frame_id+len(frames))
 
