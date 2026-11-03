@@ -474,6 +474,51 @@ If video clips do not stream or play in the web UI (Incident Video Modal, Review
    - The Vite dev server proxies `/api` and `/media` to FastAPI on port 8000 without buffering range chunks.
    - Standard HTML5 `<video src="...">` tags cannot transmit custom `Authorization: Bearer <token>` headers. Video streaming endpoints authenticate through HTTP-only session cookies or URL parameters if authentication is enabled.
 
+## Troubleshooting: Missed Accident or False Alarm
+
+When evaluating CCTV footage in the **Input / Output Video Feeder** or reviewing alerts, discrepancies between pipeline outcomes and visual ground truth can be diagnosed using Argus telemetry and the interactive **Trace Drawer**.
+
+### Diagnostic Cause Taxonomy
+Each processed clip is analyzed across the four stages of the pipeline:
+
+| Primary Cause | Description | Typical Scenario | Remediation Flag |
+| :--- | :--- | :--- | :--- |
+| `NO_DETECTIONS` | Vehicle detector generated no candidate boxes. | Night time, heavy rain, or clip has no `boxes/<id>.txt` pre-annotation and falls back to naive motion differencing. | `ARGUS_DETECTOR=yolo` with licensed weights. |
+| `SINGLE_VEHICLE` | Accident involves only one vehicle (guardrail collision, rollover, pole strike). | Legacy pipeline strictly requires pairs of colliding trackers (`itertools.combinations(trackers, 2)`). | `CRASH_SINGLE_VEHICLE=true` |
+| `BELOW_SPEED` | Relative tracker speed below moving threshold. | Creeping collisions or post-collision stationary phases. | Adjust speed threshold or evaluate initial impact frames. |
+| `TOO_FAR` | Vehicle bounding box centroid distance exceeds collision search radius `(size_a + size_b) * factor`. | Glancing collisions, side-swipes, or large trucks with offset centroids. | `CRASH_DISTANCE_FACTOR=0.35` (default 0.25). |
+| `BOX_TOO_SMALL` | Tracked bounding box rejected by geometric filter (width < 50 px, height $\le$ 28 px, aspect < 0.35). | Distant highway cameras, high-mounted overhead CCTV, or low-resolution video (e.g., 320x240). | `CRASH_ADAPTIVE_BOX_FILTER=true` |
+| `CLASSIFIER_LOW_SCORE` | Violent Flow (ViF) + SVM confidence score fell below decision boundary (0.50). | Slow-motion impacts, minimal turbulent optical flow, or occlusion. | `CRASH_CLASSIFIER_THRESHOLD=0.40` or enable multi-model ensemble `ARGUS_ENABLE_ENSEMBLE=true`. |
+| `LABEL_SUSPECT` | Visual ground truth contradicts legacy filename/manifest (e.g., near-miss, off-camera accident, unverified label). | Non-collision incidents, traffic congestion marked as accidents. | Verify ground truth via contact sheet audit; unverified clips are marked `unknown` and omitted from scoring. |
+
+### Inspecting Clip Traces in the UI
+1. Navigate to **Input / Output Video Feeder**.
+2. Click **Run All (Smoke Test)** or execute an individual clip.
+3. In the Batch Test Results table, click the **Why alerted** (green) or **Why no alert** (amber/slate) button.
+4. The expanded trace drawer reveals:
+   - Primary drop stage and cause category.
+   - Batch count, total evaluated tracker pairs, and filter drop breakdown (speed, distance, box size).
+   - Maximum classifier score vs. active threshold.
+   - Active detector backend and ground truth label source (`verified_by_frames`, `folder`, `unknown`).
+
+## Pipeline Configuration & Environment Variables
+
+All behavior changes and experimental modules are gated behind environment variables. With all flags left unset, the system guarantees **100% legacy byte-for-byte behavioral parity**.
+
+| Environment Variable | Default | Allowed Values | Description & Trade-offs |
+| :--- | :--- | :--- | :--- |
+| `ARGUS_DETECTOR` | `legacy` | `legacy`, `yolo` | Selects vehicle detector backend. `legacy` reads pre-computed `boxes/*.txt` files with motion differencing fallback. `yolo` activates neural vehicle detection (see `docs/licensing.md` for AGPL-3.0 compliance vs. permissive alternatives). |
+| `ARGUS_TRACE` | `false` | `true`, `false` | When enabled, logs structured per-batch JSONL diagnostic telemetry to `artifacts/traces/<run_id>.jsonl` with zero video frame overhead. |
+| `CRASH_ADAPTIVE_BOX_FILTER` | `false` | `true`, `false` | When `false`, enforces legacy hardcoded 50x28 px floor. When `true`, scales minimum box size dynamically based on video resolution (`CRASH_ADAPTIVE_BOX_FRACTION`, default 4%). Fixes distant misses but may increase false alarms on distant traffic queues. |
+| `CRASH_ADAPTIVE_BOX_FRACTION` | `0.04` | Float (0.01 - 0.20) | Relative fraction of video diagonal/dimensions used for adaptive minimum box sizing. |
+| `CRASH_DISTANCE_FACTOR` | `0.25` | Float (0.10 - 1.0) | Multiplier for inter-vehicle collision radius `(asize + bsize) * factor`. Higher values detect glancing collisions at higher false-positive risk. |
+| `CRASH_SINGLE_VEHICLE` | `false` | `true`, `false` | When enabled, detects abrupt deceleration anomalies on single isolated trackers, alerting on guardrail impacts and rollovers. |
+| `CRASH_SINGLE_DECEL_THRESHOLD` | `4.0` | Float (1.0 - 20.0) | Velocity drop threshold (px/frame) required to trigger a single-vehicle collision candidate. |
+| `CRASH_CLASSIFIER_THRESHOLD` | `0.50` | Float (0.0 - 1.0) | ViF + SVM decision threshold. Lower values increase recall; higher values reduce false alarms. |
+| `ARGUS_ENABLE_ENSEMBLE` | `false` | `true`, `false` | Activates multi-model scoring ensemble (`vif_svm` + `convae`). |
+| `ARGUS_CRASH_POLICY` | `any` | `any`, `all`, `majority`, `weighted` | Consensus decision policy for the multi-model scoring ensemble. |
+
+
 
 
 

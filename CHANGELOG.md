@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-11-04
+
+### Added
+- **Pipeline Diagnostic Telemetry & Trace System (`argus_ml.trace`)**:
+  - Structured per-batch JSONL execution tracer (`ARGUS_TRACE=true`) recording tracker counts, pair evaluations, filter drop breakdown (speed, distance, box size), ViF SVM decision scores, and primary drop causes without saving video frames.
+  - Endpoints `GET /api/feeds/trace/{run_id}` and `GET /api/feeds/config/active` for runtime introspection.
+- **Ground Truth Label Verification (`videos/manifest.json`)**:
+  - Audited all 68 video sample clips via 12-frame contact sheets, classifying labels as `verified_by_frames`, `folder`, or `unknown`.
+  - Reclassified `1507.mp4` (verified single-vehicle rollover) and excluded ambiguous near-miss `1559.mp4` from scoring (`unknown`).
+  - Added zero-leakage camera group split validation test in `test_samples_catalog.py`.
+- **Permissive Neural Detector Architecture & Licensing (`System/Functions/Detector/`)**:
+  - `ModernYoloDetector` and factory with fallback to legacy/motion differencing when weights are unavailable.
+  - Comprehensive licensing analysis (`docs/licensing.md`) documenting copyleft AGPL-3.0 vs. permissive alternatives (Apache-2.0 YOLOX, BSD-3 torchvision Faster R-CNN).
+- **Configurable Crash Geometry Flags (`System/Functions/Crashing.py`)**:
+  - `CRASH_ADAPTIVE_BOX_FILTER`: Resolution-relative box size filtering (`CRASH_ADAPTIVE_BOX_FRACTION`, default 0.04) resolving distant camera misses.
+  - `CRASH_DISTANCE_FACTOR`: Configurable inter-vehicle collision radius (default: 0.25).
+  - `CRASH_SINGLE_VEHICLE`: Abrupt deceleration anomaly detection (`CRASH_SINGLE_DECEL_THRESHOLD`) for single-vehicle impacts.
+  - `CRASH_CLASSIFIER_THRESHOLD`: Tunable ViF + SVM decision threshold (default: 0.50).
+  - Strict 100% legacy byte-for-byte behavioral parity maintained when flags are left disabled.
+- **Frontend Trace Drawer & Operator Explainability (`frontend/src/pages/CameraFeeder.tsx`)**:
+  - Interactive **Why alerted** / **Why no alert** drawer displaying candidate drop counts, maximum classifier score vs. threshold, and primary cause taxonomy.
+  - Active configuration banner displaying enabled detector and geometry flags.
+  - Added `label_source`, `cause_category`, and trace summaries to Batch Test Results table and CSV export.
+- **Held-Out Evaluation Suite (`scripts/evaluate.py`)**:
+  - Rigorous evaluation on 45 held-out test clips (24 normal, 21 accident) with 0 camera group leakage and 95% bootstrap confidence intervals.
+
+---
+
 ## [2.1.0] - 2026-11-01
 
 ### Added
