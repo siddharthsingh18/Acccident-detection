@@ -37,8 +37,9 @@ class Crashing:
                 pairs_evaluated += 1
 
                 # calculate the distance
-                asize = pow(pow(tracker_A.vehicle_height, 2) + pow(tracker_A.vehicle_width, 2), 0.5) * .25
-                bsize = pow(pow(tracker_B.vehicle_height, 2) + pow(tracker_B.vehicle_width, 2), 0.5) * .25
+                dist_factor = float(os.getenv("CRASH_DISTANCE_FACTOR", "0.25"))
+                asize = pow(pow(tracker_A.vehicle_height, 2) + pow(tracker_A.vehicle_width, 2), 0.5) * dist_factor
+                bsize = pow(pow(tracker_B.vehicle_height, 2) + pow(tracker_B.vehicle_width, 2), 0.5) * dist_factor
                 dis = asize + bsize
 
                 speed_ok = False
@@ -72,6 +73,19 @@ class Crashing:
                         failed_distance += 1
                     else:
                         failed_deviation += 1
+
+        enable_single_vehicle = os.getenv("CRASH_SINGLE_VEHICLE", "false").lower() in ("true", "1", "yes")
+        if enable_single_vehicle and len(trackers) == 1:
+            pairs_evaluated += 1
+            tracker_single = trackers[0]
+            if self._check_single_vehicle_anomaly(tracker_single):
+                candidates_passed_geometry += 1
+                if Work_Crash_Estimation_Only:
+                    pass
+                else:
+                    crash_dimentions.extend(self.predict(frames, [tracker_single]))
+            else:
+                failed_speed += 1
 
         if len(crash_dimentions) > 0:
             xmin = 10000
@@ -172,6 +186,23 @@ class Crashing:
         passed, _ = self._check_distance_detailed(tracker_A, tracker_B, frame_no, dis)
         return passed
 
+    def _check_single_vehicle_anomaly(self, tracker):
+        """
+        Evaluate single tracker for abrupt deceleration or sudden heading change.
+        Used when CRASH_SINGLE_VEHICLE=true.
+        """
+        try:
+            decel_ratio = float(os.getenv("CRASH_SINGLE_DECEL_THRESHOLD", "0.60"))
+            # Abrupt deceleration between early and late window frames
+            s_start = tracker.getAvgSpeed(0, 10)
+            s_end = tracker.getAvgSpeed(15, 28)
+            if s_start is not None and s_end is not None and s_start > 30:
+                if s_end < s_start * (1.0 - decel_ratio):
+                    return True
+            return False
+        except Exception:
+            return False
+
     def predict(self,frames_RGB, trackers):
         gray_frames = self.convertToGrayFrames(frames_RGB)
         no_crash = 0
@@ -202,16 +233,30 @@ class Crashing:
             if tracker_frames == None:
                 continue
 
-            if xmax - xmin < 50:  # 50
+            adaptive_box = os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1", "yes")
+            if adaptive_box:
+                frame_h, frame_w = gray_frames[0].shape[:2] if gray_frames and len(gray_frames) > 0 else (360, 480)
+                frac = float(os.getenv("CRASH_ADAPTIVE_BOX_FRACTION", "0.04"))
+                min_w = max(15, int(frame_w * frac))
+                min_h = max(10, int(frame_h * frac))
+                min_aspect = float(os.getenv("CRASH_MIN_ASPECT_RATIO", "0.20"))
+            else:
+                min_w = 50
+                min_h = 28
+                min_aspect = 0.35
+
+            if xmax - xmin < min_w:  # 50
                 self.last_failed_box_size += 1
                 continue
-            if ymax - ymin <= 28:  # 35
+            if ymax - ymin <= min_h:  # 28
                 self.last_failed_box_size += 1
                 continue
 
-            if (ymax - ymin) / (xmax - xmin) < 0.35:  # 0.35
+            if (ymax - ymin) / (xmax - xmin) < min_aspect:  # 0.35
                 self.last_failed_aspect_ratio += 1
                 continue
+
+            clf_thresh = float(os.getenv("CRASH_CLASSIFIER_THRESHOLD", "0.50"))
 
             if enable_ensemble and ensemble is not None:
                 from argus_ml.scoring.base import ClipInput
@@ -235,8 +280,14 @@ class Crashing:
                     except Exception:
                         score = 0.0
                 self.last_classifier_scores.append(score)
-                result = self.vif.clf.predict(feature_vec.reshape(1, 304))
-                if result[0] == 0.0:
+
+                if clf_thresh != 0.50 and hasattr(self.vif.clf, "predict_proba"):
+                    is_crash = (score >= clf_thresh)
+                else:
+                    result = self.vif.clf.predict(feature_vec.reshape(1, 304))
+                    is_crash = (result[0] != 0.0)
+
+                if not is_crash:
                     no_crash += 1
                 else:
                     crash += 1
