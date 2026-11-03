@@ -467,3 +467,29 @@ async def cancel_feed(id: str):
     """Cancel an active camera feed subprocess."""
     safe_id = sanitize_id(id)
     return await feed_manager.cancel_feed(safe_id)
+
+
+@router.get("/trace/{run_id}", summary="Get pipeline trace diagnostics for a camera or feed run")
+async def get_run_trace(run_id: str):
+    """Retrieve diagnostic pipeline telemetry explaining why an alert did or did not fire."""
+    from argus_ml.trace import read_run_trace, summarize_run_trace
+    records = read_run_trace(run_id)
+    if not records:
+        return {"run_id": run_id, "has_trace": False, "summary": None, "message": "No trace recorded"}
+    summary = summarize_run_trace(records)
+    return {"run_id": run_id, "has_trace": True, "summary": summary, "records_count": len(records)}
+
+
+@router.get("/config/active", summary="Get active CV pipeline detector and geometry flags")
+async def get_active_config():
+    """Retrieve active CV configuration for reproducible runs."""
+    return {
+        "detector": os.getenv("ARGUS_DETECTOR", os.getenv("DETECTOR", "legacy")).lower(),
+        "trace_enabled": os.getenv("ARGUS_TRACE", "false").lower() in ("true", "1", "yes"),
+        "adaptive_box_filter": os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1", "yes"),
+        "distance_factor": float(os.getenv("CRASH_DISTANCE_FACTOR", "0.25")),
+        "single_vehicle": os.getenv("CRASH_SINGLE_VEHICLE", "false").lower() in ("true", "1", "yes"),
+        "classifier_threshold": float(os.getenv("CRASH_CLASSIFIER_THRESHOLD", "0.50")),
+        "ensemble_enabled": os.getenv("ARGUS_ENABLE_ENSEMBLE", "false").lower() in ("true", "1", "yes"),
+        "crash_policy": os.getenv("CRASH_POLICY", "majority")
+    }

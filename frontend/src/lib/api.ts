@@ -108,6 +108,33 @@ export interface SampleItem {
   notes?: string | null;
 }
 
+export interface TraceSummaryResponse {
+  run_id: string;
+  has_trace: boolean;
+  summary: {
+    detector_used?: string;
+    max_trackers?: number;
+    dominant_filter?: string;
+    max_classifier_score?: number | null;
+    primary_cause?: string;
+    filter_counts?: Record<string, number>;
+    pairs_evaluated?: number;
+  } | null;
+  records_count?: number;
+  message?: string;
+}
+
+export interface ActiveConfigResponse {
+  detector: string;
+  trace_enabled: boolean;
+  adaptive_box_filter: boolean;
+  distance_factor: number;
+  single_vehicle: boolean;
+  classifier_threshold: number;
+  ensemble_enabled: boolean;
+  crash_policy: string;
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let errorDetail = 'An unexpected error occurred';
@@ -273,5 +300,15 @@ export const api = {
     const res = await fetch('/api/models/status');
     const json = await handleResponse<unknown>(res);
     return ModelsStatusResponseSchema.parse(json);
+  },
+
+  async getRunTrace(runId: string): Promise<TraceSummaryResponse> {
+    const res = await fetch(`/api/feeds/trace/${encodeURIComponent(runId)}`);
+    return handleResponse<TraceSummaryResponse>(res);
+  },
+
+  async getActiveConfig(): Promise<ActiveConfigResponse> {
+    const res = await fetch('/api/feeds/config/active');
+    return handleResponse<ActiveConfigResponse>(res);
   }
 };

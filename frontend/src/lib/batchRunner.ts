@@ -10,6 +10,8 @@ export interface BatchResultItem {
   name: string;
   relative_path: string;
   expected_label: 'accident' | 'normal' | 'unknown';
+  label_source?: 'verified_by_frames' | 'folder' | 'unknown';
+  cause_category?: string | null;
   alert_raised: boolean;
   time_to_first_alert_s: number | null;
   processing_time_s: number;
@@ -18,6 +20,13 @@ export interface BatchResultItem {
   incident_id?: string | null;
   video_url?: string | null;
   error?: string | null;
+  trace_summary?: {
+    detector_used?: string;
+    max_trackers?: number;
+    dominant_filter?: string;
+    max_classifier_score?: number | null;
+    primary_cause?: string;
+  } | null;
 }
 
 /**
@@ -44,6 +53,8 @@ export function generateBatchResultsCsv(results: BatchResultItem[]): string {
     'Clip Name',
     'Relative Path',
     'Expected Label',
+    'Label Source',
+    'Cause Category',
     'Alert Raised',
     'Time to First Alert (s)',
     'Processing Time (s)',
@@ -66,6 +77,8 @@ export function generateBatchResultsCsv(results: BatchResultItem[]): string {
     escapeCsv(r.name),
     escapeCsv(r.relative_path),
     escapeCsv(r.expected_label),
+    escapeCsv(r.label_source || 'unknown'),
+    escapeCsv(r.cause_category || '-'),
     escapeCsv(r.alert_raised ? 'Yes' : 'No'),
     escapeCsv(r.time_to_first_alert_s != null ? r.time_to_first_alert_s : '-'),
     escapeCsv(r.processing_time_s),

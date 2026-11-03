@@ -16,6 +16,9 @@ vi.mock('@/lib/api', () => ({
     getFeed: vi.fn(),
     cancelFeed: vi.fn(),
     getIncidents: vi.fn(),
+    getIncident: vi.fn(),
+    getRunTrace: vi.fn(),
+    getActiveConfig: vi.fn(),
   },
 }));
 
@@ -125,7 +128,7 @@ describe('Batch Test Runner Logic & Utilities (Phase 3)', () => {
       },
     ]);
 
-    expect(csv).toContain('Clip Name,Relative Path,Expected Label,Alert Raised');
+    expect(csv).toContain('Clip Name,Relative Path,Expected Label,Label Source,Cause Category,Alert Raised');
     expect(csv).toContain('"1528, test.mp4"');
     expect(csv).toContain('Alert on accident clip');
     expect(csv).toContain('No alert on normal clip');
@@ -137,6 +140,22 @@ describe('CameraFeeder - Batch Test Runner UI & Execution (Phase 3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (api.getSamples as any).mockResolvedValue(mockSamples);
+    (api.getActiveConfig as any).mockResolvedValue({
+      detector: 'legacy',
+      trace_enabled: true,
+      adaptive_box_filter: false,
+      distance_factor: 0.25,
+      single_vehicle: false,
+      classifier_threshold: 0.50,
+      ensemble_enabled: false,
+      crash_policy: 'majority',
+    });
+    (api.getRunTrace as any).mockResolvedValue({
+      run_id: 'default',
+      has_trace: false,
+      summary: null,
+      message: 'No trace recorded',
+    });
   });
 
   it('opens confirmation modal showing clip counts and estimated duration before starting', async () => {
@@ -359,5 +378,96 @@ describe('CameraFeeder - Batch Test Runner UI & Execution (Phase 3)', () => {
     expect(screen.getByTestId('batch-row-videos--1528.mp4')).toHaveTextContent('failed');
     expect(screen.getByTestId('batch-row-videos--normal_1.mp4')).toHaveTextContent('completed');
     expect(screen.getByTestId('batch-row-videos--normal_1.mp4')).toHaveTextContent('No alert on normal clip');
+  });
+
+  it('toggles trace drawer showing diagnostics when trace data exists', async () => {
+    const user = userEvent.setup();
+    (api.startFeedFromSample as any).mockResolvedValue({ id: 'feed-trace-1', status: 'processing' });
+    (api.getFeed as any).mockResolvedValue({
+      id: 'feed-trace-1',
+      camera_id: 1528,
+      city: 'Shibin El Kom',
+      district: 'District 13',
+      status: 'done',
+      created_at: '2026-11-01T10:00:00Z',
+      thumbnail_url: '/thumb.jpg',
+      detected_incidents: ['1528_76'],
+      progress: { frames_sent: 100, total_frames: 100, percent: 100 },
+    });
+    (api.getIncident as any).mockResolvedValue({ id: '1528_76', starting_frame_id: 76 });
+    (api.getRunTrace as any).mockResolvedValue({
+      run_id: 'videos--1528.mp4',
+      has_trace: true,
+      summary: {
+        detector_used: 'box file',
+        max_trackers: 8,
+        dominant_filter: 'TOO_FAR',
+        max_classifier_score: 0.5926,
+        primary_cause: 'CRASH_DETECTED',
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CameraFeeder />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('sample-card-videos--1528.mp4');
+    await user.click(screen.getByTestId('batch-run-btn'));
+    await user.click(screen.getByTestId('batch-confirm-start-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('batch-row-videos--1528.mp4')).toBeInTheDocument();
+    });
+
+    // Verify Why alerted button
+    const toggleBtn = screen.getByTestId('trace-toggle-videos--1528.mp4');
+    expect(toggleBtn).toHaveTextContent('Why alerted');
+
+    // Click toggle to open drawer
+    await user.click(toggleBtn);
+    expect(screen.getByTestId('trace-drawer-videos--1528.mp4')).toBeInTheDocument();
+    expect(screen.getByTestId('trace-details')).toHaveTextContent('CRASH_DETECTED');
+    expect(screen.getByTestId('trace-details')).toHaveTextContent('TOO_FAR');
+  });
+
+  it('renders "No trace recorded" when no trace data exists for clip', async () => {
+    const user = userEvent.setup();
+    (api.startFeedFromSample as any).mockResolvedValue({ id: 'feed-no-trace', status: 'processing' });
+    (api.getFeed as any).mockResolvedValue({
+      id: 'feed-no-trace',
+      camera_id: 1528,
+      status: 'done',
+      created_at: '2026-11-01T10:00:00Z',
+      thumbnail_url: '/thumb.jpg',
+      detected_incidents: [],
+      progress: { frames_sent: 100, total_frames: 100, percent: 100 },
+    });
+    (api.getRunTrace as any).mockResolvedValue({
+      run_id: 'videos--1528.mp4',
+      has_trace: false,
+      summary: null,
+      message: 'No trace recorded',
+    });
+
+    render(
+      <MemoryRouter>
+        <CameraFeeder />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('sample-card-videos--1528.mp4');
+    await user.click(screen.getByTestId('batch-run-btn'));
+    await user.click(screen.getByTestId('batch-confirm-start-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('batch-row-videos--1528.mp4')).toBeInTheDocument();
+    });
+
+    const toggleBtn = screen.getByTestId('trace-toggle-videos--1528.mp4');
+    await user.click(toggleBtn);
+
+    expect(screen.getByTestId('no-trace-message')).toHaveTextContent('No trace recorded');
   });
 });

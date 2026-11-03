@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import {
   UploadCloud,
@@ -180,9 +180,17 @@ export function CameraFeeder() {
   const [batchCurrentFeed, setBatchCurrentFeed] = useState<FeedResponse | null>(null);
   const [batchElapsedSeconds, setBatchElapsedSeconds] = useState<number>(0);
   const [batchResults, setBatchResults] = useState<BatchResultItem[]>([]);
+  const [activeConfig, setActiveConfig] = useState<any>(null);
+  const [expandedTraceId, setExpandedTraceId] = useState<string | null>(null);
 
   const cancelBatchRef = useRef<boolean>(false);
   const currentFeedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (typeof api.getActiveConfig === 'function') {
+      api.getActiveConfig().then(setActiveConfig).catch(() => {});
+    }
+  }, []);
 
   // Batch elapsed seconds counter
   useEffect(() => {
@@ -262,12 +270,15 @@ export function CameraFeeder() {
           name: sample.name,
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
+          label_source: sample.label_source || 'unknown',
+          cause_category: null,
           alert_raised: false,
           time_to_first_alert_s: null,
           processing_time_s: procTime,
           status: 'failed',
           outcome: classifyBatchOutcome(sample.expected_label, false),
           error: err.message || 'Failed to start feed',
+          trace_summary: null,
         });
         setBatchResults([...results]);
         continue;
@@ -306,11 +317,14 @@ export function CameraFeeder() {
           name: sample.name,
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
+          label_source: sample.label_source || 'unknown',
+          cause_category: null,
           alert_raised: false,
           time_to_first_alert_s: null,
           processing_time_s: procTime,
           status: 'cancelled',
           outcome: classifyBatchOutcome(sample.expected_label, false),
+          trace_summary: null,
         });
         setBatchResults([...results]);
         break; // Stop remaining queue on cancel
@@ -320,12 +334,15 @@ export function CameraFeeder() {
           name: sample.name,
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
+          label_source: sample.label_source || 'unknown',
+          cause_category: null,
           alert_raised: false,
           time_to_first_alert_s: null,
           processing_time_s: procTime,
           status: 'failed',
           outcome: classifyBatchOutcome(sample.expected_label, false),
           error: terminalFeed.error || 'Pipeline error',
+          trace_summary: null,
         });
         setBatchResults([...results]);
       } else {
@@ -366,12 +383,28 @@ export function CameraFeeder() {
           alertTime = Math.round((detectedIncident.starting_frame_id / fps) * 10) / 10;
         }
 
+        let traceSummary = null;
+        let causeCategory: string | null = null;
+        try {
+          if (typeof api.getRunTrace === 'function') {
+            const traceResp = await api.getRunTrace(sample.id);
+            if (traceResp && traceResp.has_trace && traceResp.summary) {
+              traceSummary = traceResp.summary;
+              causeCategory = traceResp.summary.primary_cause || null;
+            }
+          }
+        } catch {
+          traceSummary = null;
+        }
+
         const outcome = classifyBatchOutcome(sample.expected_label, alertRaised);
         results.push({
           id: sample.id,
           name: sample.name,
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
+          label_source: sample.label_source || 'unknown',
+          cause_category: causeCategory,
           alert_raised: alertRaised,
           time_to_first_alert_s: alertTime,
           processing_time_s: procTime,
@@ -379,6 +412,7 @@ export function CameraFeeder() {
           outcome,
           incident_id: detectedIncident?.id || incId || undefined,
           video_url: detectedIncident?.video_url || sample.video_url,
+          trace_summary: traceSummary,
         });
         setBatchResults([...results]);
       }
@@ -1718,12 +1752,12 @@ export function CameraFeeder() {
               </div>
 
               {/* Current Clip Ingest / Tracker Progress */}
-              {batchCurrentFeed && (
+              {batchCurrentFeed?.progress && (
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
                   <span>
-                    Frame Ingest: {batchCurrentFeed.progress.frames_sent} / {batchCurrentFeed.progress.total_frames || '...'}
+                    Frame Ingest: {batchCurrentFeed.progress.frames_sent ?? 0} / {batchCurrentFeed.progress.total_frames || '...'}
                   </span>
-                  <span className="text-cyan-400 font-bold">{batchCurrentFeed.progress.percent}%</span>
+                  <span className="text-cyan-400 font-bold">{batchCurrentFeed.progress.percent ?? 0}%</span>
                 </div>
               )}
             </div>
@@ -1741,6 +1775,28 @@ export function CameraFeeder() {
             </span>
           </div>
 
+          {/* Active Pipeline Configuration Banner */}
+          {activeConfig && (
+            <div data-testid="active-config-banner" className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs font-mono">
+              <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Active Config:</span>
+              <span className="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">
+                Detector: {activeConfig.detector}
+              </span>
+              <span className={`px-2 py-0.5 rounded border ${activeConfig.adaptive_box_filter ? 'bg-cyan-950 text-cyan-300 border-cyan-600' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                Adaptive Box: {activeConfig.adaptive_box_filter ? 'ON' : 'OFF'}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                Distance Factor: {activeConfig.distance_factor}
+              </span>
+              <span className={`px-2 py-0.5 rounded border ${activeConfig.single_vehicle ? 'bg-cyan-950 text-cyan-300 border-cyan-600' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                Single Vehicle: {activeConfig.single_vehicle ? 'ON' : 'OFF'}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                Threshold: {activeConfig.classifier_threshold}
+              </span>
+            </div>
+          )}
+
           {/* Results Table */}
           {batchResults.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/80">
@@ -1749,6 +1805,8 @@ export function CameraFeeder() {
                   <tr>
                     <th className="py-2.5 px-3 font-semibold">Clip Name</th>
                     <th className="py-2.5 px-3 font-semibold">Expected</th>
+                    <th className="py-2.5 px-3 font-semibold">Label Source</th>
+                    <th className="py-2.5 px-3 font-semibold">Cause</th>
                     <th className="py-2.5 px-3 font-semibold">Alert Raised?</th>
                     <th className="py-2.5 px-3 font-semibold">1st Alert (s)</th>
                     <th className="py-2.5 px-3 font-semibold">Proc Time</th>
@@ -1759,94 +1817,166 @@ export function CameraFeeder() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {batchResults.map((r) => (
-                    <tr key={r.id} data-testid={`batch-row-${r.id}`} className="hover:bg-slate-900/40 transition">
-                      <td className="py-2 px-3">
-                        <div className="font-bold text-white truncate max-w-[180px]" title={r.name}>{r.name}</div>
-                        <div className="text-[10px] text-slate-500 truncate max-w-[180px]" title={r.relative_path}>{r.relative_path}</div>
-                      </td>
-                      <td className="py-2 px-3">
-                        {r.expected_label === 'accident' && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-950/80 text-red-300 border border-red-500/40">
-                            Accident
+                    <Fragment key={r.id}>
+                      <tr data-testid={`batch-row-${r.id}`} className="hover:bg-slate-900/40 transition">
+                        <td className="py-2 px-3">
+                          <div className="font-bold text-white truncate max-w-[180px]" title={r.name}>{r.name}</div>
+                          <div className="text-[10px] text-slate-500 truncate max-w-[180px]" title={r.relative_path}>{r.relative_path}</div>
+                        </td>
+                        <td className="py-2 px-3">
+                          {r.expected_label === 'accident' && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-950/80 text-red-300 border border-red-500/40">
+                              Accident
+                            </span>
+                          )}
+                          {r.expected_label === 'normal' && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                              Normal
+                            </span>
+                          )}
+                          {r.expected_label === 'unknown' && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-700">
+                              Unlabeled
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-800">
+                            {r.label_source || 'unknown'}
                           </span>
-                        )}
-                        {r.expected_label === 'normal' && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
-                            Normal
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                            r.cause_category === 'CRASH_DETECTED'
+                              ? 'text-emerald-400 bg-emerald-950/60 border border-emerald-500/30'
+                              : r.cause_category === 'CORRECT_NORMAL'
+                              ? 'text-cyan-400 bg-cyan-950/60 border border-cyan-500/30'
+                              : r.cause_category
+                              ? 'text-amber-400 bg-amber-950/60 border border-amber-500/30'
+                              : 'text-slate-500'
+                          }`}>
+                            {r.cause_category || '-'}
                           </span>
-                        )}
-                        {r.expected_label === 'unknown' && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-700">
-                            Unlabeled
+                        </td>
+                        <td className="py-2 px-3">
+                          {r.alert_raised ? (
+                            <span className="text-red-400 font-bold flex items-center gap-1">
+                              <Flame className="w-3 h-3 fill-red-400" /> Yes
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-medium">No</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-slate-300">
+                          {r.time_to_first_alert_s != null ? `${r.time_to_first_alert_s}s` : '-'}
+                        </td>
+                        <td className="py-2 px-3 text-slate-300">
+                          {r.processing_time_s}s
+                        </td>
+                        <td className="py-2 px-3">
+                          {r.outcome === 'Alert on accident clip' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                              Alert on accident clip
+                            </span>
+                          )}
+                          {r.outcome === 'No alert on normal clip' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                              No alert on normal clip
+                            </span>
+                          )}
+                          {r.outcome === 'Missed accident' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-950/80 text-red-300 border border-red-500/40">
+                              Missed accident
+                            </span>
+                          )}
+                          {r.outcome === 'False alarm' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40">
+                              False alarm
+                            </span>
+                          )}
+                          {r.outcome === 'Not scored (unlabeled)' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-700">
+                              Not scored (unlabeled)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+                            r.status === 'completed'
+                              ? 'text-emerald-400 bg-emerald-950/40 border border-emerald-500/30'
+                              : r.status === 'failed'
+                              ? 'text-red-400 bg-red-950/40 border border-red-500/30'
+                              : 'text-amber-400 bg-amber-950/40 border border-amber-500/30'
+                          }`}>
+                            {r.status}
                           </span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3">
-                        {r.alert_raised ? (
-                          <span className="text-red-400 font-bold flex items-center gap-1">
-                            <Flame className="w-3 h-3 fill-red-400" /> Yes
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-medium">No</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-slate-300">
-                        {r.time_to_first_alert_s != null ? `${r.time_to_first_alert_s}s` : '-'}
-                      </td>
-                      <td className="py-2 px-3 text-slate-300">
-                        {r.processing_time_s}s
-                      </td>
-                      <td className="py-2 px-3">
-                        {r.outcome === 'Alert on accident clip' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
-                            Alert on accident clip
-                          </span>
-                        )}
-                        {r.outcome === 'No alert on normal clip' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
-                            No alert on normal clip
-                          </span>
-                        )}
-                        {r.outcome === 'Missed accident' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-950/80 text-red-300 border border-red-500/40">
-                            Missed accident
-                          </span>
-                        )}
-                        {r.outcome === 'False alarm' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40">
-                            False alarm
-                          </span>
-                        )}
-                        {r.outcome === 'Not scored (unlabeled)' && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-400 border border-slate-700">
-                            Not scored (unlabeled)
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
-                          r.status === 'completed'
-                            ? 'text-emerald-400 bg-emerald-950/40 border border-emerald-500/30'
-                            : r.status === 'failed'
-                            ? 'text-red-400 bg-red-950/40 border border-red-500/30'
-                            : 'text-amber-400 bg-amber-950/40 border border-amber-500/30'
-                        }`}>
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="py-2 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const found = samples.find((s) => s.id === r.id);
-                            if (found) setPreviewSample(found);
-                          }}
-                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-[11px]"
-                        >
-                          View Clip
-                        </button>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              data-testid={`trace-toggle-${r.id}`}
+                              onClick={() => setExpandedTraceId(expandedTraceId === r.id ? null : r.id)}
+                              className={`px-2 py-1 rounded transition text-[11px] font-mono border ${
+                                expandedTraceId === r.id
+                                  ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/50'
+                                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                              }`}
+                            >
+                              {r.alert_raised ? 'Why alerted' : 'Why no alert'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const found = samples.find((s) => s.id === r.id);
+                                if (found) setPreviewSample(found);
+                              }}
+                              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-[11px]"
+                            >
+                              View Clip
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedTraceId === r.id && (
+                        <tr data-testid={`trace-drawer-${r.id}`} className="bg-slate-950/90 border-b border-slate-800">
+                          <td colSpan={10} className="p-3">
+                            {r.trace_summary ? (
+                              <div data-testid="trace-details" className="rounded-lg bg-slate-900 border border-slate-800 p-3 space-y-2 text-xs">
+                                <div className="font-bold text-cyan-400 flex items-center justify-between">
+                                  <span>Pipeline Trace Diagnostics</span>
+                                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                    Cause: {r.trace_summary.primary_cause || 'UNKNOWN'}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px]">
+                                  <div className="bg-slate-950 p-2 rounded border border-slate-800">
+                                    <span className="text-slate-500 block text-[9px] uppercase">Detector</span>
+                                    <span className="text-slate-200 font-bold">{r.trace_summary.detector_used || 'legacy'}</span>
+                                  </div>
+                                  <div className="bg-slate-950 p-2 rounded border border-slate-800">
+                                    <span className="text-slate-500 block text-[9px] uppercase">Trackers</span>
+                                    <span className="text-slate-200 font-bold">{r.trace_summary.max_trackers ?? 0}</span>
+                                  </div>
+                                  <div className="bg-slate-950 p-2 rounded border border-slate-800">
+                                    <span className="text-slate-500 block text-[9px] uppercase">Dominant Filter</span>
+                                    <span className="text-amber-400 font-bold">{r.trace_summary.dominant_filter || 'NONE'}</span>
+                                  </div>
+                                  <div className="bg-slate-950 p-2 rounded border border-slate-800">
+                                    <span className="text-slate-500 block text-[9px] uppercase">Max Score</span>
+                                    <span className="text-cyan-300 font-bold">{r.trace_summary.max_classifier_score != null ? r.trace_summary.max_classifier_score.toFixed(4) : '--'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div data-testid="no-trace-message" className="text-slate-400 italic text-xs py-2 px-3 bg-slate-900/50 rounded border border-slate-800">
+                                No trace recorded
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
