@@ -14,6 +14,8 @@ export interface Incident extends Omit<RawIncident, 'review_status'> {
   review_note?: string | null;
   reviewed_at?: string | null;
   model_scores?: ModelScores | null;
+  detection_quality?: 'reference' | 'neural' | 'motion_fallback' | 'unavailable' | 'unknown';
+  detector_name?: string | null;
 }
 
 export interface IncidentsResponse {
@@ -29,6 +31,10 @@ export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['cont
   active_scorers?: string[];
   detected_incidents?: string[];
   anomalies_detected?: number;
+  detection_quality?: 'reference' | 'neural' | 'motion_fallback' | 'unavailable' | 'unknown';
+  detector_name?: string;
+  detector_config?: Record<string, any>;
+  vehicles_detected_count?: number;
 };
 export type FeedCancelResponse = paths['/api/feeds/{id}/cancel']['post']['responses']['200']['content']['application/json'];
 
@@ -106,6 +112,8 @@ export interface SampleItem {
   city?: string | null;
   district?: string | null;
   notes?: string | null;
+  has_box_file?: boolean;
+  detection_quality?: 'reference' | 'neural' | 'motion_fallback' | 'unavailable' | 'unknown';
 }
 
 export interface TraceSummaryResponse {

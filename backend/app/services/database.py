@@ -54,12 +54,17 @@ def apply_migrations(db_path: Optional[str] = None) -> None:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN feed_id TEXT DEFAULT NULL;")
         if "test" not in existing_cols:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN test INTEGER DEFAULT 0;")
+        if "detection_quality" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN detection_quality TEXT DEFAULT NULL;")
+        if "detector_name" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN detector_name TEXT DEFAULT NULL;")
 
         # Indexes & View
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_review_status ON CrashFrames(review_status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_time ON CrashFrames(crash_time);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_feed_id ON CrashFrames(feed_id);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_test ON CrashFrames(test);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_detection_quality ON CrashFrames(detection_quality);")
         cursor.execute("DROP VIEW IF EXISTS incidents;")
         cursor.execute("CREATE VIEW incidents AS SELECT rowid, * FROM CrashFrames;")
 
@@ -123,6 +128,8 @@ def row_to_incident(row: sqlite3.Row) -> Incident:
         model_scores=model_scores,
         feed_id=row["feed_id"] if "feed_id" in keys else None,
         test=bool(row["test"]) if ("test" in keys and row["test"] is not None) else False,
+        detection_quality=row["detection_quality"] if "detection_quality" in keys and row["detection_quality"] else "unknown",
+        detector_name=row["detector_name"] if "detector_name" in keys else None,
     )
 
 def query_recent_incidents(limit: int = 10, include_test: bool = False) -> List[Incident]:

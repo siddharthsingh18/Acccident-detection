@@ -9,6 +9,7 @@ import {
   FileEdit,
   ShieldAlert,
   ExternalLink,
+  Activity,
 } from 'lucide-react';
 import type { Incident } from '@/lib/api';
 import { api } from '@/lib/api';
@@ -165,6 +166,17 @@ export function IncidentVideoModal({ incident, onClose, onReviewUpdated }: Incid
                     <span className="text-slate-400 block text-xs">Location</span>
                     <span className="text-white text-xs">
                       {currentIncident.city || 'Unknown'}, {currentIncident.district || 'Unassigned'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <Activity className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
+                  <div>
+                    <span className="text-slate-400 block text-xs">Detection Quality</span>
+                    <span className="font-mono text-white text-xs">
+                      {currentIncident.detection_quality || 'unknown quality'}
+                      {currentIncident.detector_name ? ` (${currentIncident.detector_name})` : ''}
                     </span>
                   </div>
                 </div>

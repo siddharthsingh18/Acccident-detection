@@ -49,6 +49,8 @@ const mockSamples: SampleItem[] = [
     camera_id: 1528,
     city: 'Shibin El Kom',
     district: 'District 13',
+    has_box_file: true,
+    detection_quality: 'reference',
   },
   {
     id: 'videos--normal_1.mp4',
@@ -64,6 +66,8 @@ const mockSamples: SampleItem[] = [
     camera_id: 2001,
     city: 'Cairo',
     district: 'District 1',
+    has_box_file: true,
+    detection_quality: 'reference',
   },
   {
     id: 'Joiner--unlabeled_1.mp4',
@@ -79,35 +83,55 @@ const mockSamples: SampleItem[] = [
     camera_id: 3001,
     city: 'Alexandria',
     district: 'Port',
+    has_box_file: false,
+    detection_quality: 'motion_fallback',
   },
 ];
 
 describe('Batch Test Runner Logic & Utilities (Phase 3)', () => {
-  it('correctly classifies all 5 evaluation outcome states', () => {
+  it('correctly classifies all evaluation outcome states including degraded quality and zero vehicles', () => {
     // 1. Expected accident + alert raised = Alert on accident clip
-    expect(classifyBatchOutcome('accident', true)).toBe('Alert on accident clip');
+    expect(classifyBatchOutcome('accident', true, 'reference', 4)).toBe('Alert on accident clip');
 
-    // 2. Expected normal + no alert = No alert on normal clip
-    expect(classifyBatchOutcome('normal', false)).toBe('No alert on normal clip');
+    // 2. Expected normal + alert raised = False alarm
+    expect(classifyBatchOutcome('normal', true, 'reference', 4)).toBe('False alarm');
 
-    // 3. Expected accident + no alert = Missed accident
-    expect(classifyBatchOutcome('accident', false)).toBe('Missed accident');
+    // 3. Expected accident + no alert (reference) = Missed accident
+    expect(classifyBatchOutcome('accident', false, 'reference', 4)).toBe('Missed accident');
 
-    // 4. Expected normal + alert = False alarm
-    expect(classifyBatchOutcome('normal', true)).toBe('False alarm');
+    // 4. Expected normal + no alert (reference) = No alert on normal clip
+    expect(classifyBatchOutcome('normal', false, 'reference', 4)).toBe('No alert on normal clip');
 
-    // 5. Unknown expected = Not scored (unlabeled)
-    expect(classifyBatchOutcome('unknown', true)).toBe('Not scored (unlabeled)');
-    expect(classifyBatchOutcome('unknown', false)).toBe('Not scored (unlabeled)');
+    // 5. Degraded detection (motion_fallback) = "No alert, but detection was low quality. This result is not reliable."
+    expect(classifyBatchOutcome('accident', false, 'motion_fallback', 2)).toBe(
+      'No alert, but detection was low quality. This result is not reliable.'
+    );
+    expect(classifyBatchOutcome('normal', false, 'unavailable', 2)).toBe(
+      'No alert, but detection was low quality. This result is not reliable.'
+    );
+
+    // 6. Zero vehicles detected = "No vehicles were detected in this video"
+    expect(classifyBatchOutcome('accident', false, 'motion_fallback', 0)).toBe(
+      'No vehicles were detected in this video'
+    );
+    expect(classifyBatchOutcome('normal', false, 'neural', 0)).toBe(
+      'No vehicles were detected in this video'
+    );
+
+    // 7. Unknown expected = Not scored (unlabeled)
+    expect(classifyBatchOutcome('unknown', true, 'reference', 4)).toBe('Not scored (unlabeled)');
+    expect(classifyBatchOutcome('unknown', false, 'reference', 4)).toBe('Not scored (unlabeled)');
   });
 
-  it('generates valid RFC-4180 CSV with escaped strings and correct headers', () => {
+  it('generates valid RFC-4180 CSV with quality, vehicle count, and handles missing quality safely', () => {
     const csv = generateBatchResultsCsv([
       {
         id: '1528',
         name: '1528, test.mp4',
         relative_path: 'videos/1528, test.mp4',
         expected_label: 'accident',
+        detection_quality: 'reference',
+        vehicles_detected_count: 6,
         alert_raised: true,
         time_to_first_alert_s: 3.5,
         processing_time_s: 4.2,
@@ -120,6 +144,7 @@ describe('Batch Test Runner Logic & Utilities (Phase 3)', () => {
         name: 'normal.mp4',
         relative_path: 'videos/normal.mp4',
         expected_label: 'normal',
+        // missing detection_quality should safely output 'unknown quality'
         alert_raised: false,
         time_to_first_alert_s: null,
         processing_time_s: 2.1,
@@ -128,8 +153,12 @@ describe('Batch Test Runner Logic & Utilities (Phase 3)', () => {
       },
     ]);
 
-    expect(csv).toContain('Clip Name,Relative Path,Expected Label,Label Source,Cause Category,Alert Raised');
+    expect(csv).toContain(
+      'Clip Name,Relative Path,Expected Label,Label Source,Detection Quality,Vehicles Detected,Cause Category,Alert Raised'
+    );
     expect(csv).toContain('"1528, test.mp4"');
+    expect(csv).toContain('reference,6');
+    expect(csv).toContain('unknown quality,-');
     expect(csv).toContain('Alert on accident clip');
     expect(csv).toContain('No alert on normal clip');
     expect(csv).toContain('1528_106');
@@ -351,6 +380,8 @@ describe('CameraFeeder - Batch Test Runner UI & Execution (Phase 3)', () => {
       status: 'done',
       created_at: '2026-11-01T10:00:00Z',
       thumbnail_url: '/thumb.jpg',
+      detection_quality: 'reference',
+      vehicles_detected_count: 5,
       progress: { frames_sent: 100, total_frames: 100, percent: 100 },
     });
 

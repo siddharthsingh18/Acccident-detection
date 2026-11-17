@@ -80,6 +80,8 @@ class Incident(BaseModel):
     model_scores: Optional[ModelScores] = Field(None, description="Ensemble and model score breakdown, or null for legacy incidents")
     feed_id: Optional[str] = Field(None, description="Optional feed ID associated with this incident")
     test: bool = Field(default=False, description="Whether incident was recorded during test execution")
+    detection_quality: Optional[str] = Field(default="unknown", description="'reference', 'neural', 'motion_fallback', 'unavailable', or 'unknown'")
+    detector_name: Optional[str] = Field(None, description="Detector implementation name")
 
 class ReviewIncidentRequest(BaseModel):
     status: str = Field(..., description="'confirmed' or 'false_alarm'")
@@ -118,6 +120,10 @@ class FeedResponse(BaseModel):
     created_at: str
     detected_incidents: List[str] = Field(default_factory=list, description="List of incident IDs detected during this feed")
     anomalies_detected: int = Field(default=0, description="Count of anomalies/crashes detected during this feed")
+    detection_quality: str = Field(default="unknown", description="'reference', 'neural', 'motion_fallback', 'unavailable', or 'unknown'")
+    detector_name: Optional[str] = Field(default="legacy", description="Active detector implementation name")
+    detector_config: Dict[str, Any] = Field(default_factory=dict, description="Active detector configuration and flags")
+    vehicles_detected_count: int = Field(default=0, description="Max vehicles detected simultaneously during this feed")
 
 class FeedCancelResponse(BaseModel):
     id: str
@@ -161,6 +167,8 @@ class SampleItemResponse(BaseModel):
     city: Optional[str] = Field(None, description="Suggested city name if known")
     district: Optional[str] = Field(None, description="Suggested district if known")
     notes: Optional[str] = Field(None, description="Optional annotations or notes from manifest")
+    has_box_file: bool = Field(default=False, description="Whether pre-annotated bounding boxes file exists")
+    detection_quality: Optional[str] = Field(default="reference", description="Expected detection quality ('reference' or 'motion_fallback')")
 
 class StartFeedFromSampleRequest(BaseModel):
     sample_id: str = Field(..., description="Stable ID or relative path of the sample video")

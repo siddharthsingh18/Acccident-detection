@@ -4,6 +4,7 @@ import {
   UploadCloud,
   Video,
   Play,
+  X,
   XCircle,
   AlertTriangle,
   RefreshCw,
@@ -26,6 +27,8 @@ import {
   HelpCircle,
   SlidersHorizontal,
   PlayCircle,
+  AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { api, type FeedResponse, type Incident, type SampleItem } from '@/lib/api';
 import { classifyBatchOutcome, generateBatchResultsCsv, downloadCsv, type BatchResultItem } from '@/lib/batchRunner';
@@ -167,6 +170,7 @@ export function CameraFeeder() {
   const [outputVideoUrl, setOutputVideoUrl] = useState<string | null>(null);
   const [modalIncident, setModalIncident] = useState<Incident | null>(null);
   const [isCompareModels, setIsCompareModels] = useState<boolean>(false);
+  const [showDetectorHelpModal, setShowDetectorHelpModal] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pollingIntervalRef = useRef<number | null>(null);
@@ -271,6 +275,8 @@ export function CameraFeeder() {
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
           label_source: sample.label_source || 'unknown',
+          detection_quality: 'unknown',
+          vehicles_detected_count: 0,
           cause_category: null,
           alert_raised: false,
           time_to_first_alert_s: null,
@@ -318,6 +324,8 @@ export function CameraFeeder() {
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
           label_source: sample.label_source || 'unknown',
+          detection_quality: 'unknown',
+          vehicles_detected_count: 0,
           cause_category: null,
           alert_raised: false,
           time_to_first_alert_s: null,
@@ -335,6 +343,8 @@ export function CameraFeeder() {
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
           label_source: sample.label_source || 'unknown',
+          detection_quality: 'unknown',
+          vehicles_detected_count: 0,
           cause_category: null,
           alert_raised: false,
           time_to_first_alert_s: null,
@@ -397,13 +407,17 @@ export function CameraFeeder() {
           traceSummary = null;
         }
 
-        const outcome = classifyBatchOutcome(sample.expected_label, alertRaised);
+        const quality = terminalFeed?.detection_quality || (sample.has_box_file ? 'reference' : 'motion_fallback');
+        const vCount = terminalFeed?.vehicles_detected_count ?? traceSummary?.max_trackers ?? 0;
+        const outcome = classifyBatchOutcome(sample.expected_label, alertRaised, quality, vCount);
         results.push({
           id: sample.id,
           name: sample.name,
           relative_path: sample.relative_path,
           expected_label: sample.expected_label,
           label_source: sample.label_source || 'unknown',
+          detection_quality: quality,
+          vehicles_detected_count: vCount,
           cause_category: causeCategory,
           alert_raised: alertRaised,
           time_to_first_alert_s: alertTime,
@@ -1154,6 +1168,34 @@ export function CameraFeeder() {
                 <p className="text-[10px] text-slate-500">MP4, AVI, MKV up to 200MB (Motion Contours Fallback)</p>
               </div>
             </div>
+
+            {/* Pre-run Degraded Mode Warning */}
+            {((selectedFile !== null) || (selectedSample && !selectedSample.has_box_file)) && (activeConfig?.detector === 'legacy' || !activeConfig) && (
+              <div
+                data-testid="prerun-fallback-warning"
+                role="alert"
+                className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-300 text-xs flex items-start gap-2.5 animate-fade-in"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-semibold text-amber-200">
+                    No detector is available for this video; results will be unreliable
+                  </div>
+                  <div className="text-[11px] text-amber-300/80 leading-relaxed">
+                    This video has no pre-annotated box file and neural vehicle detection is inactive.
+                    Argus will fall back to naive motion differencing which produces unreliable results.
+                    {' '}
+                    <button
+                      type="button"
+                      onClick={() => setShowDetectorHelpModal(true)}
+                      className="underline text-amber-200 hover:text-white font-medium inline-flex items-center gap-1"
+                    >
+                      How to enable the detector <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input Video Player Preview */}
@@ -1324,10 +1366,20 @@ export function CameraFeeder() {
                   : detectionOutcome === 'processing'
                   ? 'bg-amber-950/60 text-amber-300 border border-amber-500/40'
                   : detectionOutcome === 'normal'
-                  ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
+                  ? (activeFeed?.detection_quality === 'motion_fallback' || activeFeed?.detection_quality === 'unavailable' || (activeFeed as any)?.detection_mode === 'low-quality detection mode')
+                    ? 'bg-amber-950/60 text-amber-300 border border-amber-500/40'
+                    : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
                   : 'bg-slate-950/60 text-slate-400 border border-slate-800'
               }`}>
-                {detectionOutcome === 'idle' ? 'STANDBY' : detectionOutcome}
+                {detectionOutcome === 'idle'
+                  ? 'STANDBY'
+                  : detectionOutcome === 'normal'
+                  ? ((activeFeed?.vehicles_detected_count ?? 0) === 0 && activeFeed?.detection_quality !== 'reference')
+                    ? 'NO VEHICLES DETECTED'
+                    : (activeFeed?.detection_quality === 'motion_fallback' || activeFeed?.detection_quality === 'unavailable' || (activeFeed as any)?.detection_mode === 'low-quality detection mode')
+                    ? 'LOW QUALITY (UNRELIABLE)'
+                    : 'NORMAL'
+                  : detectionOutcome}
               </span>
             </div>
 
@@ -1439,17 +1491,73 @@ export function CameraFeeder() {
               )}
 
               {detectionOutcome === 'normal' && (
-                <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/20 text-white space-y-1.5 animate-fade-in">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <h4 className="font-bold text-xs text-emerald-300 uppercase tracking-wider font-mono">
-                      Normal Traffic - No Accident
-                    </h4>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    All vehicle velocity curves remained within standard roadway bounds. 0 collision anomalies detected.
-                  </p>
-                </div>
+                (() => {
+                  const isDegradedQuality =
+                    activeFeed?.detection_quality === 'motion_fallback' ||
+                    activeFeed?.detection_quality === 'unavailable' ||
+                    (activeFeed as any)?.detection_mode === 'low-quality detection mode';
+
+                  const zeroVehicles =
+                    (activeFeed?.vehicles_detected_count ?? 0) === 0 &&
+                    activeFeed?.detection_quality !== 'reference';
+
+                  if (zeroVehicles) {
+                    return (
+                      <div
+                        data-testid="outcome-zero-vehicles"
+                        role="status"
+                        className="p-4 rounded-xl border border-amber-500/40 bg-slate-900/90 text-white space-y-1.5 animate-fade-in"
+                      >
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                          <h4 className="font-bold text-xs text-amber-300 uppercase tracking-wider font-mono">
+                            No vehicles were detected in this video
+                          </h4>
+                        </div>
+                        <p className="text-xs text-slate-300">
+                          The vehicle detector did not identify any vehicles throughout the entire clip. Crash classification could not be performed.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  if (isDegradedQuality) {
+                    return (
+                      <div
+                        data-testid="outcome-low-quality-warning"
+                        role="alert"
+                        className="p-4 rounded-xl border-2 border-amber-500/60 bg-amber-950/30 text-white space-y-1.5 animate-fade-in"
+                      >
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                          <h4 className="font-bold text-xs text-amber-300 uppercase tracking-wider font-mono">
+                            No alert, but detection was low quality. This result is not reliable.
+                          </h4>
+                        </div>
+                        <p className="text-xs text-amber-200/80">
+                          Motion fallback detector was active. Bounding boxes are uncalibrated and vehicle trajectories were dropped before classification.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      data-testid="outcome-clean-normal"
+                      className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/20 text-white space-y-1.5 animate-fade-in"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <h4 className="font-bold text-xs text-emerald-300 uppercase tracking-wider font-mono">
+                          Normal Traffic - No Accident
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-300">
+                        All vehicle velocity curves remained within standard roadway bounds. 0 collision anomalies detected.
+                      </p>
+                    </div>
+                  );
+                })()
               )}
             </div>
 
@@ -1619,8 +1727,22 @@ export function CameraFeeder() {
                     </div>
                   </div>
                 ) : (
-                  <div data-testid="timeline-empty" className="p-4 rounded-lg bg-slate-900/30 border border-slate-800/80 text-center text-xs text-slate-500">
-                    No collision anomaly events detected across analyzed frame batches.
+                  <div data-testid="timeline-empty" className="p-4 rounded-lg bg-slate-900/30 border border-slate-800/80 text-center text-xs">
+                    {activeFeed?.detection_quality === 'motion_fallback' || activeFeed?.detection_quality === 'unavailable' || (activeFeed as any)?.detection_mode === 'low-quality detection mode' ? (
+                      <span className="text-amber-300 font-semibold flex items-center justify-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        No alert, but detection was low quality. This result is not reliable.
+                      </span>
+                    ) : (activeFeed?.vehicles_detected_count ?? 0) === 0 && activeFeed?.detection_quality !== 'reference' ? (
+                      <span className="text-amber-300 font-semibold flex items-center justify-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        No vehicles were detected in this video
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">
+                        No collision anomaly events detected across analyzed frame batches.
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -1806,6 +1928,7 @@ export function CameraFeeder() {
                     <th className="py-2.5 px-3 font-semibold">Clip Name</th>
                     <th className="py-2.5 px-3 font-semibold">Expected</th>
                     <th className="py-2.5 px-3 font-semibold">Label Source</th>
+                    <th className="py-2.5 px-3 font-semibold">Quality</th>
                     <th className="py-2.5 px-3 font-semibold">Cause</th>
                     <th className="py-2.5 px-3 font-semibold">Alert Raised?</th>
                     <th className="py-2.5 px-3 font-semibold">1st Alert (s)</th>
@@ -1844,6 +1967,29 @@ export function CameraFeeder() {
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-800">
                             {r.label_source || 'unknown'}
                           </span>
+                        </td>
+                        <td className="py-2 px-3">
+                          {r.detection_quality === 'reference' ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-500/30">
+                              reference
+                            </span>
+                          ) : r.detection_quality === 'neural' ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-500/30">
+                              neural
+                            </span>
+                          ) : r.detection_quality === 'motion_fallback' ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-amber-300 bg-amber-950/80 border border-amber-500/40">
+                              motion_fallback
+                            </span>
+                          ) : r.detection_quality === 'unavailable' ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-red-300 bg-red-950/80 border border-red-500/40">
+                              unavailable
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-700">
+                              unknown quality
+                            </span>
+                          )}
                         </td>
                         <td className="py-2 px-3">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
@@ -1899,6 +2045,18 @@ export function CameraFeeder() {
                               Not scored (unlabeled)
                             </span>
                           )}
+                          {r.outcome === 'No alert, but detection was low quality. This result is not reliable.' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span>No alert, but detection was low quality. This result is not reliable.</span>
+                            </span>
+                          )}
+                          {r.outcome === 'No vehicles were detected in this video' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span>No vehicles were detected in this video</span>
+                            </span>
+                          )}
                         </td>
                         <td className="py-2 px-3">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
@@ -1940,7 +2098,7 @@ export function CameraFeeder() {
                       </tr>
                       {expandedTraceId === r.id && (
                         <tr data-testid={`trace-drawer-${r.id}`} className="bg-slate-950/90 border-b border-slate-800">
-                          <td colSpan={10} className="p-3">
+                          <td colSpan={11} className="p-3">
                             {r.trace_summary ? (
                               <div data-testid="trace-details" className="rounded-lg bg-slate-900 border border-slate-800 p-3 space-y-2 text-xs">
                                 <div className="font-bold text-cyan-400 flex items-center justify-between">
@@ -2186,10 +2344,82 @@ export function CameraFeeder() {
                 type="button"
                 data-testid="batch-confirm-start-btn"
                 onClick={handleStartBatch}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-cyan-400 hover:bg-cyan-300 text-slate-950 transition active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-cyan-400 hover:cyan-300 text-slate-950 transition active:scale-[0.98]"
               >
                 <Play className="w-3.5 h-3.5 fill-slate-950" />
                 Start Sequential Batch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detector Help Modal */}
+      {showDetectorHelpModal && (
+        <div
+          data-testid="detector-help-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+        >
+          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-bold text-white font-mono uppercase tracking-wider">
+                  Vehicle Detector Configuration
+                </h3>
+              </div>
+              <button
+                type="button"
+                data-testid="close-detector-help-modal"
+                onClick={() => setShowDetectorHelpModal(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              <p>
+                Argus uses vehicle bounding boxes to initialize spatial trackers and compute Horn-Schunck violent flow descriptors.
+              </p>
+
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1.5">
+                <div className="font-semibold text-amber-300 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Why is detection degraded on uploaded videos?
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  The bundled sample clips rely on pre-annotated bounding boxes (<code className="text-cyan-400 font-mono">boxes/&lt;id&gt;.txt</code>). When an arbitrary video is uploaded without annotations, Argus falls back to naive motion frame differencing (<code className="text-amber-400 font-mono">MotionFallbackDetector</code>), which produces noisy contours and unreliable results.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-950/80 border border-cyan-500/30 space-y-1.5">
+                <div className="font-semibold text-cyan-300 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5" />
+                  How to configure neural vehicle detection:
+                </div>
+                <ul className="list-disc pl-4 text-[11px] text-slate-400 space-y-1">
+                  <li>
+                    Set <code className="text-cyan-300 font-mono">ARGUS_DETECTOR=yolo</code> or neural detector mode before launching the supervisor.
+                  </li>
+                  <li>
+                    In Phase 3, a permissive Apache-2.0 / BSD neural detector will be integrated directly for automatic vehicle localization on all uploads.
+                  </li>
+                  <li>
+                    For benchmark evaluation, ground-truth box annotations can be registered in <code className="text-cyan-300 font-mono">boxes/</code>.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                data-testid="detector-help-close-btn"
+                onClick={() => setShowDetectorHelpModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+              >
+                Close
               </button>
             </div>
           </div>

@@ -361,6 +361,9 @@ def list_samples() -> List[SampleItemResponse]:
                 except ValueError:
                     suggested_cam_id = None
 
+            has_box = (PROJECT_ROOT / "boxes" / f"{resolved_path.stem}.txt").exists()
+            quality = "reference" if has_box else "motion_fallback"
+
             item = SampleItemResponse(
                 id=stable_id,
                 name=resolved_path.name,
@@ -376,7 +379,9 @@ def list_samples() -> List[SampleItemResponse]:
                 camera_id=suggested_cam_id,
                 city=suggested_city,
                 district=suggested_district,
-                notes=notes
+                notes=notes,
+                has_box_file=has_box,
+                detection_quality=quality
             )
             samples.append(item)
 

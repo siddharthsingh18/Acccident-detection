@@ -110,7 +110,7 @@ class Master:
         self.write(camera_id, new_frames, starting_frame_id, frame_width, frame_height, True)
         return no_of_frames
 
-    def checkResult(self,camera_id,starting_frame_id,crash_dimentions,city,district_no, model_scores=None):
+    def checkResult(self,camera_id,starting_frame_id,crash_dimentions,city,district_no, model_scores=None, detection_quality=None, detector_name=None, feed_id=None, test=False):
         #print(city,district_no)
         if len(crash_dimentions) == 0:
             return
@@ -125,7 +125,18 @@ class Master:
             elif hasattr(model_scores, "model_dump_json"):
                 model_scores_str = model_scores.model_dump_json()
 
-        self.database.insertCrashFramesVid(camera_id,starting_frame_id,PRE_FRAMES_NO+1,city,district_no, model_scores=model_scores_str)
+        self.database.insertCrashFramesVid(
+            camera_id,
+            starting_frame_id,
+            PRE_FRAMES_NO+1,
+            city,
+            district_no,
+            model_scores=model_scores_str,
+            detection_quality=detection_quality,
+            detector_name=detector_name,
+            feed_id=feed_id,
+            test=test
+        )
         self.sendNotification(camera_id,starting_frame_id,city,district_no, model_scores=model_scores)
 
     def sendNotification(self,camera_id,starting_frame_id,city,district_no, model_scores=None):

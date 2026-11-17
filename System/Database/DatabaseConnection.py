@@ -59,12 +59,13 @@ class DatabaseConnection:
             self.conn = None
             self.cursor = None
 
-    def execute(self, query: str, params: Tuple = ()):
+    def execute(self, query: str, params: Tuple = ()) -> Optional[int]:
         """Execute a parameterized query safely within a connection context."""
         with self.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)
             conn.commit()
+            return cursor.lastrowid
 
     def insertSavedFramesVid(self, camera_id: int, starting_frame_id: int):
         """Insert frame tracking record with parameterized SQL."""
@@ -78,27 +79,40 @@ class DatabaseConnection:
         from_no: int,
         city: str,
         district_no: str,
-        model_scores: Optional[str] = None
+        model_scores: Optional[str] = None,
+        detection_quality: Optional[str] = None,
+        detector_name: Optional[str] = None,
+        feed_id: Optional[str] = None,
+        test: bool = False
     ):
         """Insert crash incident record with parameterized SQL preventing SQL injection."""
-        if model_scores:
-            query = """
-                INSERT INTO CrashFrames (camera_id, frame_id, from_no, city, district, crash_time, model_scores)
-                VALUES (?, ?, ?, ?, ?, datetime('now'), ?)
-            """
-            self.execute(
-                query,
-                (int(camera_id), int(starting_frame_id), int(from_no), str(city), str(district_no), str(model_scores))
-            )
-        else:
-            query = """
-                INSERT INTO CrashFrames (camera_id, frame_id, from_no, city, district, crash_time)
-                VALUES (?, ?, ?, ?, ?, datetime('now'))
-            """
-            self.execute(
-                query,
-                (int(camera_id), int(starting_frame_id), int(from_no), str(city), str(district_no))
-            )
+        cols = ["camera_id", "frame_id", "from_no", "city", "district", "crash_time"]
+        vals = [int(camera_id), int(starting_frame_id), int(from_no), str(city), str(district_no)]
+        placeholders = ["?", "?", "?", "?", "?", "datetime('now')"]
+
+        if model_scores is not None:
+            cols.append("model_scores")
+            vals.append(str(model_scores))
+            placeholders.append("?")
+        if detection_quality is not None:
+            cols.append("detection_quality")
+            vals.append(str(detection_quality))
+            placeholders.append("?")
+        if detector_name is not None:
+            cols.append("detector_name")
+            vals.append(str(detector_name))
+            placeholders.append("?")
+        if feed_id is not None:
+            cols.append("feed_id")
+            vals.append(str(feed_id))
+            placeholders.append("?")
+        if test:
+            cols.append("test")
+            vals.append(1)
+            placeholders.append("?")
+
+        query = f"INSERT INTO CrashFrames ({', '.join(cols)}) VALUES ({', '.join(placeholders)})"
+        return self.execute(query, tuple(vals))
 
     def updateCrashFramesVid(self, camera_id: int, starting_frame_id: int, from_no: int):
         """Update incident chunk number with parameterized SQL."""

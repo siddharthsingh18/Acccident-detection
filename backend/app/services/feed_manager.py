@@ -42,6 +42,10 @@ class FeedItem:
         self.detected_incidents: list[str] = []
         self.anomalies_detected: int = 0
         self.is_test: bool = is_test
+        self.detection_quality: str = "unknown"
+        self.detector_name: str = os.getenv("ARGUS_DETECTOR", os.getenv("DETECTOR", "legacy")).lower()
+        self.detector_config: dict = {"env_detector": self.detector_name, "trace": os.getenv("ARGUS_TRACE", "false")}
+        self.vehicles_detected_count: int = 0
 
     def to_response(self) -> FeedResponse:
         enable_ensemble = os.environ.get("ARGUS_ENABLE_ENSEMBLE", "false").lower() in ("true", "1", "yes")
@@ -73,7 +77,11 @@ class FeedItem:
             error=self.error,
             created_at=self.created_at,
             detected_incidents=list(self.detected_incidents),
-            anomalies_detected=self.anomalies_detected
+            anomalies_detected=self.anomalies_detected,
+            detection_quality=self.detection_quality,
+            detector_name=self.detector_name,
+            detector_config=self.detector_config,
+            vehicles_detected_count=self.vehicles_detected_count
         )
 
 
@@ -286,6 +294,17 @@ class FeedManager:
                 feed_item.detection_mode = mode
                 if mode == "low-quality detection mode":
                     feed_item.status = "low-quality detection mode"
+                    if feed_item.detection_quality == "unknown":
+                        feed_item.detection_quality = "motion_fallback"
+            elif line.startswith("DETECTION_QUALITY:"):
+                feed_item.detection_quality = line.split(":", 1)[1].strip()
+            elif line.startswith("DETECTOR_NAME:"):
+                feed_item.detector_name = line.split(":", 1)[1].strip()
+            elif line.startswith("VEHICLES_DETECTED:"):
+                try:
+                    feed_item.vehicles_detected_count = int(line.split(":", 1)[1].strip())
+                except ValueError:
+                    pass
             elif line.startswith("ALERT:"):
                 inc_id = line[6:].strip()
                 self.record_incident(feed_item.feed_id, inc_id)

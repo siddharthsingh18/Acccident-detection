@@ -143,11 +143,24 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
     print(f"STATUS:PROCESSING:0:{total_frames}", flush=True)
 
     detector = get_detector()
-    if not has_boxes and (detector.name == "legacy" or detector.is_low_quality):
+    if has_boxes:
+        detection_quality = "reference"
+    elif detector.name in ("yolo", "neural") and not detector.is_low_quality:
+        detection_quality = "neural"
+    elif detector.is_low_quality or detector.name in ("motion", "legacy") or not has_boxes:
+        detection_quality = "motion_fallback"
+    else:
+        detection_quality = "unavailable"
+
+    if detection_quality == "motion_fallback":
         print("DETECTION_MODE:low-quality detection mode", flush=True)
     else:
         print(f"DETECTION_MODE:{detector.name}", flush=True)
 
+    print(f"DETECTION_QUALITY:{detection_quality}", flush=True)
+    print(f"DETECTOR_NAME:{detector.name}", flush=True)
+
+    max_vehicles_seen = 0
     t = time.time()
     while running:
         ret, frame = cap.read()
@@ -175,6 +188,10 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
                 frame_height=frame_height
             )
 
+            if boxes:
+                max_vehicles_seen = max(max_vehicles_seen, len(boxes))
+                print(f"VEHICLES_DETECTED:{max_vehicles_seen}", flush=True)
+
             msg = {
                 FUNCTION: FEED,
                 CAMERA_ID: camera_id,
@@ -188,6 +205,8 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
                 DISTRICT: district,
                 "FEED_ID": feed_id,
                 "TEST": is_test,
+                "DETECTION_QUALITY": detection_quality,
+                "DETECTOR_NAME": detector.name,
             }
 
             # Dispatch over ZeroMQ to Master node
@@ -243,6 +262,7 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
         print(f"PROGRESS:{total_frames}:{total_frames}", flush=True)
 
     if running:
+        print(f"VEHICLES_DETECTED:{max_vehicles_seen}", flush=True)
         print(f"PROGRESS:{total_frames}:{total_frames}", flush=True)
         print("STATUS:DONE", flush=True)
 
