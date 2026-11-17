@@ -6,6 +6,7 @@ import numpy as np
 from System.Functions.Detector.base import BaseDetector, DetectionBox
 from System.Functions.Detector.motion import MotionFallbackDetector
 from boxes.yoloFiles import loadFile
+from boxes.registry import lookup_box_file
 
 logger = logging.getLogger("argus.detector.legacy")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -31,8 +32,19 @@ class LegacyBoxFilesDetector(BaseDetector):
     def is_low_quality(self) -> bool:
         return False
 
-    def _get_box_file(self, video_name: str) -> Optional[Path]:
-        stem = Path(video_name).stem
+    def _get_box_file(self, video_name: str, video_path: Optional[Path] = None) -> Optional[Path]:
+        if video_path and Path(video_path).is_file():
+            matched = lookup_box_file(video_path)
+            if matched:
+                return matched
+
+        v_path = Path(video_name)
+        if v_path.is_file():
+            matched = lookup_box_file(v_path)
+            if matched:
+                return matched
+
+        stem = v_path.stem
         candidates = [stem]
         if "_" in stem:
             candidates.append(stem.split("_", 1)[1])
@@ -46,7 +58,8 @@ class LegacyBoxFilesDetector(BaseDetector):
         return None
 
     def detect(self, frame: np.ndarray, **kwargs) -> List[DetectionBox]:
-        video_name = kwargs.get("video_name") or str(kwargs.get("camera_id", ""))
+        video_path = kwargs.get("video_path")
+        video_name = kwargs.get("video_name") or (str(video_path) if video_path else "")
         frame_index = kwargs.get("frame_index", 0)
 
         # If pre-loaded boxes were passed directly (e.g. from Master / Feeder)
@@ -61,7 +74,7 @@ class LegacyBoxFilesDetector(BaseDetector):
 
         # Check cache
         if video_name not in self._cache:
-            box_file = self._get_box_file(video_name)
+            box_file = self._get_box_file(video_name, video_path=video_path)
             if box_file:
                 try:
                     loaded = loadFile(box_file.stem)

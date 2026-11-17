@@ -10,6 +10,7 @@ from fastapi import HTTPException
 
 from ..config import settings, PROJECT_ROOT
 from ..models.schemas import SampleItemResponse
+from boxes.registry import lookup_box_file
 
 logger = logging.getLogger("argus.services.sample_catalog")
 
@@ -361,7 +362,8 @@ def list_samples() -> List[SampleItemResponse]:
                 except ValueError:
                     suggested_cam_id = None
 
-            has_box = (PROJECT_ROOT / "boxes" / f"{resolved_path.stem}.txt").exists()
+            box_match = lookup_box_file(resolved_path)
+            has_box = box_match is not None and box_match.exists()
             quality = "reference" if has_box else "motion_fallback"
 
             item = SampleItemResponse(

@@ -10,7 +10,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 import cv2
 import numpy as np
@@ -199,7 +199,16 @@ class FeedManager:
                 item.detected_incidents.append(incident_id)
                 item.anomalies_detected += 1
 
-    async def start_feed(self, file_path: Path, camera_id: int, city: str, district: str, is_test: bool = False) -> FeedResponse:
+    async def start_feed(
+        self,
+        file_path: Path,
+        camera_id: int,
+        city: str,
+        district: str,
+        is_test: bool = False,
+        feed_id: Optional[str] = None,
+        detector_override: Optional[str] = None
+    ) -> FeedResponse:
         # Check if an active feed is currently running
         if self.active_feed_id:
             active_item = self.feeds.get(self.active_feed_id)
@@ -213,12 +222,12 @@ class FeedManager:
                     active_item.status = "done"
                     self.active_feed_id = None
 
-        feed_id = str(uuid.uuid4())
-        thumbnail_path = settings.FEEDS_DIR / f"{feed_id}_thumb.jpg"
+        resolved_feed_id = feed_id or str(uuid.uuid4())
+        thumbnail_path = settings.FEEDS_DIR / f"{resolved_feed_id}_thumb.jpg"
         self.create_thumbnail_with_overlay(file_path, thumbnail_path)
 
         feed_item = FeedItem(
-            feed_id=feed_id,
+            feed_id=resolved_feed_id,
             camera_id=camera_id,
             city=city,
             district=district,
@@ -226,8 +235,8 @@ class FeedManager:
             thumbnail_path=thumbnail_path,
             is_test=is_test
         )
-        self.feeds[feed_id] = feed_item
-        self.active_feed_id = feed_id
+        self.feeds[resolved_feed_id] = feed_item
+        self.active_feed_id = resolved_feed_id
 
         # Launch worker in a separate subprocess
         worker_script = BACKEND_DIR / "app" / "services" / "camera_worker.py"
@@ -240,12 +249,14 @@ class FeedManager:
             "--district", district,
             "--master-ip", settings.ZMQ_MASTER_HOST,
             "--master-port", str(settings.ZMQ_MASTER_PORT),
-            "--feed-id", feed_id,
+            "--feed-id", resolved_feed_id,
         ]
         if is_test:
             cmd.append("--test")
+        if detector_override:
+            cmd.extend(["--detector", str(detector_override)])
 
-        logger.info(f"Starting camera worker subprocess for feed {feed_id} (test={is_test})")
+        logger.info(f"Starting camera worker subprocess for feed {resolved_feed_id} (test={is_test}, detector={detector_override or 'default'})")
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -330,15 +341,105 @@ class FeedManager:
         self._cleanup_feed_video(feed_item)
 
     def _cleanup_feed_video(self, feed_item: FeedItem):
-        """Clean up temporary uploaded video file while keeping dataset files, thumbnail, and metadata."""
-        try:
-            resolved_path = feed_item.video_path.resolve()
-            resolved_uploads = settings.UPLOADS_DIR.resolve()
-            # Only delete files located in the temporary uploads directory
-            if resolved_uploads in resolved_path.parents and resolved_path.exists():
-                resolved_path.unlink(missing_ok=True)
-        except Exception as e:
-            logger.warning(f"Failed to remove uploaded feed file {feed_item.video_path}: {e}")
+        """
+        Keep uploaded video file in backend/uploads/<run_id>/original.<ext> for replay/inspection.
+        Files are preserved and pruned by cleanup_uploads based on the retention policy.
+        """
+        pass
+
+    def get_feed_video_path(self, feed_id: str) -> Optional[Path]:
+        """Find video path for a feed from active/cached item or disk storage."""
+        item = self.feeds.get(feed_id)
+        if item and item.video_path.exists():
+            return item.video_path
+
+        # Check structured upload directory backend/uploads/<feed_id>/
+        upload_dir = settings.UPLOADS_DIR / feed_id
+        if upload_dir.is_dir():
+            for p in upload_dir.glob("original.*"):
+                if p.is_file():
+                    return p
+            for p in upload_dir.iterdir():
+                if p.is_file() and p.suffix.lower() in settings.ALLOWED_EXTENSIONS:
+                    return p
+
+        # Check legacy uploads directory for prefix matches
+        for p in settings.UPLOADS_DIR.glob(f"{feed_id}_*"):
+            if p.is_file():
+                return p
+
+        return None
+
+    def cleanup_uploads(self, retention_days: int = 7, max_disk_bytes: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Enforce retention policy on uploaded files in backend/uploads/.
+        Keeps uploads for retention_days (default 7 days) and ensures disk usage stays under max_disk_bytes.
+        Never removes actively running feed videos.
+        """
+        now = time.time()
+        cutoff_seconds = retention_days * 86400
+        active_video_paths = {
+            self.feeds[f_id].video_path.resolve()
+            for f_id in self.feeds
+            if self.feeds[f_id].status in ("queued", "processing") and self.feeds[f_id].video_path
+        }
+
+        cleaned_count = 0
+        freed_bytes = 0
+
+        # Discover all upload run directories
+        upload_dirs = [p for p in settings.UPLOADS_DIR.iterdir() if p.is_dir()]
+        remaining_dirs = []
+
+        for u_dir in upload_dirs:
+            # Check if any active feed uses this directory
+            is_active = any(active_p in u_dir.resolve().parents or active_p.parent == u_dir.resolve() for active_p in active_video_paths)
+            if is_active:
+                remaining_dirs.append(u_dir)
+                continue
+
+            # Check age from directory mtime or metadata
+            dir_stat = u_dir.stat()
+            age_seconds = now - dir_stat.st_mtime
+            dir_size = sum(f.stat().st_size for f in u_dir.rglob("*") if f.is_file())
+
+            if age_seconds > cutoff_seconds:
+                try:
+                    shutil.rmtree(u_dir, ignore_errors=True)
+                    cleaned_count += 1
+                    freed_bytes += dir_size
+                except Exception as e:
+                    logger.warning(f"Failed to remove expired upload dir {u_dir}: {e}")
+            else:
+                remaining_dirs.append((u_dir, dir_stat.st_mtime, dir_size))
+
+        # Check max disk usage limit
+        if max_disk_bytes is not None and remaining_dirs:
+            total_remaining = sum(d[2] for d in remaining_dirs if isinstance(d, tuple))
+            if total_remaining > max_disk_bytes:
+                # Sort oldest first
+                remaining_dirs.sort(key=lambda x: x[1])
+                for u_dir, _, dir_size in remaining_dirs:
+                    if total_remaining <= max_disk_bytes:
+                        break
+                    try:
+                        shutil.rmtree(u_dir, ignore_errors=True)
+                        cleaned_count += 1
+                        freed_bytes += dir_size
+                        total_remaining -= dir_size
+                    except Exception as e:
+                        logger.warning(f"Failed to prune upload dir for disk quota {u_dir}: {e}")
+
+        # Compute remaining totals
+        current_remaining_count = sum(1 for p in settings.UPLOADS_DIR.iterdir() if p.is_dir())
+        current_remaining_bytes = sum(f.stat().st_size for f in settings.UPLOADS_DIR.rglob("*") if f.is_file())
+
+        return {
+            "cleaned_count": cleaned_count,
+            "freed_bytes": freed_bytes,
+            "remaining_count": current_remaining_count,
+            "remaining_bytes": current_remaining_bytes,
+        }
 
     def get_feed(self, feed_id: str) -> FeedResponse:
         item = self.feeds.get(feed_id)

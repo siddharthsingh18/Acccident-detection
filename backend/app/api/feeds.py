@@ -1,14 +1,23 @@
+import json
 import logging
 import os
 import shutil
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from ..config import settings, PROJECT_ROOT
-from ..models.schemas import FeedResponse, FeedCancelResponse, ErrorResponse, StartFeedFromSampleRequest
+from ..models.schemas import (
+    FeedResponse,
+    FeedCancelResponse,
+    ErrorResponse,
+    StartFeedFromSampleRequest,
+    RerunFeedRequest,
+    UploadCleanupResponse,
+)
 from ..services.feed_manager import feed_manager
 from ..services.media import sanitize_id
 from ..services.sample_catalog import resolve_sample_path
@@ -386,8 +395,10 @@ async def create_feed(
             detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(settings.ALLOWED_EXTENSIONS)}"
         )
 
-    temp_id = str(uuid.uuid4())
-    upload_path = settings.UPLOADS_DIR / f"{temp_id}_{file.filename}"
+    run_id = str(uuid.uuid4())
+    upload_dir = settings.UPLOADS_DIR / run_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_path = upload_dir / f"original{ext}"
 
     # Stream file to disk while enforcing max file size
     total_size = 0
@@ -399,35 +410,52 @@ async def create_feed(
                     break
                 total_size += len(chunk)
                 if total_size > settings.MAX_UPLOAD_SIZE_BYTES:
-                    upload_path.unlink(missing_ok=True)
+                    shutil.rmtree(upload_dir, ignore_errors=True)
                     raise HTTPException(
                         status_code=413,
                         detail=f"File exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)}MB"
                     )
                 out_f.write(chunk)
     except HTTPException:
-        upload_path.unlink(missing_ok=True)
+        shutil.rmtree(upload_dir, ignore_errors=True)
         raise
     except Exception as e:
-        upload_path.unlink(missing_ok=True)
+        shutil.rmtree(upload_dir, ignore_errors=True)
         raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
+
+    # Write upload metadata for retention and replay
+    try:
+        meta_file = upload_dir / "metadata.json"
+        with open(meta_file, "w", encoding="utf-8") as meta_f:
+            json.dump({
+                "run_id": run_id,
+                "original_filename": file.filename,
+                "file_size": total_size,
+                "uploaded_at": datetime.now(timezone.utc).isoformat(),
+                "camera_id": camera_id,
+                "city": city,
+                "district": district,
+            }, meta_f, indent=2)
+    except Exception as e:
+        logger.warning(f"Failed to record upload metadata for {run_id}: {e}")
 
     # Real content validation with ffprobe
     try:
         feed_manager.validate_video_file(upload_path)
     except HTTPException:
-        upload_path.unlink(missing_ok=True)
+        shutil.rmtree(upload_dir, ignore_errors=True)
         raise
     except Exception as e:
-        upload_path.unlink(missing_ok=True)
+        shutil.rmtree(upload_dir, ignore_errors=True)
         raise HTTPException(status_code=400, detail=f"Video inspection error: {str(e)}")
 
-    # Start feed process
+    # Start feed process with matching feed_id and run_id
     return await feed_manager.start_feed(
         file_path=upload_path,
         camera_id=camera_id,
         city=city,
-        district=district
+        district=district,
+        feed_id=run_id
     )
 
 @router.get(
@@ -468,6 +496,60 @@ async def cancel_feed(id: str):
     """Cancel an active camera feed subprocess."""
     safe_id = sanitize_id(id)
     return await feed_manager.cancel_feed(safe_id)
+
+
+@router.post(
+    "/{id}/rerun",
+    response_model=FeedResponse,
+    status_code=201,
+    responses={
+        404: {"model": ErrorResponse, "description": "Feed or video file not found"},
+        409: {"model": ErrorResponse, "description": "Another feed is actively processing"}
+    },
+    summary="Replay or re-run a previous feed or upload with current or overridden configuration"
+)
+async def rerun_feed(id: str, payload: Optional[RerunFeedRequest] = None):
+    """
+    Replay an existing video upload or sample run directly from disk without re-uploading bytes.
+    Enforces retention policy check and allows config overrides.
+    """
+    safe_id = sanitize_id(id)
+    video_path = feed_manager.get_feed_video_path(safe_id)
+    if not video_path or not video_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Video media for feed '{safe_id}' not found on disk. Uploaded file may have expired."
+        )
+
+    prev_item = feed_manager.feeds.get(safe_id)
+    cam_id = payload.camera_id if (payload and payload.camera_id is not None) else (prev_item.camera_id if prev_item else 9999)
+    city = (payload.city if payload and payload.city else None) or (prev_item.city if prev_item else "Cairo")
+    district = (payload.district if payload and payload.district else None) or (prev_item.district if prev_item else "District 1")
+    is_test = payload.is_test if (payload and payload.is_test is not None) else (prev_item.is_test if prev_item else False)
+    detector = payload.detector if payload else None
+
+    return await feed_manager.start_feed(
+        file_path=video_path,
+        camera_id=cam_id,
+        city=city,
+        district=district,
+        is_test=is_test,
+        detector_override=detector
+    )
+
+
+@router.post(
+    "/uploads/cleanup",
+    response_model=UploadCleanupResponse,
+    summary="Enforce upload retention policy and clean up expired upload directories"
+)
+async def cleanup_uploads(retention_days: int = 7, max_disk_mb: Optional[int] = None):
+    """
+    Remove upload directories older than retention_days or prune oldest if max_disk_mb is exceeded.
+    """
+    max_bytes = max_disk_mb * 1024 * 1024 if max_disk_mb is not None else None
+    stats = feed_manager.cleanup_uploads(retention_days=retention_days, max_disk_bytes=max_bytes)
+    return UploadCleanupResponse(**stats)
 
 
 @router.get("/trace/{run_id}", summary="Get pipeline trace diagnostics for a camera or feed run")

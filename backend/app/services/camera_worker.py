@@ -30,6 +30,7 @@ from System.Data.CONSTANTS import (
     BOXES, CITY, DISTRICT
 )
 from boxes.yoloFiles import loadFile
+from boxes.registry import lookup_box_file
 from System.Functions.Detector import get_detector
 
 running = True
@@ -114,26 +115,18 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
     if total_frames <= 0:
         total_frames = 100
 
-    # Identify pre-annotated dataset box file by checking filename stem, clean stem without uuid, or camera_id
+    # Identify pre-annotated dataset box file strictly via content-hash registry (never via camera_id)
     file_boxes = []
     has_boxes = False
-    candidates = [video_file.stem]
-    if "_" in video_file.stem:
-        candidates.append(video_file.stem.split("_", 1)[1])
-        candidates.append(video_file.stem.rsplit("_", 1)[1])
-    candidates.append(str(camera_id))
 
-    for cand in candidates:
-        cand_clean = Path(cand).stem
-        box_candidate = PROJECT_ROOT / "boxes" / f"{cand_clean}.txt"
-        if box_candidate.exists():
-            try:
-                file_boxes = loadFile(cand_clean)
-                has_boxes = True
-                print(f"Loaded {len(file_boxes)} box frames from {box_candidate.name}", flush=True)
-                break
-            except Exception as e:
-                continue
+    box_file = lookup_box_file(video_path)
+    if box_file and box_file.is_file():
+        try:
+            file_boxes = loadFile(box_file.stem)
+            has_boxes = True
+            print(f"Loaded {len(file_boxes)} box frames from registered box file: {box_file.name}", flush=True)
+        except Exception as e:
+            print(f"WARNING: Failed to parse registered box file {box_file}: {e}", flush=True)
 
     frame_width = 480
     frame_height = 360
@@ -276,8 +269,12 @@ if __name__ == "__main__":
     parser.add_argument("--master-port", type=int, default=10000, help="Master node port")
     parser.add_argument("--feed-id", default="", help="Active feed identifier")
     parser.add_argument("--test", action="store_true", default=False, help="Tag feed as test run")
+    parser.add_argument("--detector", default=None, help="Detector override (legacy, motion, yolo)")
 
     args = parser.parse_args()
+    if args.detector:
+        os.environ["ARGUS_DETECTOR"] = args.detector
+
     run_headless_camera(
         video_path=args.video,
         camera_id=args.camera_id,

@@ -130,6 +130,19 @@ class FeedCancelResponse(BaseModel):
     status: str
     message: str
 
+class RerunFeedRequest(BaseModel):
+    camera_id: Optional[int] = Field(None, description="Override camera identifier")
+    city: Optional[str] = Field(None, description="Override city location")
+    district: Optional[str] = Field(None, description="Override district location")
+    detector: Optional[str] = Field(None, description="Override detector (legacy, motion, yolo)")
+    is_test: Optional[bool] = Field(None, description="Whether to tag as test run")
+
+class UploadCleanupResponse(BaseModel):
+    cleaned_count: int
+    freed_bytes: int
+    remaining_count: int
+    remaining_bytes: int
+
 class SystemSettings(BaseModel):
     alert_sound_enabled: bool = Field(default=False, description="Whether incident audio alarm is enabled")
     siren_volume: int = Field(default=80, ge=0, le=100, description="Control room siren volume (0-100)")

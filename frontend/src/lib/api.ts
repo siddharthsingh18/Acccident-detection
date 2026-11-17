@@ -230,6 +230,26 @@ export const api = {
     return handleResponse<FeedCancelResponse>(res);
   },
 
+  async rerunFeed(
+    id: string,
+    payload?: {
+      camera_id?: number;
+      city?: string;
+      district?: string;
+      detector?: string;
+      is_test?: boolean;
+    }
+  ): Promise<FeedResponse> {
+    const res = await fetch(`/api/feeds/${id}/rerun`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload || {}),
+    });
+    return handleResponse<FeedResponse>(res);
+  },
+
   async getSampleFeeds(): Promise<SampleFeed[]> {
     const res = await fetch('/api/feeds/samples');
     return handleResponse<SampleFeed[]>(res);

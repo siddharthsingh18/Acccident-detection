@@ -741,6 +741,63 @@ export function CameraFeeder() {
     }
   };
 
+  // Re-run previously uploaded feed without re-uploading bytes
+  const handleRerunFeed = async () => {
+    if (!activeFeed?.id || isProcessing) return;
+    setDetectionOutcome('processing');
+    setErrorMessage(null);
+    try {
+      const resp = await api.rerunFeed(activeFeed.id);
+      setActiveFeed(resp);
+      currentFeedIdRef.current = resp.id;
+
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = window.setInterval(async () => {
+        try {
+          const updated = await api.getFeed(resp.id);
+          setActiveFeed(updated);
+          if (['done', 'failed', 'cancelled'].includes(updated.status)) {
+            if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+            if (updated.status === 'done') {
+              let detectedIncident: Incident | null = null;
+              let hasDetectedIncidents = false;
+              if (Array.isArray(updated.detected_incidents) && updated.detected_incidents.length > 0) {
+                const incId = updated.detected_incidents[0];
+                try {
+                  detectedIncident = await api.getIncident(incId);
+                  hasDetectedIncidents = true;
+                } catch (err) {
+                  console.debug('Failed to fetch detected incident details:', err);
+                }
+              }
+
+              if (detectedIncident || hasDetectedIncidents) {
+                playSiren();
+                setDetectionOutcome('accident');
+                if (detectedIncident) {
+                  setOutputIncident(detectedIncident);
+                  setOutputVideoUrl(detectedIncident.video_url || `/api/incidents/${detectedIncident.id}/video`);
+                }
+              } else {
+                setDetectionOutcome('normal');
+                setOutputIncident(null);
+                setOutputVideoUrl(inputVideoUrl);
+              }
+            } else if (updated.status === 'failed') {
+              setDetectionOutcome('idle');
+              setErrorMessage(updated.error || 'Video replay failed in Argus pipeline.');
+            }
+          }
+        } catch (err: any) {
+          console.error('Error polling replay feed status:', err);
+        }
+      }, 400);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to replay feed.');
+      setDetectionOutcome('idle');
+    }
+  };
+
   const isProcessing =
     isUploading ||
     (activeFeed !== null &&
@@ -1780,6 +1837,19 @@ export function CameraFeeder() {
                     <span>Save MP4</span>
                   </a>
                 </>
+              )}
+
+              {activeFeed && activeFeed.status === 'done' && (
+                <button
+                  type="button"
+                  data-testid="rerun-feed-btn"
+                  onClick={handleRerunFeed}
+                  disabled={isProcessing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-cyan-300 transition border border-cyan-500/40"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Re-run Upload</span>
+                </button>
               )}
             </div>
 

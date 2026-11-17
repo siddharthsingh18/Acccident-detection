@@ -19,6 +19,7 @@ vi.mock('@/lib/api', () => ({
     getIncident: vi.fn(),
     getRunTrace: vi.fn(),
     getActiveConfig: vi.fn(),
+    rerunFeed: vi.fn(),
   },
 }));
 
@@ -295,5 +296,49 @@ describe('Phase 1: Detection Quality Outcome Presentation', () => {
     expect(csv).toContain('unknown quality');
     expect(csv).not.toContain(',reference,');
     expect(csv).not.toContain(',neural,');
+  });
+
+  it('renders re-run button for completed feed and calls rerunFeed on click', async () => {
+    const user = userEvent.setup();
+    const mockFeed: FeedResponse = {
+      id: 'feed-rerun-test',
+      camera_id: 1528,
+      city: 'Cairo',
+      district: 'District 1',
+      status: 'done',
+      thumbnail_url: '/thumb.jpg',
+      created_at: '2026-11-01T10:00:00Z',
+      progress: { frames_sent: 50, total_frames: 50, percent: 100 },
+      anomalies_detected: 0,
+      detection_quality: 'reference',
+      vehicles_detected_count: 3,
+    };
+
+    (api.startFeedFromSample as any).mockResolvedValue(mockFeed);
+    (api.getFeed as any).mockResolvedValue(mockFeed);
+    (api.rerunFeed as any).mockResolvedValue({
+      ...mockFeed,
+      id: 'feed-rerun-test-replayed',
+      status: 'processing',
+    });
+
+    render(
+      <MemoryRouter>
+        <CameraFeeder />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('sample-card-sample-box');
+    await user.click(screen.getByTestId('sample-card-sample-box'));
+    await user.click(screen.getByTestId('start-pipeline-btn'));
+
+    // Wait for feed to complete
+    await waitFor(() => {
+      expect(screen.getByTestId('rerun-feed-btn')).toBeInTheDocument();
+    });
+
+    // Click "Re-run Upload" button
+    await user.click(screen.getByTestId('rerun-feed-btn'));
+    expect(api.rerunFeed).toHaveBeenCalledWith('feed-rerun-test');
   });
 });
