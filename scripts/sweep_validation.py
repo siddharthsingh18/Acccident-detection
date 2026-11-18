@@ -78,6 +78,7 @@ def evaluate_config(
     detector_type: str,
     env_flags: Dict[str, str],
     vif: VIF,
+    confidence: float = 0.35,
 ) -> Dict[str, Any]:
     # Set environment variables for this configuration
     for k, v in env_flags.items():
@@ -88,7 +89,7 @@ def evaluate_config(
         detector = MotionFallbackDetector()
         quality_str = "motion_fallback"
     else:
-        detector = ModernYoloDetector()
+        detector = ModernYoloDetector(confidence_threshold=confidence)
         quality_str = "neural" if detector.is_available else "motion_fallback"
 
     tracking = Tracking()
@@ -148,6 +149,7 @@ def evaluate_config(
     return {
         "detector": detector_type,
         "quality": quality_str,
+        "confidence": confidence if detector_type != "motion" else 0.0,
         "flags": " ".join(f"{k}={v}" for k, v in env_flags.items() if v not in ("false", "0.25")),
         "tp": tp,
         "fp": fp,
@@ -179,20 +181,25 @@ def main():
 
     # Configurations to sweep
     flag_sets = [
-        ("Baseline (All OFF)", {
+        ("Baseline (dist=0.25)", {
             "CRASH_ADAPTIVE_BOX_FILTER": "false",
             "CRASH_DISTANCE_FACTOR": "0.25",
+            "CRASH_SINGLE_VEHICLE": "false",
+        }),
+        ("Distance 0.33 Only", {
+            "CRASH_ADAPTIVE_BOX_FILTER": "false",
+            "CRASH_DISTANCE_FACTOR": "0.33",
+            "CRASH_SINGLE_VEHICLE": "false",
+        }),
+        ("Distance 0.40 Only", {
+            "CRASH_ADAPTIVE_BOX_FILTER": "false",
+            "CRASH_DISTANCE_FACTOR": "0.40",
             "CRASH_SINGLE_VEHICLE": "false",
         }),
         ("Adaptive Box Only", {
             "CRASH_ADAPTIVE_BOX_FILTER": "true",
             "CRASH_ADAPTIVE_BOX_FRACTION": "0.04",
             "CRASH_DISTANCE_FACTOR": "0.25",
-            "CRASH_SINGLE_VEHICLE": "false",
-        }),
-        ("Distance 0.35 Only", {
-            "CRASH_ADAPTIVE_BOX_FILTER": "false",
-            "CRASH_DISTANCE_FACTOR": "0.35",
             "CRASH_SINGLE_VEHICLE": "false",
         }),
         ("Single Vehicle Only", {
@@ -202,7 +209,14 @@ def main():
             "CRASH_SINGLE_DECEL_THRESHOLD": "0.60",
             "CRASH_SINGLE_HEADING_ANGLE": "45.0",
         }),
-        ("Adaptive + Single Vehicle", {
+        ("Single Vehicle + Dist 0.33", {
+            "CRASH_ADAPTIVE_BOX_FILTER": "false",
+            "CRASH_DISTANCE_FACTOR": "0.33",
+            "CRASH_SINGLE_VEHICLE": "true",
+            "CRASH_SINGLE_DECEL_THRESHOLD": "0.60",
+            "CRASH_SINGLE_HEADING_ANGLE": "45.0",
+        }),
+        ("Single Vehicle + Adaptive", {
             "CRASH_ADAPTIVE_BOX_FILTER": "true",
             "CRASH_ADAPTIVE_BOX_FRACTION": "0.04",
             "CRASH_DISTANCE_FACTOR": "0.25",
@@ -210,41 +224,70 @@ def main():
             "CRASH_SINGLE_DECEL_THRESHOLD": "0.60",
             "CRASH_SINGLE_HEADING_ANGLE": "45.0",
         }),
-        ("All Flags Combined", {
+        ("All Flags Combined (dist=0.33)", {
             "CRASH_ADAPTIVE_BOX_FILTER": "true",
             "CRASH_ADAPTIVE_BOX_FRACTION": "0.04",
-            "CRASH_DISTANCE_FACTOR": "0.35",
+            "CRASH_DISTANCE_FACTOR": "0.33",
+            "CRASH_SINGLE_VEHICLE": "true",
+            "CRASH_SINGLE_DECEL_THRESHOLD": "0.60",
+            "CRASH_SINGLE_HEADING_ANGLE": "45.0",
+        }),
+        ("All Flags Combined (dist=0.40)", {
+            "CRASH_ADAPTIVE_BOX_FILTER": "true",
+            "CRASH_ADAPTIVE_BOX_FRACTION": "0.04",
+            "CRASH_DISTANCE_FACTOR": "0.40",
             "CRASH_SINGLE_VEHICLE": "true",
             "CRASH_SINGLE_DECEL_THRESHOLD": "0.60",
             "CRASH_SINGLE_HEADING_ANGLE": "45.0",
         }),
     ]
 
-    print("\n" + "=" * 90)
-    print("PHASE 5 VALIDATION SWEEP: DETECTOR & CRASH GEOMETRY CONFIGURATIONS")
-    print("=" * 90)
-    print(f"{'Config / Detector':<42} {'Quality':<14} {'Recall':<8} {'Prec':<8} {'F1':<8} {'FA':<5} {'FAR/hr':<8} {'FPS':<6}")
-    print("-" * 90)
+    print("\n" + "=" * 98)
+    print("PHASE 4 VALIDATION SWEEP: DETECTOR & CRASH GEOMETRY CONFIGURATIONS")
+    print("=" * 98)
+    print(f"{'Config / Detector':<46} {'Quality':<14} {'Conf':<6} {'Recall':<8} {'Prec':<8} {'F1':<8} {'FA':<5} {'FAR/hr':<8} {'FPS':<6}")
+    print("-" * 98)
 
     results = []
 
     # 1. Motion Fallback Detector on all configs
-    for name, flags in flag_sets:
+    for name, flags in flag_sets[:5]:
         res = evaluate_config(clips, "motion", flags, vif)
         res["name"] = f"Motion - {name}"
         results.append(res)
-        print(f"{res['name']:<42} {res['quality']:<14} {res['recall']:<8.3f} {res['precision']:<8.3f} {res['f1']:<8.3f} {res['false_alarms']:<5} {res['far_per_hour']:<8.1f} {res['fps']:<6.1f}")
+        print(f"{res['name']:<46} {res['quality']:<14} {'N/A':<6} {res['recall']:<8.3f} {res['precision']:<8.3f} {res['f1']:<8.3f} {res['false_alarms']:<5} {res['far_per_hour']:<8.1f} {res['fps']:<6.1f}")
 
-    print("-" * 90)
+    print("-" * 98)
 
-    # 2. Modern Neural YOLO Detector on all configs
+    # 2. Modern Neural YOLO Detector with default confidence (0.35)
     for name, flags in flag_sets:
-        res = evaluate_config(clips, "yolo", flags, vif)
-        res["name"] = f"Neural - {name}"
+        res = evaluate_config(clips, "yolo", flags, vif, confidence=0.35)
+        res["name"] = f"Neural(0.35) - {name}"
         results.append(res)
-        print(f"{res['name']:<42} {res['quality']:<14} {res['recall']:<8.3f} {res['precision']:<8.3f} {res['f1']:<8.3f} {res['false_alarms']:<5} {res['far_per_hour']:<8.1f} {res['fps']:<6.1f}")
+        print(f"{res['name']:<46} {res['quality']:<14} {'0.35':<6} {res['recall']:<8.3f} {res['precision']:<8.3f} {res['f1']:<8.3f} {res['false_alarms']:<5} {res['far_per_hour']:<8.1f} {res['fps']:<6.1f}")
 
-    print("=" * 90)
+    print("-" * 98)
+
+    # 3. Modern Neural YOLO Detector with optimal validation confidence (0.20)
+    for name, flags in flag_sets:
+        res = evaluate_config(clips, "yolo", flags, vif, confidence=0.20)
+        res["name"] = f"Neural(0.20) - {name}"
+        results.append(res)
+        print(f"{res['name']:<46} {res['quality']:<14} {'0.20':<6} {res['recall']:<8.3f} {res['precision']:<8.3f} {res['f1']:<8.3f} {res['false_alarms']:<5} {res['far_per_hour']:<8.1f} {res['fps']:<6.1f}")
+
+    print("=" * 98)
+
+    # Select configuration with best recall at target of at most 1 false alarm / hour (or 0 FA on validation)
+    valid_candidates = [r for r in results if r["false_alarms"] == 0 or r["far_per_hour"] <= 1.0]
+    if valid_candidates:
+        best_candidate = max(valid_candidates, key=lambda r: (r["recall"], r["f1"]))
+        print("\n>>> OPTIMAL OPERATING CONFIGURATION SELECTED (Validation Recall Max with FAR <= 1.0/hr):")
+        print(f"    Name: {best_candidate['name']}")
+        print(f"    Detector: {best_candidate['detector']} (Conf: {best_candidate['confidence']})")
+        print(f"    Recall: {best_candidate['recall']:.4f} | Precision: {best_candidate['precision']:.4f} | F1: {best_candidate['f1']:.4f}")
+        print(f"    False Alarms: {best_candidate['false_alarms']} (FAR/hr: {best_candidate['far_per_hour']:.1f})")
+    else:
+        best_candidate = results[0]
 
     # Save sweep results to CSV
     sweep_csv = PROJECT_ROOT / "docs" / "evaluation" / "validation_sweep.csv"
@@ -253,6 +296,9 @@ def main():
         writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
         writer.writeheader()
         writer.writerows(results)
+
+    logger.info(f"Saved validation sweep results to {sweep_csv}")
+    return 0
 
     logger.info(f"Saved validation sweep results to {sweep_csv}")
     return 0
