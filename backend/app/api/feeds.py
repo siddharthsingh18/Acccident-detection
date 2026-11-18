@@ -564,12 +564,14 @@ async def get_run_trace(run_id: str):
     if not records:
         if feed_item:
             fallback_cause = "LOW_QUALITY_DETECTION" if quality in ("motion_fallback", "unavailable") else "NO_TRACE"
+            frames_sent = feed_item.progress.frames_sent if feed_item.progress else 0
+            batches_cnt = feed_item.batches_processed or (max(1, frames_sent // 30) if frames_sent > 0 else 0)
             return {
                 "run_id": run_id,
                 "has_trace": True,
                 "summary": {
-                    "total_batches": max(1, feed_item.frames_sent // 30) if feed_item.frames_sent > 0 else 0,
-                    "batches_processed": max(1, feed_item.frames_sent // 30) if feed_item.frames_sent > 0 else 0,
+                    "total_batches": batches_cnt,
+                    "batches_processed": batches_cnt,
                     "max_trackers": feed_item.vehicles_detected_count,
                     "total_pairs_evaluated": 0,
                     "filter_counts": {},

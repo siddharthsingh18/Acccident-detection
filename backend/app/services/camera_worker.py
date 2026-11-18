@@ -249,6 +249,10 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
             frame_height=frame_height
         )
 
+        if boxes:
+            max_vehicles_seen = max(max_vehicles_seen, len(boxes))
+            print(f"VEHICLES_DETECTED:{max_vehicles_seen}", flush=True)
+
         msg = {
             FUNCTION: FEED,
             CAMERA_ID: camera_id,
@@ -262,6 +266,8 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
             DISTRICT: district,
             "FEED_ID": feed_id,
             "TEST": is_test,
+            "DETECTION_QUALITY": detection_quality,
+            "DETECTOR_NAME": detector.name,
         }
         send_feed_to_master(master_ip, master_port, msg)
         print(f"PROGRESS:{total_frames}:{total_frames}", flush=True)
