@@ -1,3 +1,4 @@
+import math
 import os
 import cv2
 
@@ -186,19 +187,68 @@ class Crashing:
         passed, _ = self._check_distance_detailed(tracker_A, tracker_B, frame_no, dis)
         return passed
 
-    def _check_single_vehicle_anomaly(self, tracker):
+    def _get_tracker_center(self, tracker, frame_no: int):
+        """Retrieve center coordinates (x, y) of a tracker at the specified frame."""
+        try:
+            if hasattr(tracker, "tracker") and hasattr(tracker.tracker, "centers") and len(tracker.tracker.centers) > frame_no:
+                return tracker.tracker.centers[frame_no]
+            if hasattr(tracker, "history") and len(tracker.history) > frame_no:
+                box = tracker.history[frame_no]
+                if isinstance(box, (list, tuple)) and len(box) >= 4:
+                    return ((box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0)
+                elif isinstance(box, (list, tuple)) and len(box) == 2:
+                    return box
+            if hasattr(tracker, "center"):
+                return tracker.center
+        except Exception:
+            pass
+        return None
+
+    def _check_single_vehicle_anomaly(self, tracker) -> bool:
         """
-        Evaluate single tracker for abrupt deceleration or sudden heading change.
-        Used when CRASH_SINGLE_VEHICLE=true.
+        Evaluate a single tracker for single-vehicle crash anomalies.
+        Active when CRASH_SINGLE_VEHICLE=true.
+
+        Anomaly triggers:
+          1. Abrupt Deceleration:
+             Speed in early window (frames 0-10) > 30 and drops by >= CRASH_SINGLE_DECEL_THRESHOLD (default 0.60 = 60%).
+          2. Heading Change / Sudden Swerve:
+             Angle between early motion vector (frames 0 to 10) and late motion vector (frames 15 to 28)
+             exceeds CRASH_SINGLE_HEADING_ANGLE (default 45.0 degrees).
+
+        NOTE: Enabling single-vehicle crash analysis allows detection of single-car impacts
+        (guardrails, utility poles, spinouts, rollover), but can introduce false alarms from
+        emergency braking or sharp turning at intersections.
         """
         try:
+            # 1. Abrupt deceleration check
             decel_ratio = float(os.getenv("CRASH_SINGLE_DECEL_THRESHOLD", "0.60"))
-            # Abrupt deceleration between early and late window frames
             s_start = tracker.getAvgSpeed(0, 10)
             s_end = tracker.getAvgSpeed(15, 28)
             if s_start is not None and s_end is not None and s_start > 30:
                 if s_end < s_start * (1.0 - decel_ratio):
                     return True
+
+            # 2. Heading change / swerve check
+            heading_thresh = float(os.getenv("CRASH_SINGLE_HEADING_ANGLE", "45.0"))
+            c0 = self._get_tracker_center(tracker, 0)
+            c10 = self._get_tracker_center(tracker, 10)
+            c15 = self._get_tracker_center(tracker, 15)
+            c28 = self._get_tracker_center(tracker, 28)
+
+            if c0 is not None and c10 is not None and c15 is not None and c28 is not None:
+                v1 = (c10[0] - c0[0], c10[1] - c0[1])
+                v2 = (c28[0] - c15[0], c28[1] - c15[1])
+                mag1 = (v1[0] ** 2 + v1[1] ** 2) ** 0.5
+                mag2 = (v2[0] ** 2 + v2[1] ** 2) ** 0.5
+                # Require minimum displacement in both segments (at least 5 pixels)
+                if mag1 >= 5.0 and mag2 >= 5.0:
+                    dot = v1[0] * v2[0] + v1[1] * v2[1]
+                    cos_theta = max(-1.0, min(1.0, dot / (mag1 * mag2)))
+                    angle_deg = math.degrees(math.acos(cos_theta))
+                    if angle_deg >= heading_thresh:
+                        return True
+
             return False
         except Exception:
             return False
@@ -308,17 +358,25 @@ class Crashing:
         return gray_frames
 
 
-    def crashEstimation(self,crash_dimentions,tracker_A,tracker_B,frames):
-        tracker_frames, width, height, xmin, xmax, ymin, ymax = tracker_A.getFramesOfTracking(
-            self.convertToGrayFrames(frames))
-        if xmax - xmin < 50 or ymax - ymin <= 28 or (ymax - ymin) / (xmax - xmin) < 0.35 :  # 50
-           pass
+    def crashEstimation(self, crash_dimentions, tracker_A, tracker_B, frames):
+        gray_frames = self.convertToGrayFrames(frames)
+        adaptive_box = os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1", "yes")
+        if adaptive_box:
+            frame_h, frame_w = gray_frames[0].shape[:2] if gray_frames and len(gray_frames) > 0 else (360, 480)
+            frac = float(os.getenv("CRASH_ADAPTIVE_BOX_FRACTION", "0.04"))
+            min_w = max(15, int(frame_w * frac))
+            min_h = max(10, int(frame_h * frac))
+            min_aspect = float(os.getenv("CRASH_MIN_ASPECT_RATIO", "0.20"))
         else:
-            crash_dimentions.extend([[xmin, ymin, xmax, ymax]])
-        tracker_frames, width, height, xmin, xmax, ymin, ymax = tracker_B.getFramesOfTracking(
-            self.convertToGrayFrames(frames))
+            min_w = 50
+            min_h = 28
+            min_aspect = 0.35
 
-        if xmax - xmin < 50 or ymax - ymin <= 28 or (ymax - ymin) / (xmax - xmin) < 0.35:  # 50
-            pass
-        else:
-            crash_dimentions.extend([[xmin, ymin, xmax, ymax]])
+        for trk in (tracker_A, tracker_B):
+            tracker_frames, width, height, xmin, xmax, ymin, ymax = trk.getFramesOfTracking(gray_frames)
+            bw = xmax - xmin
+            bh = ymax - ymin
+            if bw < min_w or bh <= min_h or (bh / bw) < min_aspect:
+                pass
+            else:
+                crash_dimentions.extend([[xmin, ymin, xmax, ymax]])
