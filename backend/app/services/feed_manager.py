@@ -208,7 +208,8 @@ class FeedManager:
         district: str,
         is_test: bool = False,
         feed_id: Optional[str] = None,
-        detector_override: Optional[str] = None
+        detector_override: Optional[str] = None,
+        overrides: Optional[Dict[str, Any]] = None,
     ) -> FeedResponse:
         # Check if an active feed is currently running
         if self.active_feed_id:
@@ -227,6 +228,15 @@ class FeedManager:
         thumbnail_path = settings.FEEDS_DIR / f"{resolved_feed_id}_thumb.jpg"
         self.create_thumbnail_with_overlay(file_path, thumbnail_path)
 
+        ov = overrides or {}
+        effective_config = {
+            "detector_confidence": round(float(ov["detector_confidence"]), 3) if ov.get("detector_confidence") is not None else float(os.getenv("ARGUS_DETECTOR_CONFIDENCE", "0.35")),
+            "adaptive_box_filter": bool(ov["adaptive_box_filter"]) if ov.get("adaptive_box_filter") is not None else (os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1")),
+            "distance_factor": round(float(ov["distance_factor"]), 3) if ov.get("distance_factor") is not None else float(os.getenv("CRASH_DISTANCE_FACTOR", "0.25")),
+            "single_vehicle_mode": bool(ov["single_vehicle_mode"]) if ov.get("single_vehicle_mode") is not None else (os.getenv("CRASH_SINGLE_VEHICLE", "false").lower() in ("true", "1")),
+            "frame_stride": int(ov["frame_stride"]) if ov.get("frame_stride") is not None else int(os.getenv("ARGUS_DETECTOR_STRIDE", "1")),
+        }
+
         feed_item = FeedItem(
             feed_id=resolved_feed_id,
             camera_id=camera_id,
@@ -236,6 +246,7 @@ class FeedManager:
             thumbnail_path=thumbnail_path,
             is_test=is_test
         )
+        feed_item.detector_config = effective_config
         self.feeds[resolved_feed_id] = feed_item
         self.active_feed_id = resolved_feed_id
 
@@ -257,7 +268,20 @@ class FeedManager:
         if detector_override:
             cmd.extend(["--detector", str(detector_override)])
 
-        logger.info(f"Starting camera worker subprocess for feed {resolved_feed_id} (test={is_test}, detector={detector_override or 'default'})")
+        # Pass per-run overrides without mutating global state
+        if effective_config.get("detector_confidence") is not None:
+            cmd.extend(["--confidence", str(effective_config["detector_confidence"])])
+        if effective_config.get("adaptive_box_filter") is not None:
+            cmd.extend(["--adaptive-box-filter", "1" if effective_config["adaptive_box_filter"] else "0"])
+        if effective_config.get("distance_factor") is not None:
+            cmd.extend(["--distance-factor", str(effective_config["distance_factor"])])
+        if effective_config.get("single_vehicle_mode") is not None:
+            cmd.extend(["--single-vehicle", "1" if effective_config["single_vehicle_mode"] else "0"])
+        if effective_config.get("frame_stride") is not None:
+            cmd.extend(["--frame-stride", str(effective_config["frame_stride"])])
+
+        logger.info(f"Starting camera worker subprocess for feed {resolved_feed_id} (test={is_test}, detector={detector_override or 'default'}, config={effective_config})")
+
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -337,6 +361,24 @@ class FeedManager:
 
         if self.active_feed_id == feed_item.feed_id:
             self.active_feed_id = None
+
+        try:
+            from .database import record_feed_run
+            record_feed_run(
+                feed_id=feed_item.feed_id,
+                camera_id=feed_item.camera_id,
+                city=feed_item.city,
+                district=feed_item.district,
+                status=feed_item.status,
+                is_test=feed_item.is_test,
+                detector_name=feed_item.detector_name,
+                detection_quality=feed_item.detection_quality,
+                effective_config=feed_item.detector_config,
+                vehicles_detected_count=feed_item.vehicles_detected_count,
+                anomalies_detected=feed_item.anomalies_detected,
+            )
+        except Exception as e:
+            logger.debug(f"DB run record skipped: {e}")
 
         logger.info(f"Feed {feed_item.feed_id} finished with status '{feed_item.status}'")
         self._cleanup_feed_video(feed_item)

@@ -36,6 +36,8 @@ export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['cont
   detector_config?: Record<string, any>;
   vehicles_detected_count?: number;
   batches_processed?: number;
+  is_test?: boolean;
+  effective_config?: Record<string, any>;
 };
 export type FeedCancelResponse = paths['/api/feeds/{id}/cancel']['post']['responses']['200']['content']['application/json'];
 
@@ -243,6 +245,11 @@ export const api = {
       district?: string;
       detector?: string;
       is_test?: boolean;
+      detector_confidence?: number;
+      adaptive_box_filter?: boolean;
+      distance_factor?: number;
+      single_vehicle_mode?: boolean;
+      frame_stride?: number;
     }
   ): Promise<FeedResponse> {
     const res = await fetch(`/api/feeds/${id}/rerun`, {
@@ -253,6 +260,11 @@ export const api = {
       body: JSON.stringify(payload || {}),
     });
     return handleResponse<FeedResponse>(res);
+  },
+
+  async compareRuns(idA: string, idB: string): Promise<any> {
+    const res = await fetch(`/api/feeds/${idA}/compare/${idB}`);
+    return handleResponse<any>(res);
   },
 
   async getSampleFeeds(): Promise<SampleFeed[]> {

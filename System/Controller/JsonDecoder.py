@@ -91,8 +91,9 @@ class JsonDecoder(threading.Thread):
             end_detect_time = msg[END_DETECT_TIME]
             start_track_time = msg[START_TRACK_TIME]
             end_track_time = msg[END_TRACK_TIME]
+            crash_config = msg.get("CRASH_CONFIG")
 
-            self.crash(camera_id,starting_frame_id,frames,trackers,start_detect_time,end_detect_time,start_track_time,end_track_time,city,district_no)
+            self.crash(camera_id,starting_frame_id,frames,trackers,start_detect_time,end_detect_time,start_track_time,end_track_time,city,district_no, crash_config=crash_config)
 
         elif func == RESULT:    #5th step: send the result to the master to send notification and save accident or send and save none if not an accident
             camera_id = msg[CAMERA_ID]
@@ -150,12 +151,12 @@ class JsonDecoder(threading.Thread):
         self.sender_encode.crash(camera_id, starting_frame_id, frames, trackers, start_detect_time, end_detect_time,start_track_time,city,district_no)
 
 
-    def crash(self,camera_id,starting_frame_id,frames,trackers,start_detect_time,end_detect_time,start_track_time,end_track_time,city,district_no):
+    def crash(self,camera_id,starting_frame_id,frames,trackers,start_detect_time,end_detect_time,start_track_time,end_track_time,city,district_no, crash_config=None):
         if self.vif == None:
             self.vif = VIF()
 
         start_crash_time = time()
-        crashing = Crashing(self.vif)
+        crashing = Crashing(self.vif, config=crash_config)
         crash_dimentions = crashing.crash(
             frames, trackers,
             camera_id=camera_id,

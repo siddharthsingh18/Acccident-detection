@@ -131,12 +131,32 @@ class FeedCancelResponse(BaseModel):
     status: str
     message: str
 
+class RunSettingsOverrides(BaseModel):
+    detector_confidence: Optional[float] = Field(None, ge=0.05, le=0.95, description="Detector confidence threshold (0.05 to 0.95)")
+    adaptive_box_filter: Optional[bool] = Field(None, description="Whether adaptive box filter is enabled")
+    distance_factor: Optional[float] = Field(None, ge=0.10, le=1.00, description="Inter-vehicle distance factor multiplier (0.10 to 1.00)")
+    single_vehicle_mode: Optional[bool] = Field(None, description="Whether single-vehicle crash evaluation is enabled")
+    frame_stride: Optional[int] = Field(None, ge=1, le=10, description="Inference frame stride (1 to 10)")
+
 class RerunFeedRequest(BaseModel):
     camera_id: Optional[int] = Field(None, description="Override camera identifier")
     city: Optional[str] = Field(None, description="Override city location")
     district: Optional[str] = Field(None, description="Override district location")
     detector: Optional[str] = Field(None, description="Override detector (legacy, motion, yolo)")
     is_test: Optional[bool] = Field(None, description="Whether to tag as test run")
+    detector_confidence: Optional[float] = Field(None, ge=0.05, le=0.95, description="Detector confidence override")
+    adaptive_box_filter: Optional[bool] = Field(None, description="Adaptive box filter override")
+    distance_factor: Optional[float] = Field(None, ge=0.10, le=1.00, description="Distance factor override")
+    single_vehicle_mode: Optional[bool] = Field(None, description="Single-vehicle mode override")
+    frame_stride: Optional[int] = Field(None, ge=1, le=10, description="Frame stride override")
+
+class RunComparisonResponse(BaseModel):
+    run_a_id: str
+    run_b_id: str
+    run_a: Dict[str, Any]
+    run_b: Dict[str, Any]
+    differences: Dict[str, Any]
+
 
 class UploadCleanupResponse(BaseModel):
     cleaned_count: int

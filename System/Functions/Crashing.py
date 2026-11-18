@@ -8,15 +8,17 @@ from System.Data.CONSTANTS import Work_Crash_Estimation_Only
 
 class Crashing:
 
-    def __init__(self, vif):
+    def __init__(self, vif, config=None):
         self.vif = vif
+        self.config = config or {}
         self.last_model_scores = None
         self.last_classifier_scores = []
         self.last_failed_box_size = 0
         self.last_failed_aspect_ratio = 0
         self._batch_counter = 0
 
-    def crash(self, frames, trackers, camera_id=None, starting_frame_id=None, run_id=None, batch_index=None):
+    def crash(self, frames, trackers, camera_id=None, starting_frame_id=None, run_id=None, batch_index=None, config=None):
+        cfg = config or self.config
         crash_dimentions = []
         self.last_classifier_scores = []
         self.last_failed_box_size = 0
@@ -29,6 +31,8 @@ class Crashing:
         failed_deviation = 0
         candidates_passed_geometry = 0
 
+        dist_factor = float(cfg.get("distance_factor", os.getenv("CRASH_DISTANCE_FACTOR", "0.25")))
+
         for i in range(len(trackers)):
             for j in range(i + 1, len(trackers)):
                 if i == j:
@@ -38,7 +42,6 @@ class Crashing:
                 pairs_evaluated += 1
 
                 # calculate the distance
-                dist_factor = float(os.getenv("CRASH_DISTANCE_FACTOR", "0.25"))
                 asize = pow(pow(tracker_A.vehicle_height, 2) + pow(tracker_A.vehicle_width, 2), 0.5) * dist_factor
                 bsize = pow(pow(tracker_B.vehicle_height, 2) + pow(tracker_B.vehicle_width, 2), 0.5) * dist_factor
                 dis = asize + bsize
@@ -75,7 +78,7 @@ class Crashing:
                     else:
                         failed_deviation += 1
 
-        enable_single_vehicle = os.getenv("CRASH_SINGLE_VEHICLE", "false").lower() in ("true", "1", "yes")
+        enable_single_vehicle = bool(cfg.get("single_vehicle_mode", os.getenv("CRASH_SINGLE_VEHICLE", "false").lower() in ("true", "1", "yes")))
         if enable_single_vehicle and len(trackers) == 1:
             pairs_evaluated += 1
             tracker_single = trackers[0]
@@ -290,7 +293,7 @@ class Crashing:
             if tracker_frames == None:
                 continue
 
-            adaptive_box = os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1", "yes")
+            adaptive_box = bool(self.config.get("adaptive_box_filter", os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1", "yes")))
             if adaptive_box:
                 frame_h, frame_w = gray_frames[0].shape[:2] if gray_frames and len(gray_frames) > 0 else (360, 480)
                 frac = float(os.getenv("CRASH_ADAPTIVE_BOX_FRACTION", "0.04"))
@@ -367,7 +370,7 @@ class Crashing:
 
     def crashEstimation(self, crash_dimentions, tracker_A, tracker_B, frames):
         gray_frames = self.convertToGrayFrames(frames)
-        adaptive_box = os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1", "yes")
+        adaptive_box = bool(self.config.get("adaptive_box_filter", os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1", "yes")))
         if adaptive_box:
             frame_h, frame_w = gray_frames[0].shape[:2] if gray_frames and len(gray_frames) > 0 else (360, 480)
             frac = float(os.getenv("CRASH_ADAPTIVE_BOX_FRACTION", "0.04"))

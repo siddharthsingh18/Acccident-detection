@@ -17,6 +17,7 @@ from ..models.schemas import (
     StartFeedFromSampleRequest,
     RerunFeedRequest,
     UploadCleanupResponse,
+    RunComparisonResponse,
 )
 from ..services.feed_manager import feed_manager
 from ..services.media import sanitize_id
@@ -381,13 +382,26 @@ async def create_feed(
     file: UploadFile = File(..., description="Video file (mp4, avi, mkv, mov)"),
     camera_id: int = Form(..., description="Camera identifier"),
     city: str = Form("Cairo", description="City location"),
-    district: str = Form("District 1", description="District location")
+    district: str = Form("District 1", description="District location"),
+    detector_confidence: Optional[float] = Form(None, description="Detector confidence override (0.05 - 0.95)"),
+    adaptive_box_filter: Optional[bool] = Form(None, description="Adaptive box filter toggle"),
+    distance_factor: Optional[float] = Form(None, description="Distance factor multiplier (0.10 - 1.00)"),
+    single_vehicle_mode: Optional[bool] = Form(None, description="Single vehicle mode toggle"),
+    frame_stride: Optional[int] = Form(None, description="Frame stride override (1 - 10)"),
+    is_test: bool = Form(False, description="Tag run as test"),
 ):
     """
     Upload and start processing a CCTV camera video feed.
     Inspects real content with ffprobe, generates thumbnail with play overlay,
     and streams 30-frame batches with 15-frame overlap via a headless CameraNode subprocess.
     """
+    if detector_confidence is not None and not (0.05 <= detector_confidence <= 0.95):
+        raise HTTPException(status_code=422, detail="detector_confidence must be between 0.05 and 0.95")
+    if distance_factor is not None and not (0.10 <= distance_factor <= 1.00):
+        raise HTTPException(status_code=422, detail="distance_factor must be between 0.10 and 1.00")
+    if frame_stride is not None and not (1 <= frame_stride <= 10):
+        raise HTTPException(status_code=422, detail="frame_stride must be between 1 and 10")
+
     ext = Path(file.filename or "").suffix.lower()
     if ext not in settings.ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -449,13 +463,22 @@ async def create_feed(
         shutil.rmtree(upload_dir, ignore_errors=True)
         raise HTTPException(status_code=400, detail=f"Video inspection error: {str(e)}")
 
-    # Start feed process with matching feed_id and run_id
+    # Start feed process with matching feed_id and run_id and per-run overrides
+    overrides = {
+        "detector_confidence": detector_confidence,
+        "adaptive_box_filter": adaptive_box_filter,
+        "distance_factor": distance_factor,
+        "single_vehicle_mode": single_vehicle_mode,
+        "frame_stride": frame_stride,
+    }
     return await feed_manager.start_feed(
         file_path=upload_path,
         camera_id=camera_id,
         city=city,
         district=district,
-        feed_id=run_id
+        is_test=is_test,
+        feed_id=run_id,
+        overrides=overrides,
     )
 
 @router.get(
@@ -528,14 +551,82 @@ async def rerun_feed(id: str, payload: Optional[RerunFeedRequest] = None):
     is_test = payload.is_test if (payload and payload.is_test is not None) else (prev_item.is_test if prev_item else False)
     detector = payload.detector if payload else None
 
+    # Merge overrides from payload or prior run
+    prev_cfg = (prev_item.detector_config if prev_item else {}) or {}
+    overrides = {
+        "detector_confidence": payload.detector_confidence if payload and payload.detector_confidence is not None else prev_cfg.get("detector_confidence"),
+        "adaptive_box_filter": payload.adaptive_box_filter if payload and payload.adaptive_box_filter is not None else prev_cfg.get("adaptive_box_filter"),
+        "distance_factor": payload.distance_factor if payload and payload.distance_factor is not None else prev_cfg.get("distance_factor"),
+        "single_vehicle_mode": payload.single_vehicle_mode if payload and payload.single_vehicle_mode is not None else prev_cfg.get("single_vehicle_mode"),
+        "frame_stride": payload.frame_stride if payload and payload.frame_stride is not None else prev_cfg.get("frame_stride"),
+    }
+
+    if overrides["detector_confidence"] is not None and not (0.05 <= overrides["detector_confidence"] <= 0.95):
+        raise HTTPException(status_code=422, detail="detector_confidence must be between 0.05 and 0.95")
+    if overrides["distance_factor"] is not None and not (0.10 <= overrides["distance_factor"] <= 1.00):
+        raise HTTPException(status_code=422, detail="distance_factor must be between 0.10 and 1.00")
+    if overrides["frame_stride"] is not None and not (1 <= overrides["frame_stride"] <= 10):
+        raise HTTPException(status_code=422, detail="frame_stride must be between 1 and 10")
+
     return await feed_manager.start_feed(
         file_path=video_path,
         camera_id=cam_id,
         city=city,
         district=district,
         is_test=is_test,
-        detector_override=detector
+        detector_override=detector,
+        overrides=overrides,
     )
+
+
+@router.get(
+    "/{id}/compare/{other_id}",
+    summary="Side-by-side comparison of two feed runs (detector, vehicles seen, alerts, trace summary)"
+)
+async def compare_feed_runs(id: str, other_id: str):
+    """Retrieve side-by-side comparison of two runs."""
+    safe_a = sanitize_id(id)
+    safe_b = sanitize_id(other_id)
+
+    feed_a = feed_manager.feeds.get(safe_a)
+    feed_b = feed_manager.feeds.get(safe_b)
+
+    resp_a = feed_a.to_response().model_dump() if feed_a else {"id": safe_a, "status": "unknown"}
+    resp_b = feed_b.to_response().model_dump() if feed_b else {"id": safe_b, "status": "unknown"}
+
+    cfg_a = resp_a.get("detector_config", {})
+    cfg_b = resp_b.get("detector_config", {})
+
+    config_diff = {}
+    all_keys = set(cfg_a.keys()).union(set(cfg_b.keys()))
+    for k in all_keys:
+        if cfg_a.get(k) != cfg_b.get(k):
+            config_diff[k] = {"run_a": cfg_a.get(k), "run_b": cfg_b.get(k)}
+
+    # Read traces if available
+    from argus_ml.trace import read_run_trace, summarize_run_trace
+    trace_a = summarize_run_trace(read_run_trace(safe_a))
+    trace_b = summarize_run_trace(read_run_trace(safe_b))
+
+    return {
+        "run_a_id": safe_a,
+        "run_b_id": safe_b,
+        "run_a": {
+            **resp_a,
+            "trace_summary": trace_a,
+        },
+        "run_b": {
+            **resp_b,
+            "trace_summary": trace_b,
+        },
+        "differences": {
+            "detector_changed": resp_a.get("detector_name") != resp_b.get("detector_name"),
+            "vehicles_diff": (resp_b.get("vehicles_detected_count", 0) - resp_a.get("vehicles_detected_count", 0)),
+            "alerts_diff": (resp_b.get("anomalies_detected", 0) - resp_a.get("anomalies_detected", 0)),
+            "config_diff": config_diff,
+        }
+    }
+
 
 
 @router.post(

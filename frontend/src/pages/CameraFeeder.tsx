@@ -196,6 +196,30 @@ export function CameraFeeder() {
     }
   }, []);
 
+  // Advanced Settings State (Phase 3)
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
+  const [advConfidence, setAdvConfidence] = useState<number>(0.35);
+  const [advAdaptiveBox, setAdvAdaptiveBox] = useState<boolean>(false);
+  const [advDistanceFactor, setAdvDistanceFactor] = useState<number>(0.25);
+  const [advSingleVehicle, setAdvSingleVehicle] = useState<boolean>(false);
+  const [advFrameStride, setAdvFrameStride] = useState<number>(1);
+  const [showCompareModal, setShowCompareModal] = useState<boolean>(false);
+  const [comparisonData, setComparisonData] = useState<any>(null);
+  const previousRunIdRef = useRef<string | null>(null);
+
+  const isConfidenceChanged = advConfidence !== 0.35;
+  const isAdaptiveBoxChanged = advAdaptiveBox !== false;
+  const isDistanceFactorChanged = advDistanceFactor !== 0.25;
+  const isSingleVehicleChanged = advSingleVehicle !== false;
+  const isFrameStrideChanged = advFrameStride !== 1;
+  const changedSettingsCount =
+    (isConfidenceChanged ? 1 : 0) +
+    (isAdaptiveBoxChanged ? 1 : 0) +
+    (isDistanceFactorChanged ? 1 : 0) +
+    (isSingleVehicleChanged ? 1 : 0) +
+    (isFrameStrideChanged ? 1 : 0);
+  const hasChangedSettings = changedSettingsCount > 0;
+
   // Batch elapsed seconds counter
   useEffect(() => {
     let interval: number | null = null;
@@ -641,6 +665,11 @@ export function CameraFeeder() {
         formData.append('camera_id', String(cameraId));
         formData.append('city', city);
         formData.append('district', district);
+        formData.append('detector_confidence', String(advConfidence));
+        formData.append('adaptive_box_filter', String(advAdaptiveBox));
+        formData.append('distance_factor', String(advDistanceFactor));
+        formData.append('single_vehicle_mode', String(advSingleVehicle));
+        formData.append('frame_stride', String(advFrameStride));
         feed = await api.createFeed(formData);
       } else {
         return;
@@ -744,10 +773,20 @@ export function CameraFeeder() {
   // Re-run previously uploaded feed without re-uploading bytes
   const handleRerunFeed = async () => {
     if (!activeFeed?.id || isProcessing) return;
+    const oldId = activeFeed.id;
+    previousRunIdRef.current = oldId;
     setDetectionOutcome('processing');
     setErrorMessage(null);
     try {
-      const resp = await api.rerunFeed(activeFeed.id);
+      const overrides = hasChangedSettings ? {
+        detector_confidence: advConfidence,
+        adaptive_box_filter: advAdaptiveBox,
+        distance_factor: advDistanceFactor,
+        single_vehicle_mode: advSingleVehicle,
+        frame_stride: advFrameStride,
+        is_test: activeFeed.is_test ?? false,
+      } : undefined;
+      const resp = overrides ? await api.rerunFeed(oldId, overrides) : await api.rerunFeed(oldId);
       setActiveFeed(resp);
       currentFeedIdRef.current = resp.id;
 
@@ -759,6 +798,14 @@ export function CameraFeeder() {
           if (['done', 'failed', 'cancelled'].includes(updated.status)) {
             if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
             if (updated.status === 'done') {
+              // Fetch side-by-side run comparison
+              try {
+                const comp = await api.compareRuns(oldId, updated.id);
+                setComparisonData(comp);
+              } catch (e) {
+                console.debug('Comparison fetch error:', e);
+              }
+
               let detectedIncident: Incident | null = null;
               let hasDetectedIncidents = false;
               if (Array.isArray(updated.detected_incidents) && updated.detected_incidents.length > 0) {
@@ -1339,6 +1386,174 @@ export function CameraFeeder() {
             </div>
           </div>
 
+          {/* Advanced Settings Accordion Panel (Phase 3) */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <button
+              type="button"
+              data-testid="advanced-settings-toggle"
+              onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+              className="w-full flex items-center justify-between text-xs font-mono font-medium text-slate-300 hover:text-white py-1 px-1 transition"
+            >
+              <span className="flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Advanced Pipeline Settings</span>
+                {changedSettingsCount > 0 && (
+                  <span
+                    data-testid="modified-settings-badge"
+                    className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                  >
+                    {changedSettingsCount} MODIFIED
+                  </span>
+                )}
+              </span>
+              <span className="text-[11px] text-cyan-400">
+                {isAdvancedOpen ? 'Hide ▲' : 'Show ▼'}
+              </span>
+            </button>
+
+            {isAdvancedOpen && (
+              <div
+                data-testid="advanced-settings-panel"
+                className="mt-3 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3.5 text-xs font-mono"
+              >
+                {/* Confidence */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300 flex items-center gap-1.5">
+                      <span>Detector Confidence:</span>
+                      <span className="text-cyan-400 font-bold">{advConfidence.toFixed(2)}</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500">(Default: 0.35)</span>
+                      {isConfidenceChanged && (
+                        <span className="px-1 py-0.2 bg-amber-500/20 text-amber-300 rounded text-[9px]">MODIFIED</span>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    data-testid="setting-confidence-slider"
+                    min="0.05"
+                    max="0.95"
+                    step="0.05"
+                    value={advConfidence}
+                    onChange={(e) => setAdvConfidence(parseFloat(e.target.value))}
+                    className="w-full accent-cyan-400 cursor-pointer"
+                  />
+                </div>
+
+                {/* Adaptive Box Filter */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-900">
+                  <div>
+                    <div className="text-slate-300">Adaptive Box Filter</div>
+                    <div className="text-[10px] text-slate-500">Filter candidate boxes by frame size (Default: OFF)</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isAdaptiveBoxChanged && (
+                      <span className="px-1 py-0.2 bg-amber-500/20 text-amber-300 rounded text-[9px]">MODIFIED</span>
+                    )}
+                    <input
+                      type="checkbox"
+                      data-testid="setting-adaptive-box-toggle"
+                      checked={advAdaptiveBox}
+                      onChange={(e) => setAdvAdaptiveBox(e.target.checked)}
+                      className="w-4 h-4 accent-cyan-400 rounded cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Distance Factor */}
+                <div className="pt-1 border-t border-slate-900">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300 flex items-center gap-1.5">
+                      <span>Distance Factor:</span>
+                      <span className="text-cyan-400 font-bold">{advDistanceFactor.toFixed(2)}</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500">(Default: 0.25)</span>
+                      {isDistanceFactorChanged && (
+                        <span className="px-1 py-0.2 bg-amber-500/20 text-amber-300 rounded text-[9px]">MODIFIED</span>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    data-testid="setting-distance-factor-slider"
+                    min="0.10"
+                    max="1.00"
+                    step="0.05"
+                    value={advDistanceFactor}
+                    onChange={(e) => setAdvDistanceFactor(parseFloat(e.target.value))}
+                    className="w-full accent-cyan-400 cursor-pointer"
+                  />
+                </div>
+
+                {/* Single Vehicle Mode */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-900">
+                  <div>
+                    <div className="text-slate-300">Single-Vehicle Anomaly Mode</div>
+                    <div className="text-[10px] text-slate-500">Detect solo abrupt deceleration / rotation (Default: OFF)</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isSingleVehicleChanged && (
+                      <span className="px-1 py-0.2 bg-amber-500/20 text-amber-300 rounded text-[9px]">MODIFIED</span>
+                    )}
+                    <input
+                      type="checkbox"
+                      data-testid="setting-single-vehicle-toggle"
+                      checked={advSingleVehicle}
+                      onChange={(e) => setAdvSingleVehicle(e.target.checked)}
+                      className="w-4 h-4 accent-cyan-400 rounded cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Frame Stride */}
+                <div className="flex items-center justify-between pt-1 border-t border-slate-900">
+                  <div>
+                    <div className="text-slate-300">Frame Stride</div>
+                    <div className="text-[10px] text-slate-500">Inference cadence in frames (Default: 1)</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isFrameStrideChanged && (
+                      <span className="px-1 py-0.2 bg-amber-500/20 text-amber-300 rounded text-[9px]">MODIFIED</span>
+                    )}
+                    <select
+                      data-testid="setting-frame-stride-select"
+                      value={advFrameStride}
+                      onChange={(e) => setAdvFrameStride(parseInt(e.target.value, 10))}
+                      className="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-200 focus:outline-none"
+                    >
+                      {[1, 2, 3, 5, 10].map((n) => (
+                        <option key={n} value={n}>Every {n} frame{n > 1 ? 's' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Reset button */}
+                {changedSettingsCount > 0 && (
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      data-testid="reset-settings-btn"
+                      onClick={() => {
+                        setAdvConfidence(0.35);
+                        setAdvAdaptiveBox(false);
+                        setAdvDistanceFactor(0.25);
+                        setAdvSingleVehicle(false);
+                        setAdvFrameStride(1);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-cyan-400 underline"
+                    >
+                      Reset all settings to server defaults
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Primary Action Button */}
           <div className="pt-2 space-y-2">
             <div className="flex items-center gap-3">
@@ -1897,16 +2112,30 @@ export function CameraFeeder() {
               )}
 
               {activeFeed && activeFeed.status === 'done' && (
-                <button
-                  type="button"
-                  data-testid="rerun-feed-btn"
-                  onClick={handleRerunFeed}
-                  disabled={isProcessing}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-cyan-300 transition border border-cyan-500/40"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Re-run Upload</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    data-testid="rerun-feed-btn"
+                    onClick={handleRerunFeed}
+                    disabled={isProcessing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-cyan-300 transition border border-cyan-500/40"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Re-run with different settings</span>
+                  </button>
+
+                  {comparisonData && (
+                    <button
+                      type="button"
+                      data-testid="view-comparison-btn"
+                      onClick={() => setShowCompareModal(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/60 text-xs font-semibold text-cyan-200 transition border border-cyan-400/50"
+                    >
+                      <Columns className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Compare Runs</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -2568,6 +2797,128 @@ export function CameraFeeder() {
                 type="button"
                 data-testid="detector-help-close-btn"
                 onClick={() => setShowDetectorHelpModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Side-by-side Run Comparison Modal (Phase 3) */}
+      {showCompareModal && comparisonData && (
+        <div
+          data-testid="run-comparison-modal"
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div className="bg-slate-900 border border-cyan-500/40 rounded-2xl max-w-3xl w-full p-6 space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Columns className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono">
+                  Side-by-Side Run Comparison
+                </h3>
+              </div>
+              <button
+                type="button"
+                data-testid="close-comparison-btn"
+                onClick={() => setShowCompareModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Differences Summary */}
+            <div className="grid grid-cols-3 gap-3 text-xs font-mono">
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                <div className="text-slate-400 text-[10px]">VEHICLES SEEN DIFF</div>
+                <div className="text-lg font-bold text-cyan-400">
+                  {comparisonData.differences?.vehicles_diff > 0 ? `+${comparisonData.differences.vehicles_diff}` : comparisonData.differences?.vehicles_diff ?? 0}
+                </div>
+              </div>
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                <div className="text-slate-400 text-[10px]">ALERTS DIFF</div>
+                <div className="text-lg font-bold text-amber-400">
+                  {comparisonData.differences?.alerts_diff > 0 ? `+${comparisonData.differences.alerts_diff}` : comparisonData.differences?.alerts_diff ?? 0}
+                </div>
+              </div>
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                <div className="text-slate-400 text-[10px]">DETECTOR CHANGED</div>
+                <div className="text-lg font-bold text-white">
+                  {comparisonData.differences?.detector_changed ? 'YES' : 'NO'}
+                </div>
+              </div>
+            </div>
+
+            {/* Run A vs Run B Table */}
+            <div className="border border-slate-800 rounded-xl overflow-hidden text-xs font-mono">
+              <table className="w-full text-left">
+                <thead className="bg-slate-950 text-slate-400 text-[11px] uppercase border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">Parameter / Metric</th>
+                    <th className="p-3 text-cyan-300">Run A (Previous)</th>
+                    <th className="p-3 text-cyan-300">Run B (Current Rerun)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-slate-200">
+                  <tr>
+                    <td className="p-3 text-slate-400">Run ID</td>
+                    <td className="p-3 truncate max-w-[150px]">{comparisonData.run_a?.id}</td>
+                    <td className="p-3 truncate max-w-[150px]">{comparisonData.run_b?.id}</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-slate-400">Detector Used</td>
+                    <td className="p-3">{comparisonData.run_a?.detector_name || 'unknown'}</td>
+                    <td className="p-3">{comparisonData.run_b?.detector_name || 'unknown'}</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-slate-400">Detection Quality</td>
+                    <td className="p-3">{comparisonData.run_a?.detection_quality || 'unknown'}</td>
+                    <td className="p-3">{comparisonData.run_b?.detection_quality || 'unknown'}</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-slate-400">Vehicles Seen</td>
+                    <td className="p-3">{comparisonData.run_a?.vehicles_detected_count ?? 0}</td>
+                    <td className="p-3">{comparisonData.run_b?.vehicles_detected_count ?? 0}</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-slate-400">Alerts Detected</td>
+                    <td className="p-3">{comparisonData.run_a?.anomalies_detected ?? 0}</td>
+                    <td className="p-3">{comparisonData.run_b?.anomalies_detected ?? 0}</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 text-slate-400">Trace Primary Cause</td>
+                    <td className="p-3">{comparisonData.run_a?.trace_summary?.primary_cause || 'NO_TRACE'}</td>
+                    <td className="p-3">{comparisonData.run_b?.trace_summary?.primary_cause || 'NO_TRACE'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Overridden Config Diff */}
+            {comparisonData.differences?.config_diff && Object.keys(comparisonData.differences.config_diff).length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-mono font-bold text-slate-300 uppercase">Configuration Differences:</h4>
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1 text-xs font-mono">
+                  {Object.entries(comparisonData.differences.config_diff).map(([key, val]: [string, any]) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-slate-400">{key}:</span>
+                      <span className="text-slate-200">
+                        {String(val.run_a)} → <strong className="text-cyan-400">{String(val.run_b)}</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                data-testid="comparison-modal-close-btn"
+                onClick={() => setShowCompareModal(false)}
                 className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
               >
                 Close

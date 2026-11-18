@@ -58,6 +58,8 @@ def apply_migrations(db_path: Optional[str] = None) -> None:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN detection_quality TEXT DEFAULT NULL;")
         if "detector_name" not in existing_cols:
             cursor.execute("ALTER TABLE CrashFrames ADD COLUMN detector_name TEXT DEFAULT NULL;")
+        if "effective_config" not in existing_cols:
+            cursor.execute("ALTER TABLE CrashFrames ADD COLUMN effective_config TEXT DEFAULT NULL;")
 
         # Indexes & View
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_review_status ON CrashFrames(review_status);")
@@ -67,6 +69,26 @@ def apply_migrations(db_path: Optional[str] = None) -> None:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_crashframes_detection_quality ON CrashFrames(detection_quality);")
         cursor.execute("DROP VIEW IF EXISTS incidents;")
         cursor.execute("CREATE VIEW incidents AS SELECT rowid, * FROM CrashFrames;")
+
+        # Feed Runs table (Phase 3 per-run settings persistence)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS feed_runs (
+                feed_id TEXT PRIMARY KEY,
+                camera_id INTEGER,
+                city TEXT,
+                district TEXT,
+                created_at TEXT NOT NULL,
+                status TEXT NOT NULL,
+                is_test INTEGER DEFAULT 0,
+                detector_name TEXT,
+                detection_quality TEXT,
+                effective_config TEXT,
+                vehicles_detected_count INTEGER DEFAULT 0,
+                anomalies_detected INTEGER DEFAULT 0
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_feed_runs_is_test ON feed_runs(is_test);")
+
 
         # Settings table migration (Phase 2)
         cursor.execute("""
@@ -452,3 +474,91 @@ def tag_incident_test(camera_id: int, frame_id: int, feed_id: str, is_test: bool
         return cursor.rowcount > 0
     finally:
         conn.close()
+
+
+def record_feed_run(
+    feed_id: str,
+    camera_id: int,
+    city: str,
+    district: str,
+    status: str,
+    is_test: bool = False,
+    detector_name: str = "legacy",
+    detection_quality: str = "unknown",
+    effective_config: Optional[Dict[str, Any]] = None,
+    vehicles_detected_count: int = 0,
+    anomalies_detected: int = 0,
+) -> bool:
+    """
+    Persist or update run configuration and telemetry using parameterized SQL.
+    Respects Demo Mode (skips write if demo mode is enabled).
+    """
+    if os.getenv("ARGUS_DEMO_MODE", "false").lower() in ("true", "1", "yes"):
+        logger.debug("Demo Mode active: skipping DB write for record_feed_run.")
+        return True
+
+    conn = get_write_connection()
+    try:
+        cursor = conn.cursor()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        cfg_json = json.dumps(effective_config or {})
+        test_val = 1 if is_test else 0
+
+        cursor.execute(
+            """
+            INSERT INTO feed_runs (
+                feed_id, camera_id, city, district, created_at, status,
+                is_test, detector_name, detection_quality, effective_config,
+                vehicles_detected_count, anomalies_detected
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(feed_id) DO UPDATE SET
+                status = excluded.status,
+                detector_name = excluded.detector_name,
+                detection_quality = excluded.detection_quality,
+                effective_config = excluded.effective_config,
+                vehicles_detected_count = excluded.vehicles_detected_count,
+                anomalies_detected = excluded.anomalies_detected;
+            """,
+            (
+                feed_id,
+                int(camera_id),
+                city,
+                district,
+                now_iso,
+                status,
+                test_val,
+                detector_name,
+                detection_quality,
+                cfg_json,
+                int(vehicles_detected_count),
+                int(anomalies_detected),
+            ),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to record feed run {feed_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_feed_run(feed_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve persisted feed run record by feed_id."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        row = cursor.execute("SELECT * FROM feed_runs WHERE feed_id = ?", (feed_id,)).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if d.get("effective_config"):
+            try:
+                d["effective_config"] = json.loads(d["effective_config"])
+            except Exception:
+                pass
+        return d
+    finally:
+        conn.close()
+

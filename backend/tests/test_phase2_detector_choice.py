@@ -82,7 +82,7 @@ def test_detector_unavailable_reporting(monkeypatch, tmp_path):
         def detect(self, *args, **kwargs):
             return []
 
-    monkeypatch.setattr(camera_worker, "ModernYoloDetector", lambda: MockUnavailableDetector())
+    monkeypatch.setattr(camera_worker, "ModernYoloDetector", lambda *args, **kwargs: MockUnavailableDetector())
 
     camera_worker.run_headless_camera(
         video_path=str(short_vid),

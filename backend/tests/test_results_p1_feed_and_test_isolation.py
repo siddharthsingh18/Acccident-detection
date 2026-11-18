@@ -158,7 +158,7 @@ def test_camera_worker_short_clip_vehicles_and_metadata(tmp_path, capsys, monkey
         def detect(self, *args, **kwargs):
             return [(10, 20, 50, 60), (100, 100, 150, 150)]
 
-    monkeypatch.setattr(camera_worker, "ModernYoloDetector", lambda: MockDetector())
+    monkeypatch.setattr(camera_worker, "ModernYoloDetector", lambda *args, **kwargs: MockDetector())
     monkeypatch.setenv("ARGUS_DETECTOR", "mock_neural")
 
     camera_worker.run_headless_camera(

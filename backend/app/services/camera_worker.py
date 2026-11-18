@@ -12,6 +12,7 @@ import socket
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 import cv2
 import zmq
 
@@ -99,8 +100,30 @@ def detect_motion_boxes(frames, frame_width: int, frame_height: int):
             boxes.append(["car", float(x), float(x + w), float(y), float(y + h), 0.85])
     return boxes[:8]
 
-def run_headless_camera(video_path: str, camera_id: int, city: str, district: str, master_ip: str = "127.0.0.1", master_port: int = 10000, feed_id: str = "", is_test: bool = False):
+def run_headless_camera(
+    video_path: str,
+    camera_id: int,
+    city: str,
+    district: str,
+    master_ip: str = "127.0.0.1",
+    master_port: int = 10000,
+    feed_id: str = "",
+    is_test: bool = False,
+    confidence: Optional[float] = None,
+    adaptive_box_filter: Optional[bool] = None,
+    distance_factor: Optional[float] = None,
+    single_vehicle: Optional[bool] = None,
+    frame_stride: Optional[int] = None,
+):
     global running
+    effective_config = {
+        "detector_confidence": round(float(confidence), 3) if confidence is not None else float(os.getenv("ARGUS_DETECTOR_CONFIDENCE", "0.35")),
+        "adaptive_box_filter": bool(adaptive_box_filter) if adaptive_box_filter is not None else (os.getenv("CRASH_ADAPTIVE_BOX_FILTER", "false").lower() in ("true", "1")),
+        "distance_factor": round(float(distance_factor), 3) if distance_factor is not None else float(os.getenv("CRASH_DISTANCE_FACTOR", "0.25")),
+        "single_vehicle_mode": bool(single_vehicle) if single_vehicle is not None else (os.getenv("CRASH_SINGLE_VEHICLE", "false").lower() in ("true", "1")),
+        "frame_stride": int(frame_stride) if frame_stride is not None else int(os.getenv("ARGUS_DETECTOR_STRIDE", "1")),
+    }
+
     video_file = Path(video_path)
     if not video_file.exists():
         print(f"ERROR: Video file {video_path} does not exist", flush=True)
@@ -148,7 +171,10 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
             detector = get_detector("motion")
             detection_quality = "motion_fallback"
         elif env_detector in ("yolo", "neural"):
-            neural = ModernYoloDetector()
+            neural = ModernYoloDetector(
+                confidence_threshold=effective_config["detector_confidence"],
+                frame_stride=effective_config["frame_stride"]
+            )
             if neural.is_available:
                 detector = neural
                 detection_quality = "neural"
@@ -157,7 +183,10 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
                 detection_quality = "unavailable"
                 print("WARNING: Neural detector requested but unavailable (weights missing).", flush=True)
         else:
-            neural = ModernYoloDetector()
+            neural = ModernYoloDetector(
+                confidence_threshold=effective_config["detector_confidence"],
+                frame_stride=effective_config["frame_stride"]
+            )
             if neural.is_available:
                 detector = neural
                 detection_quality = "neural"
@@ -221,6 +250,7 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
                 "TEST": is_test,
                 "DETECTION_QUALITY": detection_quality,
                 "DETECTOR_NAME": detector.name,
+                "CRASH_CONFIG": effective_config,
             }
 
             # Dispatch over ZeroMQ to Master node
@@ -277,6 +307,7 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
             "TEST": is_test,
             "DETECTION_QUALITY": detection_quality,
             "DETECTOR_NAME": detector.name,
+            "CRASH_CONFIG": effective_config,
         }
         send_feed_to_master(master_ip, master_port, msg)
         print(f"PROGRESS:{total_frames}:{total_frames}", flush=True)
@@ -297,6 +328,11 @@ if __name__ == "__main__":
     parser.add_argument("--feed-id", default="", help="Active feed identifier")
     parser.add_argument("--test", action="store_true", default=False, help="Tag feed as test run")
     parser.add_argument("--detector", default=None, help="Detector override (legacy, motion, yolo)")
+    parser.add_argument("--confidence", type=float, default=None, help="Detector confidence threshold override")
+    parser.add_argument("--adaptive-box-filter", type=int, default=None, help="Adaptive box filter override (1 or 0)")
+    parser.add_argument("--distance-factor", type=float, default=None, help="Distance factor override")
+    parser.add_argument("--single-vehicle", type=int, default=None, help="Single vehicle mode override (1 or 0)")
+    parser.add_argument("--frame-stride", type=int, default=None, help="Frame stride override")
 
     args = parser.parse_args()
     if args.detector:
@@ -310,5 +346,10 @@ if __name__ == "__main__":
         master_ip=args.master_ip,
         master_port=args.master_port,
         feed_id=args.feed_id,
-        is_test=args.test
+        is_test=args.test,
+        confidence=args.confidence,
+        adaptive_box_filter=(bool(args.adaptive_box_filter) if args.adaptive_box_filter is not None else None),
+        distance_factor=args.distance_factor,
+        single_vehicle=(bool(args.single_vehicle) if args.single_vehicle is not None else None),
+        frame_stride=args.frame_stride,
     )
