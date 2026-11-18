@@ -76,22 +76,28 @@ def read_run_trace(run_id: str) -> List[Dict[str, Any]]:
     return records
 
 
-def summarize_run_trace(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_run_trace(records: List[Dict[str, Any]], detection_quality: Optional[str] = None) -> Dict[str, Any]:
     """
     Summarize a collection of batch trace records for a single video run.
     Identifies max trackers, total pairs evaluated, dominant filter dropping candidates,
-    max classifier score, alert count, and the primary cause code.
+    max classifier score, alert count, detector used, detection quality, and the primary cause code.
     """
+    resolved_quality = detection_quality or (records[0].get("detection_quality") if records and records[0].get("detection_quality") else "unknown")
+    detector_used = (records[0].get("detector_name") or records[0].get("detector_used")) if records else "unknown"
+
     if not records:
         return {
             "total_batches": 0,
+            "batches_processed": 0,
             "max_trackers": 0,
             "total_pairs_evaluated": 0,
             "filter_counts": {},
             "dominant_filter": "NONE",
             "max_classifier_score": 0.0,
             "alert_count": 0,
-            "primary_cause": "NO_TRACE",
+            "detector_used": detector_used or "unknown",
+            "detection_quality": resolved_quality or "unknown",
+            "primary_cause": "LOW_QUALITY_DETECTION" if resolved_quality in ("motion_fallback", "unavailable") else "NO_TRACE",
         }
 
     total_batches = len(records)
@@ -103,8 +109,8 @@ def summarize_run_trace(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         "TOO_FAR": sum(r.get("failed_distance", 0) for r in records),
         "BELOW_SPEED": sum(r.get("failed_speed", 0) for r in records),
         "NO_DEVIATION": sum(r.get("failed_deviation", 0) for r in records),
-        "BOX_TOO_SMALL": sum(r.get("failed_box_size", 0) for r in records),
-        "ASPECT_RATIO": sum(r.get("failed_aspect_ratio", 0) for r in records),
+        "FILTERED_BOX_SIZE": sum(r.get("failed_box_size", 0) for r in records),
+        "FILTERED_ASPECT_RATIO": sum(r.get("failed_aspect_ratio", 0) for r in records),
     }
 
     # Find which filter dropped candidates most often
@@ -118,12 +124,21 @@ def summarize_run_trace(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Assign primary cause code if no alert was raised
     if alert_count > 0:
         primary_cause = "CRASH_DETECTED"
+    elif (
+        resolved_quality in ("motion_fallback", "unavailable")
+        or any(r.get("detection_quality") in ("motion_fallback", "unavailable") for r in records)
+        or any(r.get("is_low_quality") is True for r in records)
+        or any(r.get("primary_reason") == "LOW_QUALITY_DETECTION" for r in records)
+    ):
+        primary_cause = "LOW_QUALITY_DETECTION"
     elif max_trackers == 0:
         primary_cause = "NO_DETECTIONS"
     elif max_trackers == 1:
         primary_cause = "SINGLE_VEHICLE"
-    elif any(r.get("failed_box_size", 0) > 0 for r in records):
-        primary_cause = "BOX_TOO_SMALL"
+    elif any(r.get("failed_box_size", 0) > 0 for r in records) or any(r.get("primary_reason") == "FILTERED_BOX_SIZE" for r in records):
+        primary_cause = "FILTERED_BOX_SIZE"
+    elif any(r.get("failed_aspect_ratio", 0) > 0 for r in records) or any(r.get("primary_reason") == "FILTERED_ASPECT_RATIO" for r in records):
+        primary_cause = "FILTERED_ASPECT_RATIO"
     elif any(r.get("classifier_score", 0.0) is not None and r.get("classifier_score", 0.0) > 0 for r in records):
         primary_cause = "CLASSIFIER_LOW_SCORE"
     elif filter_counts["TOO_FAR"] > 0 and filter_counts["TOO_FAR"] >= filter_counts["BELOW_SPEED"]:
@@ -135,12 +150,15 @@ def summarize_run_trace(records: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     return {
         "total_batches": total_batches,
+        "batches_processed": total_batches,
         "max_trackers": max_trackers,
         "total_pairs_evaluated": total_pairs,
         "filter_counts": filter_counts,
         "dominant_filter": dominant_filter,
         "max_classifier_score": round(max_score, 4),
         "alert_count": alert_count,
+        "detector_used": detector_used or "unknown",
+        "detection_quality": resolved_quality or "unknown",
         "primary_cause": primary_cause,
     }
 

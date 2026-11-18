@@ -81,7 +81,8 @@ class FeedItem:
             detection_quality=self.detection_quality,
             detector_name=self.detector_name,
             detector_config=self.detector_config,
-            vehicles_detected_count=self.vehicles_detected_count
+            vehicles_detected_count=self.vehicles_detected_count,
+            batches_processed=max(1, self.frames_sent // 30) if self.frames_sent > 0 else 0
         )
 
 

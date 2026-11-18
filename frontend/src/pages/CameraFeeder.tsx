@@ -1671,6 +1671,63 @@ export function CameraFeeder() {
               </div>
             </div>
 
+            {/* Run Summary Line (Detector used, detection quality, vehicles seen, batches processed, alert count) */}
+            {detectionOutcome !== 'idle' && detectionOutcome !== 'processing' && (
+              <div
+                data-testid="run-summary-line"
+                className="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono flex flex-wrap items-center justify-between gap-3 shadow-inner"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 uppercase text-[10px] tracking-wider font-semibold">Run Summary:</span>
+                  <span className="text-white font-bold">{activeFeed?.id || (selectedSample ? selectedSample.id : 'Live')}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-[11px]">
+                  <div>
+                    <span className="text-slate-500 mr-1">Detector:</span>
+                    <span data-testid="run-summary-detector" className="text-cyan-300 font-semibold">{activeFeed?.detector_name || 'legacy'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 mr-1">Quality:</span>
+                    <span
+                      data-testid="run-summary-quality"
+                      className={`font-semibold ${
+                        activeFeed?.detection_quality === 'neural' || activeFeed?.detection_quality === 'reference'
+                          ? 'text-emerald-400'
+                          : 'text-amber-400'
+                      }`}
+                    >
+                      {activeFeed?.detection_quality || (selectedSample?.has_box_file ? 'reference' : 'unknown')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 mr-1">Vehicles Seen:</span>
+                    <span data-testid="run-summary-vehicles" className="text-white font-semibold">
+                      {activeFeed?.vehicles_detected_count ?? 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 mr-1">Batches:</span>
+                    <span data-testid="run-summary-batches" className="text-white font-semibold">
+                      {activeFeed?.batches_processed ?? Math.max(1, Math.floor(((activeFeed?.progress?.frames_sent ?? 30) > 0 ? (activeFeed?.progress?.frames_sent ?? 30) : 30) / 30))}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 mr-1">Alerts:</span>
+                    <span
+                      data-testid="run-summary-alerts"
+                      className={`font-semibold ${
+                        (detectionOutcome === 'accident' || (activeFeed?.anomalies_detected ?? 0) > 0)
+                          ? 'text-red-400'
+                          : 'text-slate-300'
+                      }`}
+                    >
+                      {detectionOutcome === 'accident' ? Math.max(1, activeFeed?.anomalies_detected ?? 1) : (activeFeed?.anomalies_detected ?? 0)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Detected Events Timeline & Model Scoring (Shown after processing completes) */}
             {detectionOutcome !== 'idle' && detectionOutcome !== 'processing' && (
               <div data-testid="events-timeline-section" className="mt-4 p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4">
@@ -2173,18 +2230,42 @@ export function CameraFeeder() {
                               <div data-testid="trace-details" className="rounded-lg bg-slate-900 border border-slate-800 p-3 space-y-2 text-xs">
                                 <div className="font-bold text-cyan-400 flex items-center justify-between">
                                   <span>Pipeline Trace Diagnostics</span>
-                                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                  <span
+                                    data-testid="trace-primary-cause"
+                                    className={`font-mono text-[10px] px-2 py-0.5 rounded border ${
+                                      r.trace_summary.primary_cause === 'LOW_QUALITY_DETECTION'
+                                        ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                                    }`}
+                                  >
                                     Cause: {r.trace_summary.primary_cause || 'UNKNOWN'}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px]">
+                                {r.trace_summary.primary_cause === 'LOW_QUALITY_DETECTION' && (
+                                  <div
+                                    data-testid="trace-low-quality-warning"
+                                    className="p-2 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-1.5"
+                                  >
+                                    <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span>Video ran in degraded motion fallback mode. Vehicle detections and trajectory analysis are unreliable.</span>
+                                  </div>
+                                )}
+                                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 font-mono text-[11px]">
                                   <div className="bg-slate-950 p-2 rounded border border-slate-800">
                                     <span className="text-slate-500 block text-[9px] uppercase">Detector</span>
                                     <span className="text-slate-200 font-bold">{r.trace_summary.detector_used || 'legacy'}</span>
                                   </div>
                                   <div className="bg-slate-950 p-2 rounded border border-slate-800">
+                                    <span className="text-slate-500 block text-[9px] uppercase">Quality</span>
+                                    <span className="text-slate-200 font-bold">{r.detection_quality || r.trace_summary.detection_quality || 'unknown'}</span>
+                                  </div>
+                                  <div className="bg-slate-950 p-2 rounded border border-slate-800">
                                     <span className="text-slate-500 block text-[9px] uppercase">Trackers</span>
                                     <span className="text-slate-200 font-bold">{r.trace_summary.max_trackers ?? 0}</span>
+                                  </div>
+                                  <div className="bg-slate-950 p-2 rounded border border-slate-800">
+                                    <span className="text-slate-500 block text-[9px] uppercase">Batches</span>
+                                    <span className="text-slate-200 font-bold">{r.trace_summary.batches_processed || r.trace_summary.total_batches || 1}</span>
                                   </div>
                                   <div className="bg-slate-950 p-2 rounded border border-slate-800">
                                     <span className="text-slate-500 block text-[9px] uppercase">Dominant Filter</span>

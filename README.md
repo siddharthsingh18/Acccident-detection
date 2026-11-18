@@ -478,16 +478,59 @@ If video clips do not stream or play in the web UI (Incident Video Modal, Review
 
 When evaluating CCTV footage in the **Input / Output Video Feeder** or reviewing alerts, discrepancies between pipeline outcomes and visual ground truth can be diagnosed using Argus telemetry and the interactive **Trace Drawer**.
 
+### My upload shows no alert: how to tell if the detector failed vs no accident
+
+When an uploaded surveillance video produces zero alerts in Argus, follow this **3-step diagnostic** to determine whether the result represents a genuine non-accident or a degraded/failed detection pipeline:
+
+#### Step 1: Inspect the Detection Quality Badge
+Look at the status badge in the **Output Section** or the **Batch Test Results** table:
+- ⚠️ **`LOW QUALITY (UNRELIABLE)` / `motion_fallback` (Amber Badge)**:  
+  The upload ran in degraded motion-fallback mode because no pre-annotated box file matched this video's SHA-256 hash and no neural detector weights were found. **Do not interpret "0 anomalies" as "no accident"**—the result is unverified because motion blobs rarely track vehicles stably. Run `python scripts/download_models.py --model ssdlite320-mobilenet` to enable the neural detector.
+- ⚠️ **`NO VEHICLES DETECTED` (Amber Badge)**:  
+  The detector ran, but zero vehicle bounding boxes were formed across the entire video. If vehicles are clearly visible, the vehicle confidence threshold may be too high or the vehicle dimensions too small.
+- 🟢 **`NORMAL` (Emerald Badge)**:  
+  Detection quality is `reference` (verified box file) or `neural` (proper vehicle detector) AND vehicles were successfully tracked (`Vehicles Seen > 0`), but no collision trajectories or violent flow spikes were observed.
+
+#### Step 2: Open the Trace Drawer ("Why no alert")
+Click the **Why no alert** button in the results table to inspect the per-batch diagnostic trace:
+- **`Cause: LOW_QUALITY_DETECTION`**: The video executed in degraded motion differencing mode. Candidate trajectories were dropped before reaching the classifier.
+- **`Cause: NO_DETECTIONS`**: The detector found 0 candidate vehicles in the frames.
+- **`Cause: SINGLE_VEHICLE`**: Only 1 vehicle was tracked. The standard Argus pipeline requires interacting pairs of vehicles (`itertools.combinations(trackers, 2)`). If this was a solo crash (e.g. guardrail collision or rollover), enable `CRASH_SINGLE_VEHICLE=true`.
+- **`Cause: FILTERED_BOX_SIZE`**: Bounding boxes fell below the 50x28 pixel size floor. Enable `CRASH_ADAPTIVE_BOX_FILTER=true` for distant or high-angle cameras.
+- **`Cause: TOO_FAR`**: Tracked vehicles did not approach within collision search radius `(size_a + size_b) * factor`.
+- **`Cause: CLASSIFIER_LOW_SCORE`**: Collision geometry was met, but the Violent Flow (ViF) SVM confidence fell below the 0.50 threshold.
+
+#### Step 3: Configure Environment Flags & Re-run
+Review and set the appropriate environment flags, then click **Re-run Upload** (or `POST /api/feeds/{id}/rerun`) to replay the stored video without re-uploading:
+
+| Environment Variable | Default | Allowed Values | Description & Operational Trade-offs |
+| :--- | :--- | :--- | :--- |
+| `ARGUS_DETECTOR` | `auto` | `auto`, `yolo`, `legacy`, `motion` | Vehicle detector backend. For uploads, `auto` uses `yolo` if weights exist, falling back to `motion`. `legacy` uses registered SHA-256 box files. |
+| `ARGUS_DETECTOR_CONFIDENCE` | `0.35` | Float (0.10 - 0.90) | Minimum confidence for neural vehicle detection (car, motorcycle, bus, truck). Lower for night/rain footage. |
+| `ARGUS_DETECTOR_STRIDE` | `1` | Integer ($\ge 1$) | Frame detection stride. Set to `2` or `3` to boost FPS by interpolating intermediate frames with MOSSE. |
+| `ARGUS_TRACE` | `false` | `true`, `false` | When enabled, logs structured per-batch JSONL diagnostic telemetry to `artifacts/traces/<run_id>.jsonl`. |
+| `CRASH_SINGLE_VEHICLE` | `false` | `true`, `false` | Enables single-vehicle crash analysis (guardrail impacts, spinouts, pole strikes) based on abrupt deceleration and heading shifts. |
+| `CRASH_SINGLE_DECEL_THRESHOLD` | `0.60` | Float (0.10 - 0.95) | Fractional speed drop required to trigger single-vehicle collision candidate (default 60% speed drop). |
+| `CRASH_SINGLE_HEADING_ANGLE` | `45.0` | Float (10.0 - 90.0) | Heading change angle threshold in degrees for single-vehicle collision candidate. |
+| `CRASH_ADAPTIVE_BOX_FILTER` | `false` | `true`, `false` | Scales minimum box size to `CRASH_ADAPTIVE_BOX_FRACTION` (default 4% of frame size) instead of hardcoded 50x28 px floor. |
+| `CRASH_ADAPTIVE_BOX_FRACTION` | `0.04` | Float (0.01 - 0.20) | Relative fraction of video diagonal used for adaptive box sizing. |
+| `CRASH_DISTANCE_FACTOR` | `0.25` | Float (0.10 - 1.0) | Collision proximity search multiplier `(asize + bsize) * factor`. Values above 0.25 may raise false alarms. |
+| `CRASH_CLASSIFIER_THRESHOLD` | `0.50` | Float (0.0 - 1.0) | Decision threshold for ViF SVM crash classification. |
+| `ARGUS_ENABLE_ENSEMBLE` | `false` | `true`, `false` | Activates multi-model scoring ensemble (`vif_svm` + `convae`). |
+| `ARGUS_CRASH_POLICY` | `any` | `any`, `all`, `majority`, `weighted` | Consensus decision policy for the multi-model scoring ensemble. |
+
 ### Diagnostic Cause Taxonomy
 Each processed clip is analyzed across the four stages of the pipeline:
 
 | Primary Cause | Description | Typical Scenario | Remediation Flag |
 | :--- | :--- | :--- | :--- |
-| `NO_DETECTIONS` | Vehicle detector generated no candidate boxes. | Night time, heavy rain, or clip has no `boxes/<id>.txt` pre-annotation and falls back to naive motion differencing. | `ARGUS_DETECTOR=yolo` with licensed weights. |
-| `SINGLE_VEHICLE` | Accident involves only one vehicle (guardrail collision, rollover, pole strike). | Legacy pipeline strictly requires pairs of colliding trackers (`itertools.combinations(trackers, 2)`). | `CRASH_SINGLE_VEHICLE=true` |
+| `LOW_QUALITY_DETECTION` | Run used degraded motion differencing fallback. | Uploaded clip without matching box file and without neural detector weights. | Run `python scripts/download_models.py --model ssdlite320-mobilenet`. |
+| `NO_DETECTIONS` | Vehicle detector generated no candidate boxes. | Night time, heavy rain, or distant vehicles below detector confidence. | Lower `ARGUS_DETECTOR_CONFIDENCE=0.25`. |
+| `SINGLE_VEHICLE` | Accident involves only one vehicle (guardrail collision, rollover, pole strike). | Standard pipeline strictly requires pairs of colliding trackers (`itertools.combinations(trackers, 2)`). | `CRASH_SINGLE_VEHICLE=true` |
 | `BELOW_SPEED` | Relative tracker speed below moving threshold. | Creeping collisions or post-collision stationary phases. | Adjust speed threshold or evaluate initial impact frames. |
 | `TOO_FAR` | Vehicle bounding box centroid distance exceeds collision search radius `(size_a + size_b) * factor`. | Glancing collisions, side-swipes, or large trucks with offset centroids. | `CRASH_DISTANCE_FACTOR=0.35` (default 0.25). |
-| `BOX_TOO_SMALL` | Tracked bounding box rejected by geometric filter (width < 50 px, height $\le$ 28 px, aspect < 0.35). | Distant highway cameras, high-mounted overhead CCTV, or low-resolution video (e.g., 320x240). | `CRASH_ADAPTIVE_BOX_FILTER=true` |
+| `FILTERED_BOX_SIZE` | Tracked bounding box rejected by geometric filter (width < 50 px, height $\le$ 28 px). | Distant highway cameras, high-mounted overhead CCTV, or low-resolution video (e.g., 320x240). | `CRASH_ADAPTIVE_BOX_FILTER=true` |
+| `FILTERED_ASPECT_RATIO` | Bounding box rejected by aspect ratio filter ($aspect < 0.20$ or $aspect > 5.0$). | Occlusions or partial vehicle views near frame edges. | Inspect camera placement and angle. |
 | `CLASSIFIER_LOW_SCORE` | Violent Flow (ViF) + SVM confidence score fell below decision boundary (0.50). | Slow-motion impacts, minimal turbulent optical flow, or occlusion. | `CRASH_CLASSIFIER_THRESHOLD=0.40` or enable multi-model ensemble `ARGUS_ENABLE_ENSEMBLE=true`. |
 | `LABEL_SUSPECT` | Visual ground truth contradicts legacy filename/manifest (e.g., near-miss, off-camera accident, unverified label). | Non-collision incidents, traffic congestion marked as accidents. | Verify ground truth via contact sheet audit; unverified clips are marked `unknown` and omitted from scoring. |
 
@@ -496,7 +539,8 @@ Each processed clip is analyzed across the four stages of the pipeline:
 2. Click **Run All (Smoke Test)** or execute an individual clip.
 3. In the Batch Test Results table, click the **Why alerted** (green) or **Why no alert** (amber/slate) button.
 4. The expanded trace drawer reveals:
-   - Primary drop stage and cause category.
+   - Primary drop stage and cause category (`Cause: LOW_QUALITY_DETECTION`, `FILTERED_BOX_SIZE`, etc.).
+   - Degradation warning banner when the video ran under motion differencing fallback.
    - Batch count, total evaluated tracker pairs, and filter drop breakdown (speed, distance, box size).
    - Maximum classifier score vs. active threshold.
    - Active detector backend and ground truth label source (`verified_by_frames`, `folder`, `unknown`).

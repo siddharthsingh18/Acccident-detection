@@ -143,5 +143,17 @@ SOFTWARE.
 * **Weights URL:** `https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_s.onnx`
 * **Verified SHA-256:** `b068bc56ba598c92fb38cf2ea31df12da3eeeb351e39a3f29dd11d1fa5020fd4`
 
+---
+
+## 11. CCTV Surveillance Research Datasets (Evaluation & Validation)
+
+* **Datasets Referenced:**
+  - **IEEE DataPort CCTV Video Set**: Surveillance road footage under Creative Commons Attribution (CC BY 4.0).
+  - **Car Crash Dataset (CADP)**: Academic benchmark for traffic accident analysis (Bao et al., ACM MM). Research and educational evaluation only.
+  - **TU-DAT (Tezpur University Road Accident Dataset)**: Non-commercial educational research use.
+  - **UCF-Crime Road Accidents**: Sultani et al. (CVPR 2018), University of Central Florida. Research use only.
+* **Storage Policy:** Video binaries and clips from these datasets are NEVER committed or tracked in Git repository history. Manifests and split generation scripts (`scripts/data/make_evaluation_manifest.py`) reference them locally under the `.gitignore`d `data/` directory.
+
+
 
 

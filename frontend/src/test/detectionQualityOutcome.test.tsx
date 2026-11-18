@@ -341,4 +341,46 @@ describe('Phase 1: Detection Quality Outcome Presentation', () => {
     await user.click(screen.getByTestId('rerun-feed-btn'));
     expect(api.rerunFeed).toHaveBeenCalledWith('feed-rerun-test');
   });
+
+  it('renders run summary line with detector, quality, vehicles seen, batches processed, and alert count', async () => {
+    const user = userEvent.setup();
+    const mockFeed: FeedResponse = {
+      id: 'feed-summary-test',
+      camera_id: 1528,
+      city: 'Cairo',
+      district: 'District 1',
+      status: 'done',
+      thumbnail_url: '/thumb.jpg',
+      created_at: '2026-11-01T10:00:00Z',
+      progress: { frames_sent: 90, total_frames: 90, percent: 100 },
+      anomalies_detected: 0,
+      detection_quality: 'neural',
+      detector_name: 'ssdlite320',
+      vehicles_detected_count: 4,
+      batches_processed: 3,
+    };
+
+    (api.startFeedFromSample as any).mockResolvedValue(mockFeed);
+    (api.getFeed as any).mockResolvedValue(mockFeed);
+
+    render(
+      <MemoryRouter>
+        <CameraFeeder />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('sample-card-sample-box');
+    await user.click(screen.getByTestId('sample-card-sample-box'));
+    await user.click(screen.getByTestId('start-pipeline-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('run-summary-line')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('run-summary-detector')).toHaveTextContent('ssdlite320');
+    expect(screen.getByTestId('run-summary-quality')).toHaveTextContent('neural');
+    expect(screen.getByTestId('run-summary-vehicles')).toHaveTextContent('4');
+    expect(screen.getByTestId('run-summary-batches')).toHaveTextContent('3');
+    expect(screen.getByTestId('run-summary-alerts')).toHaveTextContent('0');
+  });
 });

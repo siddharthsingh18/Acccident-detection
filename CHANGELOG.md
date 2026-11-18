@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.0] - 2026-11-18
+
+### Added
+- **Permissive Neural Detector for Video Uploads (`System/Functions/Detector/`)**:
+  - Automatic selection of permissive neural vehicle detector (`ModernYoloDetector`, Torchvision SSDLite320 MobileNetV3 / YOLOX ONNX) for uploaded and unannotated surveillance clips.
+  - Strict vehicle class filtering (`{car, motorcycle, bus, truck}`) with configurable confidence threshold (`ARGUS_DETECTOR_CONFIDENCE`, default 0.35) and frame stride (`ARGUS_DETECTOR_STRIDE`, default 1).
+  - SHA-256 verified download tool `scripts/download_models.py` with automatic integrity check and license display.
+- **Detection Quality Taxonomy & Operator Warning System (`frontend/`, `backend/`)**:
+  - Explicit quality states (`reference`, `neural`, `motion_fallback`, `unavailable`, `unknown`) persisted in SQLite and returned on all feed APIs.
+  - Amber badge and warning banners preventing degraded runs from ever displaying as clean "Normal" or "0 anomalies".
+  - Dedicated "No vehicles were detected in this video" outcome state when zero vehicles are found across the entire clip.
+  - Pre-run upload warning modal alerting the operator if an upload will run without a neural detector.
+- **Content-Addressed Box Registry & Persistent Storage**:
+  - Replaced user-typed `camera_id` box file lookups with SHA-256 video content-hash matching (`boxes/registry.py`), eliminating cross-video annotation collisions.
+  - Persistent upload storage under `backend/uploads/<run_id>/` with configurable retention cleanup (`POST /api/feeds/uploads/cleanup`).
+  - Re-run upload endpoint (`POST /api/feeds/{id}/rerun`) enabling rapid testing of different detector and geometry settings without re-uploading.
+- **Single-Vehicle Crash Geometry (`System/Functions/Crashing.py`)**:
+  - Added opt-in single-vehicle collision detection (`CRASH_SINGLE_VEHICLE=true`, `CRASH_SINGLE_DECEL_THRESHOLD=0.60`, `CRASH_SINGLE_HEADING_ANGLE=45.0`) targeting guardrail impacts, barrier strikes, and spinouts with 0.0 false alarms/hr.
+  - Enforced default-OFF isolation for `CRASH_ADAPTIVE_BOX_FILTER` and `CRASH_DISTANCE_FACTOR` after sweep analysis proved they increased distant false alarms.
+- **Honest Held-Out CCTV Evaluation Suite (`docs/evaluation/`)**:
+  - Unbundled CCTV surveillance evaluation set (`data/evaluation_manifest.csv`) strictly excluding the 19 bundled demo clips, with zero camera/video group overlap.
+  - Systematic validation sweep (`docs/evaluation/validation_sweep.csv`) across 37 validation clips.
+  - Single frozen evaluation on 33 held-out test clips (`docs/evaluation/heldout_test_metrics.csv` and `docs/evaluation/report.md`), proving false alarm rate drop from 530.2/hr down to 0.0/hr.
+- **UI Run Summary Line & Trace Diagnostics**:
+  - Real-time run summary line displaying detector used, detection quality, vehicles seen, batches processed, and alert count in both single-feed and batch views.
+  - Trace drawer enriched with `Cause: LOW_QUALITY_DETECTION` and an amber degradation warning notice.
+  - Troubleshooting guide in `README.md` with a 3-step diagnostic procedure.
+
+---
+
 ## [2.2.0] - 2026-11-04
 
 ### Added

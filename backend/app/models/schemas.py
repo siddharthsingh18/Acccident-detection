@@ -124,6 +124,7 @@ class FeedResponse(BaseModel):
     detector_name: Optional[str] = Field(default="legacy", description="Active detector implementation name")
     detector_config: Dict[str, Any] = Field(default_factory=dict, description="Active detector configuration and flags")
     vehicles_detected_count: int = Field(default=0, description="Max vehicles detected simultaneously during this feed")
+    batches_processed: int = Field(default=0, description="Count of 30-frame batches processed")
 
 class FeedCancelResponse(BaseModel):
     id: str

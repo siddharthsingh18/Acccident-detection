@@ -35,6 +35,7 @@ export type FeedResponse = paths['/api/feeds']['post']['responses']['201']['cont
   detector_name?: string;
   detector_config?: Record<string, any>;
   vehicles_detected_count?: number;
+  batches_processed?: number;
 };
 export type FeedCancelResponse = paths['/api/feeds/{id}/cancel']['post']['responses']['200']['content']['application/json'];
 
@@ -121,9 +122,13 @@ export interface TraceSummaryResponse {
   has_trace: boolean;
   summary: {
     detector_used?: string;
+    detection_quality?: string;
     max_trackers?: number;
+    total_batches?: number;
+    batches_processed?: number;
     dominant_filter?: string;
     max_classifier_score?: number | null;
+    alert_count?: number;
     primary_cause?: string;
     filter_counts?: Record<string, number>;
     pairs_evaluated?: number;

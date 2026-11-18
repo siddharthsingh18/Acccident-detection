@@ -557,9 +557,38 @@ async def get_run_trace(run_id: str):
     """Retrieve diagnostic pipeline telemetry explaining why an alert did or did not fire."""
     from argus_ml.trace import read_run_trace, summarize_run_trace
     records = read_run_trace(run_id)
+    feed_item = feed_manager.get_feed(run_id)
+    quality = feed_item.detection_quality if feed_item else None
+    detector_name = feed_item.detector_name if feed_item else None
+
     if not records:
+        if feed_item:
+            fallback_cause = "LOW_QUALITY_DETECTION" if quality in ("motion_fallback", "unavailable") else "NO_TRACE"
+            return {
+                "run_id": run_id,
+                "has_trace": True,
+                "summary": {
+                    "total_batches": max(1, feed_item.frames_sent // 30) if feed_item.frames_sent > 0 else 0,
+                    "batches_processed": max(1, feed_item.frames_sent // 30) if feed_item.frames_sent > 0 else 0,
+                    "max_trackers": feed_item.vehicles_detected_count,
+                    "total_pairs_evaluated": 0,
+                    "filter_counts": {},
+                    "dominant_filter": "NONE",
+                    "max_classifier_score": 0.0,
+                    "alert_count": len(feed_item.detected_incidents),
+                    "detector_used": detector_name or "unknown",
+                    "detection_quality": quality or "unknown",
+                    "primary_cause": fallback_cause,
+                },
+                "records_count": 0,
+            }
         return {"run_id": run_id, "has_trace": False, "summary": None, "message": "No trace recorded"}
-    summary = summarize_run_trace(records)
+
+    summary = summarize_run_trace(records, detection_quality=quality)
+    if detector_name and not summary.get("detector_used"):
+        summary["detector_used"] = detector_name
+    if quality and not summary.get("detection_quality"):
+        summary["detection_quality"] = quality
     return {"run_id": run_id, "has_trace": True, "summary": summary, "records_count": len(records)}
 
 

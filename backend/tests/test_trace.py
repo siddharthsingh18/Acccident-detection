@@ -120,3 +120,41 @@ def test_summarize_run_trace():
     assert summary["alert_count"] == 0
     assert summary["primary_cause"] == "CLASSIFIER_LOW_SCORE"
 
+
+def test_summarize_run_trace_low_quality_detection():
+    """Verify summarize_run_trace returns LOW_QUALITY_DETECTION when detection is degraded."""
+    degraded_records = [
+        {
+            "run_id": "upload_degraded",
+            "batch_index": 1,
+            "num_trackers": 0,
+            "pairs_evaluated": 0,
+            "detection_quality": "motion_fallback",
+            "decision": False,
+        }
+    ]
+    summary = summarize_run_trace(degraded_records, detection_quality="motion_fallback")
+    assert summary["primary_cause"] == "LOW_QUALITY_DETECTION"
+    assert summary["detection_quality"] == "motion_fallback"
+
+    # Also test empty records with motion_fallback
+    summary_empty = summarize_run_trace([], detection_quality="motion_fallback")
+    assert summary_empty["primary_cause"] == "LOW_QUALITY_DETECTION"
+
+
+def test_summarize_run_trace_filtered_box_size():
+    """Verify summarize_run_trace assigns FILTERED_BOX_SIZE when bounding boxes are rejected."""
+    box_records = [
+        {
+            "run_id": "test_box",
+            "batch_index": 1,
+            "num_trackers": 2,
+            "pairs_evaluated": 1,
+            "failed_box_size": 2,
+            "decision": False,
+        }
+    ]
+    summary = summarize_run_trace(box_records)
+    assert summary["primary_cause"] == "FILTERED_BOX_SIZE"
+
+

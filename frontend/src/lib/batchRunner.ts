@@ -26,9 +26,13 @@ export interface BatchResultItem {
   error?: string | null;
   trace_summary?: {
     detector_used?: string;
+    detection_quality?: string;
     max_trackers?: number;
+    total_batches?: number;
+    batches_processed?: number;
     dominant_filter?: string;
     max_classifier_score?: number | null;
+    alert_count?: number;
     primary_cause?: string;
   } | null;
 }

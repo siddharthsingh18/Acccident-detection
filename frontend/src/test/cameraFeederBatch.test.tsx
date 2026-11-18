@@ -501,4 +501,56 @@ describe('CameraFeeder - Batch Test Runner UI & Execution (Phase 3)', () => {
 
     expect(screen.getByTestId('no-trace-message')).toHaveTextContent('No trace recorded');
   });
+
+  it('renders LOW_QUALITY_DETECTION cause badge and warning banner in trace drawer', async () => {
+    const user = userEvent.setup();
+    (api.startFeedFromSample as any).mockResolvedValue({ id: 'feed-degraded', status: 'processing' });
+    (api.getFeed as any).mockResolvedValue({
+      id: 'feed-degraded',
+      camera_id: 1528,
+      status: 'done',
+      detection_quality: 'motion_fallback',
+      detector_name: 'motion',
+      created_at: '2026-11-01T10:00:00Z',
+      thumbnail_url: '/thumb.jpg',
+      detected_incidents: [],
+      vehicles_detected_count: 0,
+      progress: { frames_sent: 100, total_frames: 100, percent: 100 },
+    });
+    (api.getRunTrace as any).mockResolvedValue({
+      run_id: 'videos--1528.mp4',
+      has_trace: true,
+      summary: {
+        detector_used: 'motion',
+        detection_quality: 'motion_fallback',
+        max_trackers: 0,
+        total_batches: 3,
+        batches_processed: 3,
+        dominant_filter: 'NONE',
+        max_classifier_score: 0.0,
+        primary_cause: 'LOW_QUALITY_DETECTION',
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CameraFeeder />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('sample-card-videos--1528.mp4');
+    await user.click(screen.getByTestId('batch-run-btn'));
+    await user.click(screen.getByTestId('batch-confirm-start-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('batch-row-videos--1528.mp4')).toBeInTheDocument();
+    });
+
+    const toggleBtn = screen.getByTestId('trace-toggle-videos--1528.mp4');
+    await user.click(toggleBtn);
+
+    expect(screen.getByTestId('trace-primary-cause')).toHaveTextContent('Cause: LOW_QUALITY_DETECTION');
+    expect(screen.getByTestId('trace-low-quality-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('trace-low-quality-warning')).toHaveTextContent(/degraded motion fallback mode/i);
+  });
 });

@@ -112,8 +112,15 @@ class Crashing:
                 max_score = max(self.last_classifier_scores) if self.last_classifier_scores else None
                 decision = len(crash_dimentions) > 0
 
+                is_degraded = (
+                    os.getenv("ARGUS_DETECTION_QUALITY", "").lower() in ("motion_fallback", "unavailable")
+                    or os.getenv("ARGUS_LOW_QUALITY", "false").lower() in ("true", "1")
+                )
+
                 if decision:
                     primary_reason = "CRASH_DETECTED"
+                elif is_degraded:
+                    primary_reason = "LOW_QUALITY_DETECTION"
                 elif len(trackers) == 0:
                     primary_reason = "NO_DETECTIONS"
                 elif len(trackers) == 1:
@@ -125,9 +132,9 @@ class Crashing:
                 elif failed_deviation == pairs_evaluated and pairs_evaluated > 0:
                     primary_reason = "NO_DEVIATION"
                 elif self.last_failed_box_size > 0:
-                    primary_reason = "BOX_TOO_SMALL"
+                    primary_reason = "FILTERED_BOX_SIZE"
                 elif self.last_failed_aspect_ratio > 0:
-                    primary_reason = "ASPECT_RATIO"
+                    primary_reason = "FILTERED_ASPECT_RATIO"
                 elif max_score is not None and max_score < 0.5:
                     primary_reason = "CLASSIFIER_LOW_SCORE"
                 else:
