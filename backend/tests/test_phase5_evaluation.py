@@ -74,3 +74,53 @@ def test_test_clips_composition_and_no_train_labels():
     assert "normal" in labels
     assert "accident" in labels
 
+
+def test_upload_evaluation_artifacts_and_zero_leakage():
+    """Verify Phase 5 upload evaluation artifacts, sweep, held-out test metrics, and zero leakage."""
+    eval_manifest_path = PROJECT_ROOT / "data" / "evaluation_manifest.csv"
+    sweep_path = PROJECT_ROOT / "docs" / "evaluation" / "validation_sweep.csv"
+    heldout_path = PROJECT_ROOT / "docs" / "evaluation" / "heldout_test_metrics.csv"
+    report_path = PROJECT_ROOT / "docs" / "evaluation" / "report.md"
+
+    # 1. Sweep CSV exists and contains both detectors and flags
+    assert sweep_path.exists(), f"Validation sweep CSV missing at {sweep_path}"
+    with open(sweep_path, mode="r", encoding="utf-8") as f:
+        sweep_rows = list(csv.DictReader(f))
+    assert len(sweep_rows) >= 12
+    detectors = {r["detector"] for r in sweep_rows}
+    assert "motion" in detectors
+    assert "yolo" in detectors
+
+    # 2. Heldout Test Metrics CSV exists and contains baseline and candidates
+    assert heldout_path.exists(), f"Heldout test metrics CSV missing at {heldout_path}"
+    with open(heldout_path, mode="r", encoding="utf-8") as f:
+        heldout_rows = list(csv.DictReader(f))
+    assert len(heldout_rows) >= 3
+    candidates = [r["candidate"] for r in heldout_rows]
+    assert any("Legacy Baseline" in c for c in candidates)
+    assert any("Neural Baseline" in c for c in candidates)
+    assert any("Calibrated Candidate" in c for c in candidates)
+
+    for r in heldout_rows:
+        assert float(r["accuracy"]) >= 0.0
+        assert float(r["fps"]) > 0.0
+        assert r["detection_quality"] in {"neural", "motion_fallback", "reference", "unavailable"}
+
+    # 3. Report contains upload-specific analysis
+    report_text = report_path.read_text(encoding="utf-8")
+    assert "Upload Pipeline" in report_text
+    assert "What Helped, What Hurt, and Why" in report_text
+
+    # 4. If evaluation manifest exists on disk, check zero group leakage across splits
+    if eval_manifest_path.exists():
+        with open(eval_manifest_path, mode="r", encoding="utf-8") as f:
+            manifest_rows = list(csv.DictReader(f))
+        train_groups = {r["group_id"] for r in manifest_rows if r["split"] == "train"}
+        val_groups = {r["group_id"] for r in manifest_rows if r["split"] == "val"}
+        test_groups = {r["group_id"] for r in manifest_rows if r["split"] == "test"}
+
+        assert len(train_groups.intersection(val_groups)) == 0, "Train-Val group leakage!"
+        assert len(train_groups.intersection(test_groups)) == 0, "Train-Test group leakage!"
+        assert len(val_groups.intersection(test_groups)) == 0, "Val-Test group leakage!"
+
+

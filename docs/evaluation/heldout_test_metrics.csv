@@ -1,0 +1,4 @@
+candidate,detector,detection_quality,accuracy,precision,recall,f1,f1_ci_low,f1_ci_high,tp,fp,tn,fn,false_alarms,far_per_hour,fps,latency_p50_ms,latency_p95_ms
+Legacy Baseline (Motion Fallback),motion,motion_fallback,0.4545,0.6,0.1579,0.25,0.0,0.4642,3,2,12,16,2,530.2,728.6,46.2,74.8
+Neural Baseline (YOLO SSDLite320),yolo,neural,0.4545,1.0,0.0526,0.1,0.0,0.3158,1,0,14,18,0,0.0,367.7,82.0,122.4
+Calibrated Candidate (Neural + Single Vehicle),yolo,neural,0.4545,1.0,0.0526,0.1,0.0,0.2857,1,0,14,18,0,0.0,367.0,85.5,123.1

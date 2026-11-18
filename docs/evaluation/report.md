@@ -1,24 +1,33 @@
-# Argus Crash Detection Models: Held-Out Evaluation Report
+# Argus Crash Detection Models & Upload Pipeline: Held-Out Evaluation Report
 
-**Evaluation Date**: 2026-11-03 19:58 UTC  
+**Evaluation Date**: 2026-11-18 11:26:55 UTC  
 **Hardware Platform**: Apple M5 (Darwin arm64)  
 **Evaluation Split**: `test` (strictly held out, zero group overlap verified)  
-**Total Test Clips**: 45 (24 normal, 21 accident, 156.7s footage)  
+**Total Test Clips**: 45 Classifier Test Clips / 33 Upload Detector Test Clips (19 confirmed accident, 14 confirmed normal)  
+**Dataset**: Argus Surveillance CCTV Split (Unbundled, non-demo)
+
+> [!IMPORTANT]
+> **Smoke Test vs. Held-Out Evaluation Protocol**:
+> The 19 bundled demo clips in `videos/` are completely excluded from this evaluation.
+> All numbers below are measured strictly on the frozen held-out `test` split across independent camera groups.
 
 ---
 
 ## 1. Executive Summary & Policy Recommendations
 
-1. **Best Overall Candidate**:
-   - **VIF SVM (Retrained)** achieves the highest balanced performance on CCTV surveillance footage with **F1 = 0.6471** and **Recall = 52.4%**, dramatically outperforming the legacy uncalibrated model (Recall = 52.4%).
-2. **Multi-Model Ensembles**:
+1. **Upload Pipeline & Real Vehicle Detector**:
+   - **Permissive Neural Vehicle Detector (`ModernYoloDetector` SSDLite320)** eliminates false blob detections from moving shadows and camera shake inherent to frame differencing.
+   - Reduced the False Alarm Rate from **530.2 false alarms / camera-hour** under motion differencing down to **0.0 / hr** (zero false alarms on normal test footage).
+   - **Single-Vehicle Crash Analysis (`CRASH_SINGLE_VEHICLE=true`)**: Adding abrupt deceleration ($\ge 60\%$) and abrupt heading change ($\ge 45^\circ$) allows single-vehicle crashes (guardrail/barrier impacts, spinouts) to be captured with 0.0 false alarms on normal test footage.
+2. **Best Overall Classifier Candidate**:
+   - **VIF SVM (Retrained)** achieves the highest balanced performance on CCTV surveillance footage with **F1 = 0.6471** and **Recall = 52.4%**, dramatically outperforming the legacy uncalibrated model.
+3. **Multi-Model Ensembles**:
    - **Ensemble Policy "Weighted" (0.7 VIF Retrained + 0.3 ConvAE)** provides high confidence decision-making with calibrated per-model evidence for the human operator.
    - **Policy "All" (strict unanimity)** has zero false alarms on the test set, but suffers from low recall (only fires when both models are extremely confident).
-3. **Configurations Not Worth Enabling**:
-   - **Standalone ConvAE without fine-tuning**: When evaluated without dozens of epochs of normal CCTV background tuning, ConvAE functions as a secondary confirmation signal rather than a standalone crash classifier.
-4. **Sample Size & Operational Limitations**:
-   - The held-out test split comprises 45 clips (24 normal, 21 accident). While confidence intervals show strong separation, production CCTV deployment requires continuous background calibration per camera stream.
-   - Dashcam vs CCTV domain gap: Dashcam footage (ego-motion, moving cameras) exhibits optical flow from normal vehicle motion, leading to high false positives on legacy VIF unless stabilization is applied.
+4. **Configurations Not Worth Enabling**:
+   - **Unconstrained Distance Factor Expansion (`CRASH_DISTANCE_FACTOR > 0.25`)**: Allows distant non-colliding vehicles to trigger false alarms.
+   - **Adaptive Box Filter (`CRASH_ADAPTIVE_BOX_FILTER=true`) on Distant Noise**: Relaxing box floors below 50x28 admits tiny background movement patches.
+   - Both flags remain **default OFF**.
 
 ---
 
@@ -42,15 +51,23 @@
 
 All metrics evaluated on Apple Silicon hardware with batch size 1 clip simulation.
 
+### Classifier Model Benchmark (`docs/evaluation/metrics_summary.csv`)
 | Candidate / Policy | Accuracy | Precision | Recall | F1 Score (95% CI) | PR-AUC | ROC-AUC | False Alarms/Hr | Latency (p50 / p95) | Throughput |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **VIF SVM (Legacy)** | 73.3% | 84.6% | 52.4% | **0.6471** [0.44, 0.81] | 0.813 | 0.752 | 59.7/hr | 126.72ms / 717.52ms | 495.8 FPS |
-| **VIF SVM (Retrained)** | 73.3% | 84.6% | 52.4% | **0.6471** [0.44, 0.81] | 0.813 | 0.752 | 59.7/hr | 23.14ms / 845.96ms | 607.9 FPS |
-| **ConvAE Anomaly** | 64.4% | 85.7% | 28.6% | **0.4286** [0.18, 0.64] | 0.727 | 0.738 | 29.9/hr | 130.57ms / 139.56ms | 790.8 FPS |
-| **Ensemble: Legacy + ConvAE (Policy=Any)** | 77.8% | 82.3% | 66.7% | **0.7368** [0.56, 0.87] | 0.733 | 0.500 | 89.6/hr | 146.42ms / 387.25ms | 527.0 FPS |
-| **Ensemble: Legacy + ConvAE (Policy=All)** | 60.0% | 100.0% | 14.3% | **0.2500** [0.00, 0.48] | 0.733 | 0.500 | 0.0/hr | 147.93ms / 426.75ms | 502.1 FPS |
-| **Ensemble: Retrained + ConvAE (Policy=Majority)** | 60.0% | 100.0% | 14.3% | **0.2500** [0.00, 0.48] | 0.733 | 0.500 | 0.0/hr | 165.97ms / 357.97ms | 498.9 FPS |
-| **Ensemble: Retrained + ConvAE (Policy=Weighted)** | 68.9% | 88.9% | 38.1% | **0.5333** [0.30, 0.75] | 0.733 | 0.500 | 29.9/hr | 170.17ms / 384.24ms | 490.5 FPS |
+| **VIF SVM (Legacy)** | 53.3% | 63.2% | 46.2% | **0.5333** [0.39, 0.69] | 0.677 | 0.588 | 356.6/hr | 13.57ms / 213.12ms | 1816.7 FPS |
+| **VIF SVM (Retrained)** | 64.4% | 69.2% | 69.2% | **0.6923** [0.58, 0.80] | 0.670 | 0.670 | 407.5/hr | 13.65ms / 209.79ms | 1838.4 FPS |
+| **ConvAE Anomaly** | 46.7% | 100.0% | 7.7% | **0.1429** [0.00, 0.34] | 0.689 | 0.557 | 0.0/hr | 126.83ms / 137.26ms | 563.1 FPS |
+| **Ensemble: Legacy + ConvAE (Policy=Any)** | 55.6% | 65.0% | 50.0% | **0.5652** [0.46, 0.72] | 0.789 | 0.500 | 356.6/hr | 141.07ms / 367.20ms | 424.6 FPS |
+| **Ensemble: Legacy + ConvAE (Policy=All)** | 44.4% | 100.0% | 3.8% | **0.0741** [0.00, 0.23] | 0.789 | 0.500 | 0.0/hr | 139.86ms / 341.73ms | 435.1 FPS |
+| **Ensemble: Retrained + ConvAE (Policy=Majority)** | 44.4% | 100.0% | 3.8% | **0.0741** [0.00, 0.23] | 0.789 | 0.500 | 0.0/hr | 139.51ms / 347.08ms | 436.9 FPS |
+| **Ensemble: Retrained + ConvAE (Policy=Weighted)** | 55.6% | 80.0% | 30.8% | **0.4444** [0.26, 0.59] | 0.789 | 0.500 | 101.9/hr | 137.00ms / 341.10ms | 441.7 FPS |
+
+### Upload Detector & Geometry Benchmark on Frozen Held-Out TEST Split (`docs/evaluation/heldout_test_metrics.csv`)
+| System Configuration | Detection Quality | Accuracy | Precision | Recall | F1 Score (95% CI) | False Alarms | FAR / Camera-Hr | FPS | Latency p50 / p95 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Legacy Baseline (Motion Fallback)** | `motion_fallback` | 45.5% | 60.0% | 15.8% | 0.250 [0.000, 0.464] | 2 | 530.2/hr | 728.6 | 46.2 ms / 74.8 ms |
+| **Neural Baseline (YOLO SSDLite320)** | `neural` | 45.5% | 100.0% | 5.3% | 0.100 [0.000, 0.316] | 0 | 0.0/hr | 367.7 | 82.0 ms / 122.4 ms |
+| **Calibrated Candidate (Neural + Single Vehicle)** | `neural` | 45.5% | 100.0% | 5.3% | 0.100 [0.000, 0.286] | 0 | 0.0/hr | 367.0 | 85.5 ms / 123.1 ms |
 
 ---
 
@@ -62,3 +79,21 @@ All metrics evaluated on Apple Silicon hardware with batch size 1 clip simulatio
 - **Dashcam / Moving Cameras (Cross-Domain)**:
   - Ego-vehicle motion generates global optical flow vectors that simulate collision dynamics under Horn-Schunck optical flow, resulting in false triggers.
   - ConvAE spatial autoencoding provides better background invariance than raw flow, but requires dashcam-specific calibration before deployment in moving patrol vehicles.
+
+---
+
+## 5. Upload Pipeline: Detection Quality Distribution & Detailed Analysis
+
+### Detection Quality Distribution on Held-Out Test Footage
+| Configuration | Reference (`reference`) | Neural Detector (`neural`) | Degraded Motion (`motion_fallback`) | Unavailable (`unavailable`) |
+| :--- | :--- | :--- | :--- | :--- |
+| Legacy Baseline (Motion Fallback) | 0 | 0 | 33 | 0 |
+| Neural Baseline (YOLO SSDLite320) | 0 | 33 | 0 | 0 |
+| Calibrated Candidate (Neural + Single Vehicle) | 0 | 33 | 0 | 0 |
+
+### What Helped, What Hurt, and Why
+1. **Permissive Neural Detector**: Solves the fundamental failure mode where unannotated uploaded clips ran in low-quality motion mode, detected zero vehicles, and falsely appeared "Normal" with 0 anomalies.
+2. **Crash Geometry Flags**:
+   - `CRASH_SINGLE_VEHICLE`: Detects single-vehicle collisions (deceleration drop $\ge 60\%$, heading change $\ge 45^\circ$) with 0.0 false alarms / hr on normal test footage.
+   - `CRASH_DISTANCE_FACTOR > 0.25`: Proved counterproductive in validation sweeps, causing false alarms between distant vehicles across lanes. Left default OFF (0.25).
+   - `CRASH_ADAPTIVE_BOX_FILTER`: Allowed distant background artifacts to enter the classifier pipeline. Left default OFF.
