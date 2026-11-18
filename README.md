@@ -506,7 +506,8 @@ Review and set the appropriate environment flags, then click **Re-run Upload** (
 | Environment Variable | Default | Allowed Values | Description & Operational Trade-offs |
 | :--- | :--- | :--- | :--- |
 | `ARGUS_DETECTOR` | `auto` | `auto`, `yolo`, `legacy`, `motion` | Vehicle detector backend. For uploads, `auto` uses `yolo` if weights exist, falling back to `motion`. `legacy` uses registered SHA-256 box files. |
-| `ARGUS_DETECTOR_CONFIDENCE` | `0.35` | Float (0.10 - 0.90) | Minimum confidence for neural vehicle detection (car, motorcycle, bus, truck). Lower for night/rain footage. |
+| `ARGUS_DETECTOR_CONFIDENCE` | `0.35` | Float (0.05 - 0.95) | Minimum confidence for neural vehicle detection (car, motorcycle, bus, truck). Calibrated optimal threshold for CCTV is `0.20`. |
+| `ARGUS_DETECTOR_INPUT_SIZE` | `320x320` | String (`<W>x<H>`) | Neural detector input resolution. Set to `640x360` to improve distant vehicle recall on high-resolution CCTV. |
 | `ARGUS_DETECTOR_STRIDE` | `1` | Integer ($\ge 1$) | Frame detection stride. Set to `2` or `3` to boost FPS by interpolating intermediate frames with MOSSE. |
 | `ARGUS_TRACE` | `false` | `true`, `false` | When enabled, logs structured per-batch JSONL diagnostic telemetry to `artifacts/traces/<run_id>.jsonl`. |
 | `CRASH_SINGLE_VEHICLE` | `false` | `true`, `false` | Enables single-vehicle crash analysis (guardrail impacts, spinouts, pole strikes) based on abrupt deceleration and heading shifts. |
@@ -519,20 +520,23 @@ Review and set the appropriate environment flags, then click **Re-run Upload** (
 | `ARGUS_ENABLE_ENSEMBLE` | `false` | `true`, `false` | Activates multi-model scoring ensemble (`vif_svm` + `convae`). |
 | `ARGUS_CRASH_POLICY` | `any` | `any`, `all`, `majority`, `weighted` | Consensus decision policy for the multi-model scoring ensemble. |
 
+> [!TIP]
+> **Per-Run Overrides Without Restarting**: All parameters above can be adjusted interactively in the **Advanced Pipeline Settings** panel of the Input / Output Video Feeder without restarting the server stack or modifying environment variables. Run records persist their effective configuration for auditing and side-by-side run comparisons.
+
 ### Diagnostic Cause Taxonomy
 Each processed clip is analyzed across the four stages of the pipeline:
 
-| Primary Cause | Description | Typical Scenario | Remediation Flag |
-| :--- | :--- | :--- | :--- |
-| `LOW_QUALITY_DETECTION` | Run used degraded motion differencing fallback. | Uploaded clip without matching box file and without neural detector weights. | Run `python scripts/download_models.py --model ssdlite320-mobilenet`. |
-| `NO_DETECTIONS` | Vehicle detector generated no candidate boxes. | Night time, heavy rain, or distant vehicles below detector confidence. | Lower `ARGUS_DETECTOR_CONFIDENCE=0.25`. |
-| `SINGLE_VEHICLE` | Accident involves only one vehicle (guardrail collision, rollover, pole strike). | Standard pipeline strictly requires pairs of colliding trackers (`itertools.combinations(trackers, 2)`). | `CRASH_SINGLE_VEHICLE=true` |
-| `BELOW_SPEED` | Relative tracker speed below moving threshold. | Creeping collisions or post-collision stationary phases. | Adjust speed threshold or evaluate initial impact frames. |
-| `TOO_FAR` | Vehicle bounding box centroid distance exceeds collision search radius `(size_a + size_b) * factor`. | Glancing collisions, side-swipes, or large trucks with offset centroids. | `CRASH_DISTANCE_FACTOR=0.35` (default 0.25). |
-| `FILTERED_BOX_SIZE` | Tracked bounding box rejected by geometric filter (width < 50 px, height $\le$ 28 px). | Distant highway cameras, high-mounted overhead CCTV, or low-resolution video (e.g., 320x240). | `CRASH_ADAPTIVE_BOX_FILTER=true` |
-| `FILTERED_ASPECT_RATIO` | Bounding box rejected by aspect ratio filter ($aspect < 0.20$ or $aspect > 5.0$). | Occlusions or partial vehicle views near frame edges. | Inspect camera placement and angle. |
-| `CLASSIFIER_LOW_SCORE` | Violent Flow (ViF) + SVM confidence score fell below decision boundary (0.50). | Slow-motion impacts, minimal turbulent optical flow, or occlusion. | `CRASH_CLASSIFIER_THRESHOLD=0.40` or enable multi-model ensemble `ARGUS_ENABLE_ENSEMBLE=true`. |
-| `LABEL_SUSPECT` | Visual ground truth contradicts legacy filename/manifest (e.g., near-miss, off-camera accident, unverified label). | Non-collision incidents, traffic congestion marked as accidents. | Verify ground truth via contact sheet audit; unverified clips are marked `unknown` and omitted from scoring. |
+| Primary Cause | Description | Typical Scenario | Remediation Setting | False Alarm Trade-off |
+| :--- | :--- | :--- | :--- | :--- |
+| `LOW_QUALITY_DETECTION` | Run used degraded motion differencing fallback. | Uploaded clip without matching box file and without neural detector weights. | Install weights via `python scripts/download_models.py --model ssdlite320-mobilenet`. | Motion fallback creates uncalibrated boxes and high false alarms. |
+| `NO_DETECTIONS` | Vehicle detector generated no candidate boxes. | Night time, heavy rain, or distant vehicles below detector confidence. | Lower **Detector Confidence** (e.g. from 0.35 to 0.20 in Advanced Settings). | Lowering confidence increases false positives on non-vehicle shapes. |
+| `SINGLE_VEHICLE` | Accident involves only one vehicle (guardrail collision, rollover, pole strike). | Standard pipeline strictly requires pairs of colliding trackers (`itertools.combinations(trackers, 2)`). | Enable **Single-Vehicle Crash Analysis** in Advanced Settings. | May flag aggressive normal braking or sharp turns as accidents. |
+| `BOX_TOO_SMALL` / `FILTERED_BOX_SIZE` | Tracked bounding box rejected by geometric filter (width < 50 px, height $\le$ 28 px). | Distant highway cameras, high-mounted overhead CCTV, or low-resolution video (e.g., 320x240). | Enable **Adaptive Bounding Box Filter** in Advanced Settings. | Admits tiny distant movement patches; measured at +15% FAR in sweeps. |
+| `TOO_FAR` | Vehicle bounding box centroid distance exceeds collision search radius `(size_a + size_b) * factor`. | Glancing collisions, side-swipes, or large trucks with offset centroids. | Increase **Distance Factor** (e.g. from 0.25 to 0.33 in Advanced Settings). | Vehicles in adjacent lanes may falsely trigger collision geometry. |
+| `BELOW_SPEED` | Relative tracker speed below moving threshold. | Creeping collisions or post-collision stationary phases. | Adjust speed threshold or evaluate initial impact frames. | May flag slow creeping traffic. |
+| `FILTERED_ASPECT_RATIO` | Bounding box rejected by aspect ratio filter ($aspect < 0.20$ or $aspect > 5.0$). | Occlusions or partial vehicle views near frame edges. | Inspect camera placement and angle. | N/A |
+| `CLASSIFIER_LOW_SCORE` | Violent Flow (ViF) + SVM confidence score fell below decision boundary (0.50). | Slow-motion impacts, minimal turbulent optical flow, or occlusion. | Lower classifier threshold in System Settings or enable multi-model ensemble (`ARGUS_ENABLE_ENSEMBLE=true`). | Directly increases false alarm frequency on normal traffic flows. |
+| `LABEL_SUSPECT` | Visual ground truth contradicts legacy filename/manifest (e.g., near-miss, off-camera accident, unverified label). | Non-collision incidents, traffic congestion marked as accidents. | Verify ground truth via contact sheet audit; unverified clips are marked `unknown` and omitted from scoring. | N/A |
 
 ### Inspecting Clip Traces in the UI
 1. Navigate to **Input / Output Video Feeder**.

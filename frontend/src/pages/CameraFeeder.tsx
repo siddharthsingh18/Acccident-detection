@@ -29,6 +29,7 @@ import {
   PlayCircle,
   AlertCircle,
   ExternalLink,
+  FileText,
 } from 'lucide-react';
 import { api, type FeedResponse, type Incident, type SampleItem } from '@/lib/api';
 import { classifyBatchOutcome, generateBatchResultsCsv, downloadCsv, type BatchResultItem } from '@/lib/batchRunner';
@@ -38,6 +39,64 @@ import { IncidentVideoModal } from '@/components/IncidentVideoModal';
 import { ModelScoreBreakdown } from '@/components/ModelScoreBreakdown';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { formatScore, scorerLabel } from '@/lib/modelFormatters';
+
+const TRACE_REASONS_INFO: Record<string, {
+  reason: string;
+  settingName: string;
+  actionText: string;
+  targetSetting: 'confidence' | 'single_vehicle' | 'adaptive_box' | 'distance' | 'classifier' | 'detector';
+  warning: string;
+}> = {
+  NO_DETECTIONS: {
+    reason: 'NO_DETECTIONS',
+    settingName: 'Detector Confidence',
+    actionText: 'Adjust Detector Confidence in Advanced Settings',
+    targetSetting: 'confidence',
+    warning: 'Lowering confidence threshold increases false detections from road signs and background shadows.',
+  },
+  SINGLE_VEHICLE: {
+    reason: 'SINGLE_VEHICLE',
+    settingName: 'Single-Vehicle Crash Analysis',
+    actionText: 'Enable Single-Vehicle Mode in Advanced Settings',
+    targetSetting: 'single_vehicle',
+    warning: 'Single-vehicle mode may flag aggressive braking or sharp evasive maneuvers as accidents.',
+  },
+  BOX_TOO_SMALL: {
+    reason: 'BOX_TOO_SMALL',
+    settingName: 'Adaptive Bounding Box Filter',
+    actionText: 'Enable Adaptive Box Filter in Advanced Settings',
+    targetSetting: 'adaptive_box',
+    warning: 'Enabling adaptive box filter admits tiny distant movement patches and increases false alarm rate (measured at +15% FAR in sweeps).',
+  },
+  FILTERED_BOX_SIZE: {
+    reason: 'BOX_TOO_SMALL',
+    settingName: 'Adaptive Bounding Box Filter',
+    actionText: 'Enable Adaptive Box Filter in Advanced Settings',
+    targetSetting: 'adaptive_box',
+    warning: 'Enabling adaptive box filter admits tiny distant movement patches and increases false alarm rate (measured at +15% FAR in sweeps).',
+  },
+  TOO_FAR: {
+    reason: 'TOO_FAR',
+    settingName: 'Proximity Distance Factor',
+    actionText: 'Adjust Distance Factor in Advanced Settings',
+    targetSetting: 'distance',
+    warning: 'Widening collision proximity distance factor allows vehicles in adjacent lanes to falsely trigger collision geometry.',
+  },
+  CLASSIFIER_LOW_SCORE: {
+    reason: 'CLASSIFIER_LOW_SCORE',
+    settingName: 'Classifier Confidence Threshold',
+    actionText: 'Review System Classifier Settings',
+    targetSetting: 'classifier',
+    warning: 'Lowering classifier threshold directly admits low-confidence motion anomalies and elevates false alarm frequency.',
+  },
+  LOW_QUALITY_DETECTION: {
+    reason: 'LOW_QUALITY_DETECTION',
+    settingName: 'Permissive Neural Detector',
+    actionText: 'Verify Neural Detector Weights',
+    targetSetting: 'detector',
+    warning: 'Motion fallback mode produces uncalibrated bounding boxes and false motion alerts.',
+  },
+};
 
 const EGYPTIAN_CITIES = [
   'Cairo',
@@ -192,7 +251,14 @@ export function CameraFeeder() {
 
   useEffect(() => {
     if (typeof api.getActiveConfig === 'function') {
-      api.getActiveConfig().then(setActiveConfig).catch(() => {});
+      try {
+        const res = api.getActiveConfig();
+        if (res && typeof res.then === 'function') {
+          res.then(setActiveConfig).catch(() => {});
+        }
+      } catch {
+        // ignore
+      }
     }
   }, []);
 
@@ -219,6 +285,18 @@ export function CameraFeeder() {
     (isSingleVehicleChanged ? 1 : 0) +
     (isFrameStrideChanged ? 1 : 0);
   const hasChangedSettings = changedSettingsCount > 0;
+  const [activeTraceSummary, setActiveTraceSummary] = useState<any>(null);
+  const [isActiveTraceOpen, setIsActiveTraceOpen] = useState<boolean>(false);
+
+  const handleTraceActionClick = (_target: string) => {
+    setIsAdvancedOpen(true);
+    setTimeout(() => {
+      const panel = document.getElementById('advanced-settings-accordion');
+      if (panel) {
+        panel.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 50);
+  };
 
   // Batch elapsed seconds counter
   useEffect(() => {
@@ -746,6 +824,19 @@ export function CameraFeeder() {
               setOutputIncident(null);
               setOutputVideoUrl(inputVideoUrl);
             }
+
+            if (typeof api.getRunTrace === 'function') {
+              try {
+                const trPromise = api.getRunTrace(feedId);
+                if (trPromise && typeof trPromise.then === 'function') {
+                  trPromise.then((tr) => {
+                    if (tr && tr.has_trace && tr.summary) {
+                      setActiveTraceSummary(tr.summary);
+                    }
+                  }).catch(() => {});
+                }
+              } catch {}
+            }
           } else if (updated.status === 'failed') {
             setDetectionOutcome('idle');
             setErrorMessage(updated.error || 'Video processing failed in Argus pipeline.');
@@ -829,6 +920,19 @@ export function CameraFeeder() {
                 setDetectionOutcome('normal');
                 setOutputIncident(null);
                 setOutputVideoUrl(inputVideoUrl);
+              }
+
+              if (typeof api.getRunTrace === 'function') {
+                try {
+                  const trPromise = api.getRunTrace(updated.id);
+                  if (trPromise && typeof trPromise.then === 'function') {
+                    trPromise.then((tr) => {
+                      if (tr && tr.has_trace && tr.summary) {
+                        setActiveTraceSummary(tr.summary);
+                      }
+                    }).catch(() => {});
+                  }
+                } catch {}
               }
             } else if (updated.status === 'failed') {
               setDetectionOutcome('idle');
@@ -1390,6 +1494,7 @@ export function CameraFeeder() {
           <div className="pt-2 border-t border-slate-800/80">
             <button
               type="button"
+              id="advanced-settings-accordion"
               data-testid="advanced-settings-toggle"
               onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
               className="w-full flex items-center justify-between text-xs font-mono font-medium text-slate-300 hover:text-white py-1 px-1 transition"
@@ -1781,9 +1886,9 @@ export function CameraFeeder() {
                         className="p-4 rounded-xl border border-amber-500/40 bg-slate-900/90 text-white space-y-1.5 animate-fade-in"
                       >
                         <div className="flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                           <h4 className="font-bold text-xs text-amber-300 uppercase tracking-wider font-mono">
-                            No vehicles were detected in this video
+                            No alert, but detection was low quality. This result is not reliable. (No vehicles were detected in this video)
                           </h4>
                         </div>
                         <p className="text-xs text-slate-300">
@@ -1915,6 +2020,12 @@ export function CameraFeeder() {
                     </span>
                   </div>
                   <div>
+                    <span className="text-slate-500 mr-1">Confidence:</span>
+                    <span data-testid="run-summary-confidence" className="text-cyan-300 font-semibold">
+                      {((activeFeed?.effective_config?.detector_confidence ?? activeFeed?.detector_config?.detector_confidence ?? advConfidence ?? 0.35)).toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
                     <span className="text-slate-500 mr-1">Vehicles Seen:</span>
                     <span data-testid="run-summary-vehicles" className="text-white font-semibold">
                       {activeFeed?.vehicles_detected_count ?? 0}
@@ -1938,6 +2049,126 @@ export function CameraFeeder() {
                     >
                       {detectionOutcome === 'accident' ? Math.max(1, activeFeed?.anomalies_detected ?? 1) : (activeFeed?.anomalies_detected ?? 0)}
                     </span>
+                  </div>
+                  {activeTraceSummary && (
+                    <button
+                      type="button"
+                      data-testid="toggle-active-trace-btn"
+                      onClick={() => setIsActiveTraceOpen(!isActiveTraceOpen)}
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] text-cyan-400 font-mono font-medium transition cursor-pointer"
+                    >
+                      <FileText className="w-3 h-3" />
+                      <span>{isActiveTraceOpen ? 'Hide Trace' : 'Trace Diagnostics'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Active Feed Trace Diagnostics Drawer */}
+            {isActiveTraceOpen && activeTraceSummary && (
+              <div data-testid="active-trace-drawer" className="mt-3 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-3 text-xs font-mono">
+                <div className="font-bold text-cyan-400 flex items-center justify-between">
+                  <span>Active Feed Trace Diagnostics</span>
+                  <span
+                    data-testid="active-trace-primary-cause"
+                    className={`font-mono text-[10px] px-2 py-0.5 rounded border ${
+                      activeTraceSummary.primary_cause === 'LOW_QUALITY_DETECTION'
+                        ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    Cause: {activeTraceSummary.primary_cause || 'UNKNOWN'}
+                  </span>
+                </div>
+
+                {(() => {
+                  const rawCause = activeTraceSummary.primary_cause || 'UNKNOWN';
+                  const normalizedCause = (rawCause === 'FILTERED_BOX_SIZE' ? 'BOX_TOO_SMALL' : rawCause);
+                  const causeInfo = TRACE_REASONS_INFO[rawCause] || TRACE_REASONS_INFO[normalizedCause];
+
+                  if (rawCause === 'LOW_QUALITY_DETECTION') {
+                    return (
+                      <div className="space-y-2">
+                        <div
+                          data-testid="active-trace-low-quality-warning"
+                          className="p-2 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-1.5"
+                        >
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span>Video ran in degraded motion fallback mode. Vehicle detections and trajectory analysis are unreliable.</span>
+                        </div>
+                        {causeInfo && (
+                          <div className="p-2 rounded bg-slate-900 border border-slate-800 flex items-center justify-between gap-2 text-[11px]">
+                            <span className="text-slate-400">Remediation: <strong className="text-white">{causeInfo.settingName}</strong></span>
+                            <button
+                              type="button"
+                              data-testid="active-trace-action-btn"
+                              onClick={() => handleTraceActionClick(causeInfo.targetSetting)}
+                              className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer"
+                            >
+                              {causeInfo.actionText}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (causeInfo) {
+                    return (
+                      <div data-testid={`active-trace-remediation-${rawCause}`} className="p-2.5 rounded bg-slate-900 border border-slate-800 space-y-2 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-400 font-mono text-[11px]">
+                            Affecting Setting: <strong className="text-white">{causeInfo.settingName}</strong>
+                          </span>
+                          <button
+                            type="button"
+                            data-testid="active-trace-action-btn"
+                            onClick={() => handleTraceActionClick(causeInfo.targetSetting)}
+                            className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 cursor-pointer"
+                          >
+                            <span>{causeInfo.actionText}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <div
+                          data-testid="active-trace-false-alarm-warning"
+                          className="p-2 rounded bg-amber-950/30 border border-amber-500/40 text-amber-300 text-[11px] flex items-start gap-1.5"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                          <span><strong>False Alarm Warning:</strong> {causeInfo.warning}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
+
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 font-mono text-[11px]">
+                  <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                    <span className="text-slate-500 block text-[9px] uppercase">Detector</span>
+                    <span className="text-slate-200 font-bold">{activeTraceSummary.detector_used || 'legacy'}</span>
+                  </div>
+                  <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                    <span className="text-slate-500 block text-[9px] uppercase">Quality</span>
+                    <span className="text-slate-200 font-bold">{activeFeed?.detection_quality || activeTraceSummary.detection_quality || 'unknown'}</span>
+                  </div>
+                  <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                    <span className="text-slate-500 block text-[9px] uppercase">Trackers</span>
+                    <span className="text-slate-200 font-bold">{activeTraceSummary.max_trackers ?? 0}</span>
+                  </div>
+                  <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                    <span className="text-slate-500 block text-[9px] uppercase">Batches</span>
+                    <span className="text-slate-200 font-bold">{activeTraceSummary.batches_processed || activeTraceSummary.total_batches || 1}</span>
+                  </div>
+                  <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                    <span className="text-slate-500 block text-[9px] uppercase">Dominant Filter</span>
+                    <span className="text-amber-400 font-bold">{activeTraceSummary.dominant_filter || 'NONE'}</span>
+                  </div>
+                  <div className="bg-slate-900 p-2 rounded border border-slate-800">
+                    <span className="text-slate-500 block text-[9px] uppercase">Max Score</span>
+                    <span className="text-cyan-300 font-bold">{activeTraceSummary.max_classifier_score != null ? activeTraceSummary.max_classifier_score.toFixed(4) : '--'}</span>
                   </div>
                 </div>
               </div>
@@ -2470,15 +2701,70 @@ export function CameraFeeder() {
                                     Cause: {r.trace_summary.primary_cause || 'UNKNOWN'}
                                   </span>
                                 </div>
-                                {r.trace_summary.primary_cause === 'LOW_QUALITY_DETECTION' && (
-                                  <div
-                                    data-testid="trace-low-quality-warning"
-                                    className="p-2 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-1.5"
-                                  >
-                                    <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span>Video ran in degraded motion fallback mode. Vehicle detections and trajectory analysis are unreliable.</span>
-                                  </div>
-                                )}
+
+                                {/* Remediation Link and False Alarm Warning for Diagnosed Cause */}
+                                {(() => {
+                                  const rawCause = r.trace_summary.primary_cause || 'UNKNOWN';
+                                  const normalizedCause = (rawCause === 'FILTERED_BOX_SIZE' ? 'BOX_TOO_SMALL' : rawCause);
+                                  const causeInfo = TRACE_REASONS_INFO[rawCause] || TRACE_REASONS_INFO[normalizedCause];
+
+                                  if (rawCause === 'LOW_QUALITY_DETECTION') {
+                                    return (
+                                      <div className="space-y-2">
+                                        <div
+                                          data-testid="trace-low-quality-warning"
+                                          className="p-2 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[11px] flex items-center gap-1.5"
+                                        >
+                                          <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                          <span>Video ran in degraded motion fallback mode. Vehicle detections and trajectory analysis are unreliable.</span>
+                                        </div>
+                                        {causeInfo && (
+                                          <div data-testid={`trace-remediation-${rawCause}`} className="p-2 rounded bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-[11px]">
+                                            <span className="text-slate-400">Remediation: <strong className="text-white">{causeInfo.settingName}</strong></span>
+                                            <button
+                                              type="button"
+                                              data-testid="trace-action-btn"
+                                              onClick={() => handleTraceActionClick(causeInfo.targetSetting)}
+                                              className="text-cyan-400 hover:text-cyan-300 font-semibold underline cursor-pointer"
+                                            >
+                                              {causeInfo.actionText}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+
+                                  if (causeInfo) {
+                                    return (
+                                      <div data-testid={`trace-remediation-${rawCause}`} className="p-2.5 rounded bg-slate-950 border border-slate-800 space-y-2 text-xs">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="text-slate-400 font-mono text-[11px]">
+                                            Affecting Setting: <strong className="text-white">{causeInfo.settingName}</strong>
+                                          </span>
+                                          <button
+                                            type="button"
+                                            data-testid="trace-action-btn"
+                                            onClick={() => handleTraceActionClick(causeInfo.targetSetting)}
+                                            className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 cursor-pointer"
+                                          >
+                                            <span>{causeInfo.actionText}</span>
+                                            <ExternalLink className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                        <div
+                                          data-testid="trace-false-alarm-warning"
+                                          className="p-2 rounded bg-amber-950/30 border border-amber-500/40 text-amber-300 text-[11px] flex items-start gap-1.5"
+                                        >
+                                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                          <span><strong>False Alarm Warning:</strong> {causeInfo.warning}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  return null;
+                                })()}
                                 <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 font-mono text-[11px]">
                                   <div className="bg-slate-950 p-2 rounded border border-slate-800">
                                     <span className="text-slate-500 block text-[9px] uppercase">Detector</span>

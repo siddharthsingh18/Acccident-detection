@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.0] - 2026-11-19
+
+### Added
+- **Grounded CCTV Vehicle Detection Evaluation Set (Phase 1)**:
+  - 200 diverse CCTV frames (`data/detection_eval/frames/`) sampled across day, night, and rain conditions from non-bundled camera groups.
+  - Zero leakage audit: 102 validation groups, 98 test groups, strictly independent from crash evaluation splits.
+  - Precision, Recall, F1, and AP@0.5 evaluation tool `scripts/eval_detector.py` with 95% bootstrap confidence intervals.
+  - Review HTML gallery tool `scripts/review_coco_boxes.py` and COCO ground truth annotations (`coco_annotations.json`).
+- **Permissive Neural Detector Audit & Validation Tuning (Phase 2)**:
+  - Licensing audit in `docs/licensing.md`: rejected AGPL-3.0 copyleft models; selected BSD-3 Torchvision SSDLite320 MobileNetV3 and Apache-2.0 YOLOX ONNX.
+  - Validation confidence sweep (0.10 to 0.60): selected peak F1 threshold **0.20** (F1 0.9561 on validation).
+  - Frozen held-out test evaluation: Precision 0.9194 [95% CI: 0.8478, 0.9825], Recall 1.0000, F1 0.9580, AP 0.9938 at 17.8 FPS.
+  - Model card published at `docs/model_cards/ssdlite320_mobilenet_v3.md`.
+- **Per-Run Configuration Overrides & Isolation (Phase 3)**:
+  - Advanced Pipeline Settings panel in UI: interactive confidence slider, adaptive box toggle, distance factor slider, single-vehicle mode toggle, and frame stride select without restarting server stack.
+  - Backend bounds validation with 422 HTTP errors and SQLite `effective_config` persistence.
+  - Subprocess argument passing ensuring complete process isolation between concurrent or sequential feed runs.
+  - Side-by-side run comparison modal and API (`GET /api/feeds/{id}/compare/{other_id}`).
+- **Crash-Level Effect & False Alarm Measurement (Phase 4)**:
+  - Validation sweep on 37 held-out CCTV clips: selected optimal candidate (Neural conf 0.20 + Single Vehicle + Distance 0.33) with zero false alarms (FAR 0.0/hr).
+  - Frozen evaluation on 33 held-out test clips: Precision 100.0%, Recall 10.5%, F1 0.191 [95% CI: 0.000, 0.400], FAR 0.0/camera-hour (substantially beating $\le 1.0$/hr target).
+  - Comprehensive plain-language report in `docs/evaluation/report.md` detailing domain limitations and why distance expansion and adaptive box remain default-OFF.
+- **UI Diagnostics & Trace Drawer Explainability (Phase 5)**:
+  - Run summary line displaying detector, detection quality, confidence used, vehicles seen, batches processed, and alert count.
+  - Guaranteed amber warning for `motion_fallback`, `unavailable`, and 0 vehicles seen ("No alert, but detection was low quality. This result is not reliable.").
+  - Interactive trace drawer diagnostic reasons (`NO_DETECTIONS`, `SINGLE_VEHICLE`, `BOX_TOO_SMALL`, `TOO_FAR`, `CLASSIFIER_LOW_SCORE`, `LOW_QUALITY_DETECTION`) with direct links to Advanced Settings and false-alarm risk warnings.
+  - Troubleshooting guide in `README.md` with diagnostic procedures and environment variable table.
+
 ## [2.3.0] - 2026-11-18
 
 ### Added
