@@ -31,7 +31,7 @@ from System.Data.CONSTANTS import (
 )
 from boxes.yoloFiles import loadFile
 from boxes.registry import lookup_box_file
-from System.Functions.Detector import get_detector
+from System.Functions.Detector import get_detector, ModernYoloDetector
 
 running = True
 
@@ -135,15 +135,27 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
 
     print(f"STATUS:PROCESSING:0:{total_frames}", flush=True)
 
-    detector = get_detector()
+    # Select detector and determine detection quality:
+    # 1. Registered videos with verified box files always use reference annotations (legacy parity)
+    # 2. Uploaded / unannotated videos auto-select permissive neural detector if weights are installed,
+    #    falling back to low-quality motion differencing if unavailable.
     if has_boxes:
+        detector = get_detector("legacy")
         detection_quality = "reference"
-    elif detector.name in ("yolo", "neural") and not detector.is_low_quality:
-        detection_quality = "neural"
-    elif detector.is_low_quality or detector.name in ("motion", "legacy") or not has_boxes:
-        detection_quality = "motion_fallback"
     else:
-        detection_quality = "unavailable"
+        env_detector = os.getenv("ARGUS_DETECTOR", os.getenv("DETECTOR", "auto")).strip().lower()
+        if env_detector == "motion":
+            detector = get_detector("motion")
+            detection_quality = "motion_fallback"
+        else:
+            neural = ModernYoloDetector()
+            if neural.is_available:
+                detector = neural
+                detection_quality = "neural"
+            else:
+                detector = get_detector("motion")
+                detection_quality = "motion_fallback"
+                print("WARNING: No neural detector available for this video; falling back to low-quality motion detection.", flush=True)
 
     if detection_quality == "motion_fallback":
         print("DETECTION_MODE:low-quality detection mode", flush=True)

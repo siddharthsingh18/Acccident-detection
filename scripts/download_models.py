@@ -14,16 +14,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
 
-# Registry of supported models, their SHA-256 hashes, licenses, and sources
+# Registry of supported models, their SHA-256 hashes, licenses, and sources (permissive licenses only)
 MODEL_REGISTRY = {
-    "yolov8n-onnx": {
-        "filename": "yolov8n.onnx",
-        "description": "YOLOv8 Nano ONNX model for vehicle detection (COCO classes)",
-        "license": "AGPL-3.0 (Commercial license required for proprietary use)",
-        "license_url": "https://github.com/ultralytics/ultralytics/blob/main/LICENSE",
-        "url": "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.onnx",
-        "sha256": "439ce8a6e7c10b7a4211a774641e16f39ddc95503b80b0653d9e802a4bfdd9be",
-    },
     "yolox-s-onnx": {
         "filename": "yolox_s.onnx",
         "description": "Megvii YOLOX-Small permissive object detector",
@@ -37,8 +29,8 @@ MODEL_REGISTRY = {
         "description": "PyTorch Torchvision SSDLite320 MobileNetV3 COCO vehicle detector",
         "license": "BSD-3-Clause (Permissive, fully MIT-compatible)",
         "license_url": "https://github.com/pytorch/vision/blob/main/LICENSE",
-        "url": "https://download.pytorch.org/models/ssdlite320_mobilenet_v3_large_coco-a7954395.pth",
-        "sha256": "a7954395982f6eefc4a1deca2dfd9f2df1ffcc71e723de4f552636f1c71286a0",
+        "url": "https://download.pytorch.org/models/ssdlite320_mobilenet_v3_large_coco-a79551df.pth",
+        "sha256": "a79551df90c79834bcd3bb3845ef9d966b5449a3a9b2833ae8404778ca5d65d2",
     }
 }
 
@@ -84,16 +76,26 @@ def download_model(model_key: str, force: bool = False) -> bool:
     temp_target = target_path.with_suffix(".download")
 
     try:
-        def progress_hook(block_num, block_size, total_size):
-            downloaded = block_num * block_size
-            if total_size > 0:
-                percent = min(100.0, downloaded * 100.0 / total_size)
-                mb_down = downloaded / (1024 * 1024)
-                mb_tot = total_size / (1024 * 1024)
-                sys.stdout.write(f"\rProgress: {percent:5.1f}% ({mb_down:5.1f}MB / {mb_tot:5.1f}MB)")
-                sys.stdout.flush()
-
-        urllib.request.urlretrieve(info["url"], temp_target, reporthook=progress_hook)
+        req = urllib.request.Request(
+            info["url"],
+            headers={"User-Agent": "Mozilla/5.0 (compatible; Argus/1.0; +https://github.com/argus)"}
+        )
+        with urllib.request.urlopen(req) as resp, open(temp_target, "wb") as out_f:
+            total_size = int(resp.headers.get("Content-Length", 0))
+            downloaded = 0
+            block_size = 65536
+            while True:
+                chunk = resp.read(block_size)
+                if not chunk:
+                    break
+                out_f.write(chunk)
+                downloaded += len(chunk)
+                if total_size > 0:
+                    percent = min(100.0, downloaded * 100.0 / total_size)
+                    mb_down = downloaded / (1024 * 1024)
+                    mb_tot = total_size / (1024 * 1024)
+                    sys.stdout.write(f"\rProgress: {percent:5.1f}% ({mb_down:5.1f}MB / {mb_tot:5.1f}MB)")
+                    sys.stdout.flush()
         print()
 
         # Compute SHA-256

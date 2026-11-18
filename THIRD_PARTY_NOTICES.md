@@ -115,4 +115,33 @@ SOFTWARE.
   - `artifacts/models/vif_svm_retrained.onnx` (Retrained on grouped CCTV train split with balanced class weighting).
 * **License:** MIT License.
 
+---
+
+## 9. Torchvision SSDLite320 MobileNetV3 (Permissive Neural Detector)
+
+* **Source:** [PyTorch Torchvision Model Zoo](https://github.com/pytorch/vision)
+* **Architecture:** SSDLite with MobileNetV3-Large backbone (Howard et al., 2019 / Sandler et al., 2018).
+* **Task:** Real-time object detection (COCO categories, filtered strictly to vehicle classes: car, motorcycle, bus, truck).
+* **License:** BSD 3-Clause License (fully MIT-compatible).
+* **Weights File:** `models/ssdlite320_mobilenet_v3_large.pth` (downloaded on demand; never tracked in git).
+* **Weights URL:** `https://download.pytorch.org/models/ssdlite320_mobilenet_v3_large_coco-a79551df.pth`
+* **Verified SHA-256:** `a79551df90c79834bcd3bb3845ef9d966b5449a3a9b2833ae8404778ca5d65d2`
+* **Downloader Tool:** `python scripts/download_models.py --model ssdlite320-mobilenet`
+* **Local Modifications:**
+  - Configurable vehicle confidence threshold (`ARGUS_DETECTOR_CONFIDENCE`, default 0.35).
+  - Configurable frame stride (`ARGUS_DETECTOR_STRIDE`, default 1) with temporal box persistence.
+  - Strict class filtering discarding non-vehicle classes (pedestrians, animals, furniture, signs).
+
+---
+
+## 10. Megvii YOLOX ONNX (Permissive ONNX Vehicle Detector)
+
+* **Source:** [Megvii-BaseDetection/YOLOX](https://github.com/Megvii-BaseDetection/YOLOX)
+* **Architecture:** Anchor-free object detector (Ge et al., 2021).
+* **License:** Apache License 2.0 (commercial and MIT-compatible).
+* **Model File:** `models/yolox_s.onnx` (optional on-demand download).
+* **Weights URL:** `https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_s.onnx`
+* **Verified SHA-256:** `b068bc56ba598c92fb38cf2ea31df12da3eeeb351e39a3f29dd11d1fa5020fd4`
+
+
 

@@ -12,15 +12,21 @@ def get_detector(name: Optional[str] = None) -> BaseDetector:
     Selected via configuration or environment variable (ARGUS_DETECTOR or DETECTOR).
     Options:
       - 'legacy' (DEFAULT): Reads pre-annotated dataset box files.
-      - 'yolo': Modern neural vehicle detector (Apache-2.0 / BSD / MIT).
+      - 'yolo' / 'neural': Modern permissive neural vehicle detector (BSD-3 / Apache-2.0).
+      - 'auto': Selects neural detector if available, otherwise legacy/motion.
       - 'motion': Naive frame differencing motion detector (low-quality fallback).
     """
     selected = (name or os.getenv("ARGUS_DETECTOR", os.getenv("DETECTOR", "legacy"))).strip().lower()
 
-    if selected == "yolo":
+    if selected in ("yolo", "neural"):
         return ModernYoloDetector()
     elif selected == "motion":
         return MotionFallbackDetector()
+    elif selected == "auto":
+        neural = ModernYoloDetector()
+        if neural.is_available:
+            return neural
+        return LegacyBoxFilesDetector()
     elif selected == "legacy":
         return LegacyBoxFilesDetector()
     else:

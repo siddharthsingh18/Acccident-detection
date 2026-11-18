@@ -49,3 +49,19 @@ By targeting **ONNX Runtime** (MIT license):
    - Provide `scripts/download_models.py` which checks SHA-256 integrity, prints model licensing terms, and saves models to `models/`.
 4. **Fallback Mechanism**:
    - If modern model weights are not found and `DETECTOR=yolo` is active, cleanly fall back to `MotionFallback` with an explicit warning in logs and in the UI feed status (`"low-quality detection mode"`).
+
+---
+
+## 4. Phase 3 Implementation & Model Cards
+
+### Primary Neural Detector: Torchvision SSDLite320-MobileNetV3
+- **License**: BSD 3-Clause (Permissive, 100% MIT-compatible).
+- **Weights**: Pretrained on COCO train2017.
+- **Weights File**: `models/ssdlite320_mobilenet_v3_large.pth` (14,069,355 bytes).
+- **SHA-256**: `a79551df90c79834bcd3bb3845ef9d966b5449a3a9b2833ae8404778ca5d65d2`.
+- **Vehicle Filtering**: Category IDs `{3: car, 4: motorcycle, 6: bus, 8: truck}`. All non-vehicle classes are rejected.
+- **Tuning & Controls**:
+  - `ARGUS_DETECTOR_CONFIDENCE`: Float threshold (default `0.35`).
+  - `ARGUS_DETECTOR_STRIDE`: Frame stride with box persistence for real-time CPU throughput (default `1`).
+- **Auto-Selection**: Uploaded videos with no registered box file automatically use `ModernYoloDetector` when weights are installed (`detection_quality="neural"`). If weights are missing, they degrade cleanly to `MotionFallbackDetector` (`detection_quality="motion_fallback"`). Pre-annotated dataset clips continue using reference box files (`detection_quality="reference"`).
+
