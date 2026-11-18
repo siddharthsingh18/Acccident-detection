@@ -147,6 +147,15 @@ def run_headless_camera(video_path: str, camera_id: int, city: str, district: st
         if env_detector == "motion":
             detector = get_detector("motion")
             detection_quality = "motion_fallback"
+        elif env_detector in ("yolo", "neural"):
+            neural = ModernYoloDetector()
+            if neural.is_available:
+                detector = neural
+                detection_quality = "neural"
+            else:
+                detector = get_detector("motion")
+                detection_quality = "unavailable"
+                print("WARNING: Neural detector requested but unavailable (weights missing).", flush=True)
         else:
             neural = ModernYoloDetector()
             if neural.is_available:

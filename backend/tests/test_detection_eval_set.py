@@ -113,3 +113,4 @@ def test_eval_detector_script_metrics():
     assert metrics["recall"] == 1.0
     assert metrics["f1"] > 0.7
     assert metrics["ap"] > 0.8
+

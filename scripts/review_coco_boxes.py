@@ -105,3 +105,4 @@ def generate_review_gallery():
 
 if __name__ == "__main__":
     generate_review_gallery()
+

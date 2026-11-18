@@ -61,10 +61,23 @@ class ModernYoloDetector(BaseDetector):
             if frame_stride is not None
             else int(os.getenv("ARGUS_DETECTOR_STRIDE", "1"))
         )
-        self.target_size = target_size or (
-            int(os.getenv("ARGUS_INFERENCE_WIDTH", "480")),
-            int(os.getenv("ARGUS_INFERENCE_HEIGHT", "360")),
-        )
+        input_size_env = os.getenv("ARGUS_DETECTOR_INPUT_SIZE")
+        if target_size is not None:
+            self.target_size = target_size
+        elif input_size_env:
+            parts = input_size_env.replace(",", "x").split("x")
+            if len(parts) == 2 and parts[0].strip().isdigit() and parts[1].strip().isdigit():
+                self.target_size = (int(parts[0].strip()), int(parts[1].strip()))
+            else:
+                self.target_size = (
+                    int(os.getenv("ARGUS_INFERENCE_WIDTH", "480")),
+                    int(os.getenv("ARGUS_INFERENCE_HEIGHT", "360")),
+                )
+        else:
+            self.target_size = (
+                int(os.getenv("ARGUS_INFERENCE_WIDTH", "480")),
+                int(os.getenv("ARGUS_INFERENCE_HEIGHT", "360")),
+            )
         self.model_path = model_path
         self._motion_fallback = MotionFallbackDetector()
         self._backend: Optional[str] = None

@@ -1,0 +1,2 @@
+split,frozen_confidence,detector_backend,frames,precision,precision_ci95_low,precision_ci95_high,recall,recall_ci95_low,recall_ci95_high,f1,f1_ci95_low,f1_ci95_high,ap,ap_ci95_low,ap_ci95_high,fps,latency_ms,tp,fp,fn,gt
+test,0.2,torchvision,98,0.9194,0.8478,0.9825,1.0,1.0,1.0,0.958,0.9176,0.9912,0.9938,0.9834,1.0,17.8,56.23,57,5,0,57
