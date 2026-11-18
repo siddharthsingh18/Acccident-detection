@@ -557,7 +557,8 @@ async def get_run_trace(run_id: str):
     """Retrieve diagnostic pipeline telemetry explaining why an alert did or did not fire."""
     from argus_ml.trace import read_run_trace, summarize_run_trace
     records = read_run_trace(run_id)
-    feed_item = feed_manager.get_feed(run_id)
+    raw_feed = feed_manager.feeds.get(run_id)
+    feed_item = raw_feed.to_response() if raw_feed else None
     quality = feed_item.detection_quality if feed_item else None
     detector_name = feed_item.detector_name if feed_item else None
 

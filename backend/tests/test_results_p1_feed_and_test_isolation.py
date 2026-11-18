@@ -129,3 +129,57 @@ def test_camera_worker_short_clip_padding(tmp_path, capsys):
     assert "STATUS:DONE" in captured
     assert "PROGRESS:10:10" in captured
 
+
+def test_camera_worker_short_clip_vehicles_and_metadata(tmp_path, capsys, monkeypatch):
+    """Verify camera_worker tracks max_vehicles_seen and passes metadata on short clips (< 30 frames)."""
+    from app.services import camera_worker
+
+    # Create a 10-frame test video
+    short_vid = tmp_path / "short_clip_boxes.avi"
+    fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    out = cv2.VideoWriter(str(short_vid), fourcc, 30.0, (480, 360))
+    for i in range(10):
+        frame = np.full((360, 480, 3), i * 20, dtype=np.uint8)
+        out.write(frame)
+    out.release()
+
+    sent_messages = []
+
+    def mock_send_feed(ip, port, msg):
+        sent_messages.append(msg)
+
+    monkeypatch.setattr(camera_worker, "send_feed_to_master", mock_send_feed)
+
+    class MockDetector:
+        name = "mock_neural"
+        is_available = True
+        is_low_quality = False
+
+        def detect(self, *args, **kwargs):
+            return [(10, 20, 50, 60), (100, 100, 150, 150)]
+
+    monkeypatch.setattr(camera_worker, "ModernYoloDetector", lambda: MockDetector())
+    monkeypatch.setenv("ARGUS_DETECTOR", "mock_neural")
+
+    camera_worker.run_headless_camera(
+        video_path=str(short_vid),
+        camera_id=9998,
+        city="Giza",
+        district="District 3",
+        master_ip="127.0.0.1",
+        master_port=10099,
+        feed_id="feed-short-mock",
+        is_test=True,
+    )
+
+    captured = capsys.readouterr().out
+    assert "VEHICLES_DETECTED:2" in captured
+    assert "STATUS:DONE" in captured
+    assert len(sent_messages) == 1
+    msg = sent_messages[0]
+    assert msg["DETECTION_QUALITY"] == "neural"
+    assert msg["DETECTOR_NAME"] == "mock_neural"
+    assert len(msg["BOXES"]) == 2
+    assert len(msg["FRAMES"]) == 30
+
+

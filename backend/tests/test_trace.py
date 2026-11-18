@@ -158,3 +158,76 @@ def test_summarize_run_trace_filtered_box_size():
     assert summary["primary_cause"] == "FILTERED_BOX_SIZE"
 
 
+def test_get_run_trace_endpoint_fallback_and_attributes(client, tmp_path):
+    """Verify GET /api/feeds/trace/{run_id} does not crash when feed has no trace file,
+    correctly reading progress.frames_sent and returning summary without AttributeError."""
+    from app.services.feed_manager import feed_manager, FeedItem
+
+    # 1. Non-existent feed and no trace file
+    resp = client.get("/api/feeds/trace/nonexistent_feed_123")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["has_trace"] is False
+    assert data["summary"] is None
+
+    # 2. Feed exists in feed_manager with progress, but no trace records
+    feed_id = "test_feed_no_trace"
+    feed_item = FeedItem(
+        feed_id=feed_id,
+        camera_id=101,
+        city="Cairo",
+        district="District 1",
+        video_path=tmp_path / "dummy.mp4",
+        thumbnail_path=tmp_path / "dummy.jpg",
+    )
+    feed_item.status = "done"
+    feed_item.total_frames = 90
+    feed_item.frames_sent = 90
+    feed_item.detection_quality = "neural"
+    feed_item.detector_name = "SSDLite320"
+    feed_item.vehicles_detected_count = 3
+    feed_manager.feeds[feed_id] = feed_item
+
+    try:
+        resp = client.get(f"/api/feeds/trace/{feed_id}")
+        assert resp.status_code == 200
+        trace_data = resp.json()
+        assert trace_data["has_trace"] is True
+        summary = trace_data["summary"]
+        assert summary is not None
+        assert summary["total_batches"] == 3
+        assert summary["batches_processed"] == 3
+        assert summary["max_trackers"] == 3
+        assert summary["detector_used"] == "SSDLite320"
+        assert summary["detection_quality"] == "neural"
+        assert summary["primary_cause"] == "NO_TRACE"
+
+        # 3. Feed exists with degraded detection quality
+        feed_id_deg = "test_feed_degraded"
+        feed_item_deg = FeedItem(
+            feed_id=feed_id_deg,
+            camera_id=102,
+            city="Cairo",
+            district="District 2",
+            video_path=tmp_path / "dummy_deg.mp4",
+            thumbnail_path=tmp_path / "dummy_deg.jpg",
+        )
+        feed_item_deg.status = "done"
+        feed_item_deg.total_frames = 30
+        feed_item_deg.frames_sent = 30
+        feed_item_deg.detection_quality = "motion_fallback"
+        feed_item_deg.detector_name = "motion"
+        feed_item_deg.vehicles_detected_count = 1
+        feed_manager.feeds[feed_id_deg] = feed_item_deg
+
+        resp_deg = client.get(f"/api/feeds/trace/{feed_id_deg}")
+        assert resp_deg.status_code == 200
+        summary_deg = resp_deg.json()["summary"]
+        assert summary_deg["primary_cause"] == "LOW_QUALITY_DETECTION"
+        assert summary_deg["detection_quality"] == "motion_fallback"
+
+    finally:
+        feed_manager.feeds.pop(feed_id, None)
+        feed_manager.feeds.pop("test_feed_degraded", None)
+
+
